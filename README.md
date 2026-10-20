@@ -36,6 +36,13 @@ normaalisti, kun Googlen uudet
 [sivulataussäännöt](https://developer.android.com/developer-verification)
 tulevat voimaan.
 
+## Tue kehitystä
+
+Jos sovelluksesta on sinulle hyötyä, voit tukea sen kehitystä:
+
+- [GitHub Sponsors](https://github.com/sponsors/jrs8205) – kuukausittain tai kertaluontoisesti
+- [Buy Me a Coffee](https://buymeacoffee.com/jrs8205) – ilman rekisteröitymistä
+
 ## Lisenssi
 
 [GPL-3.0](LICENSE). Sanalista: Kotimaisten kielten keskus

@@ -13,6 +13,31 @@ class LearningEngineTest {
         LearningEngine { now }.apply { load(emptyList(), emptyList(), emptyList()) }
 
     @Test
+    fun `pienella kirjoitettu korvaa lauseen alussa opitun asun`() {
+        val e = engine()
+        e.onWordCommitted("Jako")
+        e.onWordCommitted("jako")
+        assertEquals("jako", e.displayForm("jako"))
+        assertEquals("jako", e.drainDirty().words.single().word)
+    }
+
+    @Test
+    fun `hyvaksytty pieni ehdotus korvaa isolla opitun asun`() {
+        val e = engine()
+        e.onWordCommitted("Jako")
+        e.onSuggestionAccepted("jako")
+        assertEquals("jako", e.displayForm("jako"))
+    }
+
+    @Test
+    fun `iso alkukirjain ei korvaa pienta asua`() {
+        val e = engine()
+        e.onWordCommitted("jako")
+        e.onWordCommitted("Jako")
+        assertEquals("jako", e.displayForm("jako"))
+    }
+
+    @Test
     fun `uudelleenlatauksen aikana kirjoitettu sana ei katoa`() {
         // Asetuksista palattaessa data luetaan taustalla ja korvaa muistin
         // sisällön. Lukuhetken jälkeen kirjoitettu sana ei ole tilannekuvassa,
@@ -48,7 +73,6 @@ class LearningEngineTest {
         val e = engine()
         e.onWordCommitted("Jako")
         assertEquals(listOf("Jako"), e.suggest("ja"))
-        e.onWordCommitted("jako")
         assertEquals(listOf("Jako"), e.suggest("JA"))
     }
 

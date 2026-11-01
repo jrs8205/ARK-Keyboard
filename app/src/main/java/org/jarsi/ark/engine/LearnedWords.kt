@@ -1,6 +1,6 @@
 package org.jarsi.ark.engine
 
-/** Opittu sana: [word] on ensimmäinen kirjoitusasu. */
+/** Opittu sana: [word] on ensimmäinen kirjoitusasu, tai pieni asu, jos sana on kirjoitettu myös pienellä. */
 data class LearnedWord(
     val word: String,
     val count: Int,

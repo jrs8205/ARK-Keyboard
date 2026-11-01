@@ -2042,19 +2042,26 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     /**
      * Aloittaa liu'utuksen kursorista. Jos kentässä on jo valinta tai kursorin
      * sijaintia ei saa selville, liu'utus jää pelkäksi poistoksi lopussa.
+     *
+     * Sijainti luetaan aina kentältä: odotettu kursori voi olla väärä esimerkiksi
+     * silloin, kun pituusraja hylkäsi merkin, koska siitä ei tule valintapäivitystä.
+     * Väärästä kohdasta alkava valinta poistaisi väärää tekstiä.
      */
     private fun startBackspaceSwipe(ic: InputConnection): BackspaceSwipe? {
-        if (cursor.known && cursor.start != cursor.end) return null
-        val end = if (cursor.known) {
-            cursor.end
-        } else {
-            ic.getExtractedText(ExtractedTextRequest(), 0)
-                ?.takeIf { it.selectionStart == it.selectionEnd && it.selectionEnd >= 0 }
-                ?.let { it.startOffset + it.selectionEnd }
-                ?: return null
-        }
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0) ?: return null
+        if (extracted.selectionStart != extracted.selectionEnd || extracted.selectionEnd < 0) return null
+        val end = extracted.startOffset + extracted.selectionEnd
         val before = ic.getTextBeforeCursor(BACKSPACE_SWIPE_LOOKBACK, 0) ?: return null
+        cursor.onSetSelection(end, end)
         return BackspaceSwipe(before, end).also { backspaceSwipe = it }
+    }
+
+    /** Valinta on yhä se, jonka liu'utus teki: muu muokkaus ei saa joutua poistettavaksi. */
+    private fun swipeSelectionIntact(swipe: BackspaceSwipe): Boolean {
+        val selected = currentInputConnection?.getSelectedText(0) ?: return cursor.known &&
+            cursor.start == swipe.end - swipe.selected && cursor.end == swipe.end
+        val expected = swipe.before.subSequence(swipe.before.length - swipe.selected, swipe.before.length)
+        return selected.toString() == expected.toString()
     }
 
     private fun selectInField(ic: InputConnection, start: Int, end: Int) {
@@ -2093,7 +2100,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val swipe = backspaceSwipe
         backspaceSwipe = null
         // Ilman liu'utustilaa (kentässä valmis valinta) poistetaan valinta.
-        if (swipe == null || swipe.selected > 0) {
+        if (swipe == null || (swipe.selected > 0 && swipeSelectionIntact(swipe))) {
             sendKeyToField(KeyEvent.KEYCODE_DEL)
             learning.resetContext()
         }
@@ -2409,7 +2416,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             if (typed.first().isUpperCase()) {
                 it.replaceFirstChar { c -> c.titlecase(fiLocale) }
             } else {
-                it
+                suggestionEngine.correctionForm(it)
             }
         }
         var applied = false
@@ -3350,17 +3357,19 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         // uutta ei aloiteta: vanha tulos ei saa ylikirjoittaa uuden kentän riviä.
         val generation = ++suggestGeneration
         if (emojiSearchActive) return
+        val clipItem = recentClipItem()
+        // Nuolitilassa kursoria liikutellaan tekstin yli; ehdotukset olisivat vain häiriöksi.
+        // Tämä ei kysele kentältä mitään, joten vanhat sanat eivät jää salasanakentän
+        // riville hitaankaan kentän viiveen ajaksi.
+        if (!suggestionsVisible || page == Page.ARROWS) {
+            bar.setSuggestions(listOfNotNull(clipItem))
+            return
+        }
         // Hitaassa kentässä tekstikysely odottaa kirjoitustaukoa, ettei
         // jokainen näppäily jää odottamaan sovelluksen vastausta.
         if (!immediate && !translateMode && slowConnection.isSlow(SystemClock.uptimeMillis())) {
             mainHandler.removeCallbacks(deferredRefresh)
             mainHandler.postDelayed(deferredRefresh, SLOW_REFRESH_MS)
-            return
-        }
-        val clipItem = recentClipItem()
-        // Nuolitilassa kursoria liikutellaan tekstin yli; ehdotukset olisivat vain häiriöksi.
-        if (!suggestionsVisible || page == Page.ARROWS) {
-            bar.setSuggestions(listOfNotNull(clipItem))
             return
         }
         // Käännöstilassa ehdotukset lasketaan siitä alueesta, jota kirjoitetaan.
@@ -3382,15 +3391,12 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 ?.suggest(word.ifEmpty { context.lastOrNull().orEmpty() }, recents?.recent.orEmpty().toSet())
                 .orEmpty()
                 .map { SuggestionItem.Emoji(recents?.variantFor(it.emoji) ?: it.emoji) }
-            var result = if (word.isNotEmpty()) {
+            val candidates = if (word.isNotEmpty()) {
                 suggestionEngine.suggest(word, context)
             } else {
                 suggestionEngine.emptyInput(context, commonWordsEnabled)
             }
-            val capitalize = if (word.isEmpty()) shiftActive else word.first().isUpperCase()
-            if (capitalize) {
-                result = result.map { s -> s.replaceFirstChar { it.titlecase(fiLocale) } }
-            }
+            val result = suggestionEngine.applyCase(candidates, word, shiftActive)
             if (generation == suggestGeneration) {
                 mainHandler.post {
                     if (generation == suggestGeneration) {

@@ -475,6 +475,9 @@ class KeyboardView(context: Context) : View(context) {
         // Valikon peittokuva ottaa näppäinalueen kosketukset; tänne asti
         // päätyy vain jo alkanut kosketus, joka ei saa kirjoittaa mitään.
         if (alternatesPopup != null) return
+        // Liu'utus valitsee poistettavan tekstin; toisen sormen merkki korvaisi valinnan,
+        // ja ensimmäisen sormen nosto poistaisi sen.
+        if (pressed.values.any { it.backspaceSwiping }) return
         val bounded = keyAt(x, y) ?: return
         val info = PressInfo(bounded)
         pressed[pointerId] = info
@@ -533,6 +536,14 @@ class KeyboardView(context: Context) : View(context) {
             if (distance < dp(BACKSPACE_SWIPE_START_DP)) return
             info.backspaceSwiping = true
             removeCallbacks(info.repeatRunnable)
+            // Ennen liu'utusta painettu toinen näppäin ei enää kirjoita sormen noustessa.
+            for (other in pressed.values) {
+                if (other === info) continue
+                removeCallbacks(other.longPressRunnable)
+                removeCallbacks(other.repeatRunnable)
+                other.committed = true
+            }
+            hidePreview()
         }
         val past = distance - dp(BACKSPACE_SWIPE_START_DP)
         val words = if (past < 0f) 0 else 1 + (past / dp(BACKSPACE_SWIPE_STEP_DP)).toInt()

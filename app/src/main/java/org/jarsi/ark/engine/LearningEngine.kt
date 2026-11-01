@@ -11,7 +11,7 @@ import java.util.Locale
 class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) {
 
     private class WordState(
-        val word: String,
+        var word: String,
         var count: Int,
         var lastUsed: Long,
         var blocked: Boolean,
@@ -117,11 +117,19 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         if (isEligibleWord(word)) {
             val key = keyOf(word)
             val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
+            adoptLowercase(state, word)
             state.count++
             state.lastUsed = clock()
             dirtyWords += key
         }
         chain(word)
+    }
+
+    /** Lauseen alussa opittu iso alkukirjain väistyy, kun sana kirjoitetaan pienellä. */
+    private fun adoptLowercase(state: WordState, word: String) {
+        if (state.word.first().isUpperCase() && word.firstOrNull()?.isLowerCase() == true) {
+            state.word = word
+        }
     }
 
     /**
@@ -133,6 +141,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         if (!loaded) return
         val key = keyOf(word)
         val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
+        adoptLowercase(state, word)
         if (state.count > 0) state.count++
         state.acceptedCount++
         state.ignoredCount = 0
@@ -152,6 +161,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         if (isEligibleWord(word)) {
             val key = keyOf(word)
             val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
+            adoptLowercase(state, word)
             state.count++
             state.acceptedCount++
             state.ignoredCount = 0

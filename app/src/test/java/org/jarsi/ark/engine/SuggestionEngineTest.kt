@@ -9,6 +9,57 @@ class SuggestionEngineTest {
 
     private var now = 1_000_000_000_000L
 
+    @Test
+    fun `kesken lauseen lauseen alussa opittu iso alkukirjain pienenee`() {
+        val (s, l) = build("kiitos 100")
+        l.onWordCommitted("Kiitos")
+        val shown = s.applyCase(s.suggest("ki"), typed = "ki", sentenceStart = false)
+        assertEquals(listOf("kiitos"), shown)
+    }
+
+    @Test
+    fun `kesken lauseen oma nimi odottaa isoa alkukirjainta`() {
+        val (s, l) = build("kiitos 100")
+        l.onWordCommitted("Jarkko")
+        assertEquals(emptyList<String>(), s.applyCase(s.suggest("ja"), "ja", sentenceStart = false))
+        assertEquals(listOf("Jarkko"), s.applyCase(s.suggest("Ja"), "Ja", sentenceStart = false))
+    }
+
+    @Test
+    fun `pisteen jalkeen ehdotukset alkavat isolla`() {
+        val (s, _) = build("ja 100", "on 90")
+        val shown = s.applyCase(s.emptyInput(emptyList(), includeCommon = true), "", sentenceStart = true)
+        assertEquals(listOf("Ja", "On"), shown)
+    }
+
+    @Test
+    fun `kesken lauseen seuraavat sanat ovat pienella`() {
+        val (s, l) = build("kiitos 100", "ja 90")
+        listOf("hei", "Kiitos").forEach { l.onWordCommitted(it) }
+        val shown = s.applyCase(s.emptyInput(listOf("hei"), includeCommon = false), "", sentenceStart = false)
+        assertEquals(listOf("kiitos"), shown)
+    }
+
+    @Test
+    fun `pienella aloitettu sana pysyy pienena myos lauseen alussa`() {
+        val (s, _) = build("kiitos 100")
+        assertEquals(listOf("kiitos"), s.applyCase(s.suggest("ki"), "ki", sentenceStart = true))
+    }
+
+    @Test
+    fun `isolla aloitettu sana saa ison alkukirjaimen kesken lauseen`() {
+        val (s, _) = build("helsinki 100")
+        assertEquals(listOf("Helsinki"), s.applyCase(s.suggest("Hel"), "Hel", sentenceStart = false))
+    }
+
+    @Test
+    fun `korjaus ei tuo opittua isoa alkukirjainta tavalliseen sanaan`() {
+        val (s, _) = build("kiitos 100")
+        assertEquals("kiitos", s.correctionForm("Kiitos"))
+        assertEquals("Jarkko", s.correctionForm("Jarkko"))
+        assertEquals("kiitos", s.correctionForm("kiitos"))
+    }
+
     private fun build(vararg dictLines: String): Pair<SuggestionEngine, LearningEngine> {
         val dict = DictionaryEngine().apply { load(dictLines.asSequence()) }
         val learning = LearningEngine { now }.apply { load(emptyList(), emptyList(), emptyList()) }

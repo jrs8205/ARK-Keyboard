@@ -100,6 +100,26 @@ class SuggestionEngine(
             .firstOrNull { WordTools.editDistanceAtMost(key, it.lowercase(fiLocale), 1) <= 1 }
     }
 
+    /**
+     * Ehdotusten kirjainkoko: lauseen alussa ja isolla aloitetussa sanassa iso
+     * alkukirjain, muuten pieni. Opittu iso alkukirjain tulee yleensä lauseen
+     * alusta, joten tavallinen sana näytetään pienellä. Oma nimi tai lyhenne, jota
+     * sanasto ei tunne, odottaa käyttäjän isolla aloittamaa sanaa.
+     */
+    fun applyCase(suggestions: List<String>, typed: String, sentenceStart: Boolean): List<String> {
+        val capitalize = if (typed.isEmpty()) sentenceStart else typed.first().isUpperCase()
+        if (capitalize) return suggestions.map { s -> s.replaceFirstChar { it.titlecase(fiLocale) } }
+        return suggestions.map(::correctionForm).filterNot { it.first().isUpperCase() }
+    }
+
+    /** Pienellä kirjoitetun sanan korjaus: tavallinen sana ei saa opittua isoa alkukirjainta. */
+    fun correctionForm(word: String): String =
+        if (word.first().isUpperCase() && dictionary.frequencyOf(word) > 0) {
+            word.lowercase(fiLocale)
+        } else {
+            word
+        }
+
     /** Rivi tyhjälle syötteelle: ennustukset ja halutessa yleisimmät täytteeksi. */
     fun emptyInput(context: List<String>, includeCommon: Boolean, max: Int = 8): List<String> {
         val contextMatches = learning.contextMatches(context)

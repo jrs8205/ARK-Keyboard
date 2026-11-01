@@ -4,7 +4,7 @@
 
 ## Installation
 
-1. Download `ark-nappaimisto-vX.Y.Z.apk` from the [Releases page](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)
+1. Download `ark-nappaimisto-vX.Y.Z.apk` from the [Releases page](https://github.com/jrs8205/ARK-Keyboard/releases/latest)
    on your phone and install it.
 2. Open the ARK-Keyboard app. The first launch guides you through the setup.
 

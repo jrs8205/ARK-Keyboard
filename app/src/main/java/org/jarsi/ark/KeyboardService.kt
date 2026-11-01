@@ -337,6 +337,13 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     showMessage(getString(R.string.sanelu_verkkovirhe, message), long = true)
                 }
 
+                override fun onDictationConnectionLost() {
+                    showMessage(
+                        getString(R.string.sanelu_verkkovirhe, getString(R.string.yhteys_virhe)),
+                        long = true,
+                    )
+                }
+
                 override fun onSpeechLevel(level: Float) {
                     toolbar?.micLevel = level
                 }
@@ -1830,7 +1837,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             connection.disconnect()
         }
     } catch (e: Exception) {
-        AiReply(0, null, e.javaClass.simpleName)
+        AiReply(0, null, getString(R.string.yhteys_virhe))
     }
 
     private fun pasteClip(clip: Clip) {

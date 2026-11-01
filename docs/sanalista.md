@@ -5,14 +5,18 @@ muodostettu kahdesta Kotimaisten kielten keskuksen (Kotus) julkaisemasta
 aineistosta:
 
 **1. Parole-taajuuslista** — sanamuodot taajuuksineen suomen kielen
-Parole-korpuksesta (noin 17 miljoonaa sanetta kirjoitettua suomea).
+Parole-korpuksesta (noin 17 miljoonaa sanetta kirjoitettua suomea, koottu
+vuosina 1996–1998).
 
 * Aineisto: Suomen sanomalehtikielen taajuuslista (Parole),
   <https://kaino.kotus.fi/sanat/taajuuslista/parole.php>
 * Julkaisija: Kotimaisten kielten keskus (Kotus), aineisto listattu myös
   Kielipankissa
-* Lisenssi: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.fi)
-  (Kotuksen avointen aineistojen ensisijainen lisenssi)
+* Lisenssi: Kotuksen [aineistosivulla](https://kotus.fi/kotus/kieliaineistot/aineistot-verkossa/)
+  tälle listalle ei ole omaa lisenssimerkintää. Kotuksen
+  [avoimien aineistojen ensisijainen lisenssi](https://kotus.fi/kotus/kieliaineistot/kieliaineistojen-kaytto/)
+  on CC BY 4.0, ja [ISLRN-rekisteri](https://islrn.org/resources/245-100-606-282-0/)
+  ilmoittaa lisenssiksi EUPL:n. Kotukselta on hyvä varmistaa, kumpi pätee.
 * Lähtötiedosto: `parole_frek_3.zip` (sanamuodot, jotka esiintyvät korpuksessa
   vähintään kolmesti; 326 514 muotoa)
 

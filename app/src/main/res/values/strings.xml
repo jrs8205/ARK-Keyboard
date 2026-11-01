@@ -41,7 +41,7 @@
     <string name="erikoismerkit">Erikoismerkkien järjestys</string>
     <string name="tyokalurivi">Työkalurivi</string>
     <string name="tyokalurivi_kuvaus">Järjestä napit ja valitse mitkä näkyvät</string>
-    <string name="tyokalurivi_ohje">Raahaa nappia pitkällä painalluksella järjestyksen muuttamiseksi. Kytkimestä valitset, näkyykö nappi työkalurivillä. Asetukset näkyy aina viimeisenä.</string>
+    <string name="tyokalurivi_ohje">Raahaa nappia pitkällä painalluksella järjestyksen muuttamiseksi. Kytkimestä valitset, näkyykö nappi työkalurivillä. Asetukset-nappi näkyy aina viimeisenä.</string>
     <string name="tyokalurivi_palauta">Palauta oletukset</string>
     <string name="tyokalurivi_palauta_varmistus">Palautetaanko työkalurivin oletusjärjestys ja oletusnapit?</string>
     <string name="tyokalu_nuolet">Kursorin siirto</string>
@@ -75,7 +75,10 @@
     <string name="opitut_osio_estetyt">Estetyt sanat (%d)</string>
     <string name="opitut_salli">Salli taas</string>
     <string name="opitut_tyhja">Ei vielä opittuja sanoja</string>
-    <string name="opitut_kaytto">%d käyttöä</string>
+    <plurals name="opitut_kaytto">
+        <item quantity="one">%d käyttö</item>
+        <item quantity="other">%d käyttöä</item>
+    </plurals>
     <string name="opitut_kiinnitetty">Kiinnitetty</string>
     <string name="opitut_estetty">Estetty</string>
     <string name="opitut_tyhjenna">Tyhjennä kaikki</string>
@@ -137,14 +140,23 @@
     <string name="malli_haku_virhe_syy">Mallilistan haku epäonnistui: %1$s</string>
     <string name="kaannos_ai_liian_pitka">Teksti on liian pitkä AI-käännettäväksi (enintään 5 000 merkkiä)</string>
     <string name="kaannos_ai_tyhja_vastaus">palvelu palautti tyhjän vastauksen</string>
+    <string name="yhteys_virhe">ei yhteyttä palveluun</string>
 
     <string name="asetukset_varmuuskopio">Varmuuskopio</string>
     <string name="varmuuskopio_vie">Vie varmuuskopio</string>
     <string name="varmuuskopio_vie_kuvaus">Tallentaa opitut sanat, sanaketjut, kiinnitetyt tekstileikkeet ja asetukset tiedostoon</string>
     <string name="varmuuskopio_tuo">Tuo varmuuskopio</string>
     <string name="varmuuskopio_tuo_kuvaus">Yhdistää tiedoston sisällön tämän laitteen oppimisdataan ja palauttaa asetukset</string>
-    <string name="varmuuskopio_viety">Varmuuskopio tallennettu: %1$d sanaa, %2$d leikettä</string>
-    <string name="varmuuskopio_tuotu">Varmuuskopio tuotu: %1$d sanaa, %2$d leikettä</string>
+    <string name="varmuuskopio_viety">Varmuuskopio tallennettu: %1$s, %2$s</string>
+    <string name="varmuuskopio_tuotu">Varmuuskopio tuotu: %1$s, %2$s</string>
+    <plurals name="varmuuskopio_sanoja">
+        <item quantity="one">%d sana</item>
+        <item quantity="other">%d sanaa</item>
+    </plurals>
+    <plurals name="varmuuskopio_leikkeita">
+        <item quantity="one">%d leike</item>
+        <item quantity="other">%d leikettä</item>
+    </plurals>
     <string name="varmuuskopio_virhe">Varmuuskopion käsittely epäonnistui</string>
 
     <string name="sanelu_virhe">Sanelu ei onnistunut</string>
@@ -202,7 +214,7 @@
     <string name="esittely_seuraava">Seuraava</string>
     <string name="esittely_valmis_nappi">Valmis</string>
     <string name="esittely_tervetuloa_otsikko">Tervetuloa!</string>
-    <string name="esittely_tervetuloa_teksti">ARK-näppäimistö oppii omat sanasi, sanaparisi ja kirjoitustapasi — kokonaan omalla laitteellasi. Mitään kirjoittamaasi ei lähetetä minnekään.</string>
+    <string name="esittely_tervetuloa_teksti">ARK-näppäimistö oppii omat sanasi, sanaparisi ja kirjoitustapasi — kokonaan omalla laitteellasi. Tekstiä lähtee laitteelta vain, jos itse käytät AI-käännöstä tai OpenAI-sanelua.</string>
     <string name="esittely_kayttoonotto_otsikko">Ota käyttöön</string>
     <string name="esittely_kayttoonotto_teksti">Näppäimistö otetaan käyttöön puhelimen asetuksista kahdessa askeleessa.</string>
     <string name="esittely_askel_kayttoon">1. Ota näppäimistö käyttöön</string>
@@ -267,6 +279,6 @@
     <string name="enter_hae">Hae</string>
     <string name="enter_laheta">Lähetä</string>
     <string name="enter_siirry">Siirry</string>
-    <string name="enter_seuraava">Seur.</string>
+    <string name="enter_seuraava">Seuraava</string>
     <string name="enter_valmis">Valmis</string>
 </resources>

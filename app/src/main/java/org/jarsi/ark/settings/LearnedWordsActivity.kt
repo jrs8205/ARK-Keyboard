@@ -349,7 +349,7 @@ class LearnedWordsActivity : AppCompatActivity() {
                     meta.text = buildString {
                         // Käyttö = itse kirjoitetut + ehdotusriviltä valitut kerrat.
                         val uses = item.entity.count + item.entity.acceptedCount
-                        append(getString(R.string.opitut_kaytto, uses))
+                        append(resources.getQuantityString(R.plurals.opitut_kaytto, uses, uses))
                         if (item.entity.pinned) {
                             append(" • ").append(getString(R.string.opitut_kiinnitetty))
                         }

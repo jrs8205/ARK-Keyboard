@@ -197,9 +197,7 @@ class OpenAiDictation(
                 override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
                     mainHandler.post {
                         if (mySession != session) return@post
-                        listener.onDictationErrorMessage(
-                            t.message ?: t.javaClass.simpleName
-                        )
+                        listener.onDictationConnectionLost()
                         // Kertyneet deltat pelastetaan kenttään finishNow'ssa.
                         stopRequested = true
                         finishNow(mySession)

@@ -104,7 +104,7 @@ class ChatGptLoginActivity : AppCompatActivity() {
         val socket = try {
             ServerSocket(0, 1, InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1)))
         } catch (e: IOException) {
-            fail(e.javaClass.simpleName)
+            fail(getString(R.string.chatgpt_kirjautuminen_verkkovirhe))
             return
         }
         server = socket

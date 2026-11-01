@@ -418,12 +418,10 @@ class KeyboardView(context: Context) : View(context) {
             key.action is KeyAction.Text -> rowHeight * 0.42f
             else -> rowHeight * 0.38f
         }
-        if (key.action == KeyAction.Space) {
-            // Nimi mahtuu myös kapeaan välilyöntiin (yhden käden tila, lisämerkki).
-            val available = rect.width() - dp(12f)
-            val needed = labelPaint.measureText(label)
-            if (needed > available) labelPaint.textSize *= available / needed
-        }
+        // Pitkä teksti mahtuu myös kapeaan näppäimeen (yhden käden tila, lisämerkki).
+        val available = rect.width() - dp(8f)
+        val needed = labelPaint.measureText(label)
+        if (needed > available) labelPaint.textSize *= available / needed
         if (label.isNotEmpty()) {
             canvas.drawText(label, rect.centerX(), rect.centerY() + labelPaint.textSize * 0.35f, labelPaint)
         }

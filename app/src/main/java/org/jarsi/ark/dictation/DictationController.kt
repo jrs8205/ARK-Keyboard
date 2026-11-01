@@ -37,6 +37,9 @@ class DictationController(
         /** Virhe tarkalla syyllä (esim. verkkovirhe); syy näytetään aina. */
         fun onDictationErrorMessage(message: String) {}
 
+        /** Yhteys palveluun katkesi; järjestelmän tekninen selitys ei kuulu näytölle. */
+        fun onDictationConnectionLost() {}
+
         /** Puheen voimakkuus 0–1 mikrofonin sykettä varten. */
         fun onSpeechLevel(level: Float)
     }

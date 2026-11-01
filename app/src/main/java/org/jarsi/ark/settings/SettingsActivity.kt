@@ -508,6 +508,8 @@ class SettingsActivity : AppCompatActivity() {
             parse: (String) -> List<Pair<String, String>>,
             onResult: (List<Pair<String, String>>?, String?) -> Unit,
         ) {
+            // Luetaan jo tässä: taustasäikeessä näkymä voi olla jo irronnut aktiviteetista.
+            val connectionError = getString(R.string.yhteys_virhe)
             ioExecutor.execute {
                 var error: String? = null
                 val models = try {
@@ -531,7 +533,7 @@ class SettingsActivity : AppCompatActivity() {
                         connection.disconnect()
                     }
                 } catch (e: Exception) {
-                    error = e.javaClass.simpleName
+                    error = connectionError
                     null
                 }
                 activity?.runOnUiThread {
@@ -572,7 +574,13 @@ class SettingsActivity : AppCompatActivity() {
                     } ?: error("Tiedosto ei auennut")
                     toast(
                         context.getString(
-                            R.string.varmuuskopio_viety, backup.words.size, backup.clips.size
+                            R.string.varmuuskopio_viety,
+                            context.resources.getQuantityString(
+                                R.plurals.varmuuskopio_sanoja, backup.words.size, backup.words.size
+                            ),
+                            context.resources.getQuantityString(
+                                R.plurals.varmuuskopio_leikkeita, backup.clips.size, backup.clips.size
+                            ),
                         )
                     )
                 } catch (e: Exception) {
@@ -613,7 +621,13 @@ class SettingsActivity : AppCompatActivity() {
                     LearnedDataStamp.bump()
                     toast(
                         context.getString(
-                            R.string.varmuuskopio_tuotu, backup.words.size, backup.clips.size
+                            R.string.varmuuskopio_tuotu,
+                            context.resources.getQuantityString(
+                                R.plurals.varmuuskopio_sanoja, backup.words.size, backup.words.size
+                            ),
+                            context.resources.getQuantityString(
+                                R.plurals.varmuuskopio_leikkeita, backup.clips.size, backup.clips.size
+                            ),
                         )
                     )
                     if (backup.settings.isNotEmpty()) {

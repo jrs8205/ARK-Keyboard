@@ -86,6 +86,7 @@ import org.jarsi.ark.engine.WordTools
 import org.jarsi.ark.keyboard.AutoCaps
 import org.jarsi.ark.keyboard.CursorExpectation
 import org.jarsi.ark.keyboard.EditCommand
+import org.jarsi.ark.keyboard.ExportedTranslation
 import org.jarsi.ark.keyboard.FieldProfile
 import org.jarsi.ark.keyboard.InlineChips
 import org.jarsi.ark.keyboard.KeyAction
@@ -477,8 +478,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             applyVisualSettings()
         }
         // Tyhjennys tai varmuuskopion tuonti muutti muistettuja emojeja muualta.
-        if (key == PREF_EMOJI_RECENTS &&
-            prefs.getString(PREF_EMOJI_RECENTS, null) != emojiRecents?.savedRecents()
+        if ((key == PREF_EMOJI_RECENTS || key == PREF_EMOJI_VARIANTS) &&
+            emojiRecents?.matches(
+                prefs.getString(PREF_EMOJI_RECENTS, null),
+                prefs.getString(PREF_EMOJI_VARIANTS, null),
+            ) == false
         ) {
             emojiRecents = loadEmojiRecents()
         }
@@ -1107,7 +1111,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (expired) translationMemory.clear()
         if (translateBuffer.text.isNotEmpty() && expired) {
             translateBuffer.clear()
-            lastInsertedTranslation = ""
+            exportedTranslation.clear()
         }
         if (translateBuffer.text.isEmpty()) translateSourceLocked = false
         // Sanelu ja käännös eivät voi olla yhtä aikaa päällä.
@@ -1140,12 +1144,12 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun forgetSentTranslation() {
         if (!translationExported) return
         translationExported = false
-        val previous = lastInsertedTranslation
+        val previous = exportedTranslation.text
         val stillInField = previous.isNotEmpty() &&
             readBefore(previous.length)?.toString() == previous
         if (stillInField) return
         translateBuffer.clear()
-        lastInsertedTranslation = ""
+        exportedTranslation.clear()
         translateSourceLocked = false
     }
 
@@ -1540,8 +1544,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     // Viimeisin kenttään viety käännös: uusi vienti korvaa sen, ettei
-    // jatkettu teksti kahdennu kenttään. Nollataan kentän vaihtuessa.
-    private var lastInsertedTranslation = ""
+    // jatkettu teksti kahdennu kenttään.
+    private val exportedTranslation = ExportedTranslation()
 
     // Näkymä suljettiin viennin takia: seuraavalla avauksella katsotaan, onko
     // viety teksti yhä lähettämättä kentässä.
@@ -1557,14 +1561,14 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val ic = currentInputConnection ?: return
         markOwnEdit()
         ic.beginBatchEdit()
-        val previous = lastInsertedTranslation
+        val previous = exportedTranslation.text
         if (previous.isNotEmpty() && readBefore(ic, previous.length)?.toString() == previous) {
             deleteFromField(ic, previous.length)
         }
         commitToField(ic, translation)
         ic.endBatchEdit()
         textUndo.record(translation)
-        lastInsertedTranslation = translation
+        exportedTranslation.record(translation)
         feedback()
     }
 
@@ -2935,6 +2939,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
                 override fun onDelete(clip: Clip) {
                     clipStore.remove(clip.id)
+                    if (recentClip.clearIfClip(clip.id)) refreshSuggestionRow()
                     val db = database
                     executeIo {
                         try {
@@ -3164,6 +3169,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         vibrationEnabled = prefs.getBoolean("varina", true)
 
         field = FieldProfile.from(info.inputType, info.imeOptions, info.packageName)
+        // Uudessa kentässä ei ole vietyä käännöstä korvattavaksi. Saman kentän
+        // uudelleenavaus (näppäimistö piilotettiin välissä) säilyttää sen.
+        exportedTranslation.onFieldStarted(
+            ExportedTranslation.Field(info.packageName, info.fieldId, info.inputType)
+        )
 
         applyVisualSettings()
         keyboardView?.obscureKeyLabels = shouldObscureKeyLabels()
@@ -3211,8 +3221,6 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             // Kenttä vaihtui: näkymä sulkeutuu, mutta käännöstyö säilyy
             // puskurissa, koska mikään ei kirjoitu kenttiin itsestään.
             hideTranslateBar()
-            // Uudessa kentässä ei ole vietyä käännöstä korvattavaksi.
-            lastInsertedTranslation = ""
         }
         if (pendingDictation) {
             pendingDictation = false

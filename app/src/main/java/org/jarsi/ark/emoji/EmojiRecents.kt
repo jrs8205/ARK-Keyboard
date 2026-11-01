@@ -44,6 +44,10 @@ class EmojiRecents(savedRecents: String? = null, savedVariants: String? = null) 
     fun savedVariants(): String =
         variants.entries.joinToString("\n") { "${it.key}\t${it.value}" }
 
+    /** Vastaako tallenne muistia; muuten se on muuttunut muualta (varmuuskopion tuonti). */
+    fun matches(storedRecents: String?, storedVariants: String?): Boolean =
+        storedRecents.orEmpty() == savedRecents() && storedVariants.orEmpty() == savedVariants()
+
     companion object {
         const val MAX_RECENT = 40
 

@@ -26,6 +26,13 @@ class RecentClipOffer(private val clock: () -> Long = System::currentTimeMillis)
         offer = null
     }
 
+    /** Poistettu leike ei saa jäädä liitettäväksi; true, jos tarjous poistui. */
+    fun clearIfClip(clipId: Long): Boolean {
+        if (offer?.clipId != clipId) return false
+        offer = null
+        return true
+    }
+
     companion object {
         const val OFFER_MS = 60_000L
         const val PREVIEW_CHARS = 24

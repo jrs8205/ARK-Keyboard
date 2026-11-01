@@ -42,6 +42,20 @@ class RecentClipOfferTest {
     }
 
     @Test
+    fun `poistettu leike poistaa tarjouksen`() {
+        offer.offer(7L, "teksti")
+        assertEquals(true, offer.clearIfClip(7L))
+        assertNull(offer.current())
+    }
+
+    @Test
+    fun `toisen leikkeen poisto ei koske tarjousta`() {
+        offer.offer(7L, "teksti")
+        assertEquals(false, offer.clearIfClip(8L))
+        assertEquals(7L, offer.current()?.clipId)
+    }
+
+    @Test
     fun `esikatselu litistaa rivit ja valit`() {
         assertEquals("yksi kaksi kolme", RecentClipOffer.preview("  yksi\n\nkaksi \t kolme "))
     }

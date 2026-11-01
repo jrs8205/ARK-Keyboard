@@ -1,6 +1,7 @@
 package org.jarsi.ark.emoji
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -57,6 +58,20 @@ class EmojiRecentsTest {
         assertTrue(afterUse != start)
         recents.rememberVariant("👋", "👋🏻")
         assertTrue(recents.revision != afterUse)
+    }
+
+    @Test
+    fun `tallenne vastaa muistia vasta kun myos ihonvarit tasmaavat`() {
+        val recents = EmojiRecents("😀", "👋\t👋🏻")
+        assertTrue(recents.matches("😀", "👋\t👋🏻"))
+        assertFalse(recents.matches("😀", "👋\t👋🏿"))
+        assertFalse(recents.matches("🐈", "👋\t👋🏻"))
+    }
+
+    @Test
+    fun `puuttuva tallenne vastaa tyhjaa muistia`() {
+        assertTrue(EmojiRecents().matches(null, null))
+        assertFalse(EmojiRecents("😀").matches(null, null))
     }
 
     @Test

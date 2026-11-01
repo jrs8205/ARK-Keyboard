@@ -97,8 +97,16 @@ class SuggestionEngine(
         if (dictionary.frequencyOf(key) > 0) return null
         if (learning.isOwnWord(word) || learning.isBlocked(word)) return null
         return alternatives(word, context, max = AUTOCORRECT_CANDIDATES)
-            .firstOrNull { WordTools.editDistanceAtMost(key, it.lowercase(fiLocale), 1) <= 1 }
+            .firstOrNull {
+                WordTools.editDistanceAtMost(key, it.lowercase(fiLocale), 1) <= 1 &&
+                    isCorrectionTarget(it)
+            }
     }
+
+    /** Suomen kirjoitusvirhe ei saa muuttua englanniksi, ellei käyttäjä itse käytä sanaa. */
+    private fun isCorrectionTarget(word: String): Boolean =
+        dictionary.frequencyOf(word) != DictionaryEngine.SUPPLEMENT_FREQUENCY ||
+            learning.isOwnWord(word)
 
     /**
      * Ehdotusten kirjainkoko: lauseen alussa ja isolla aloitetussa sanassa iso

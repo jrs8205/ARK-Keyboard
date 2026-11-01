@@ -53,7 +53,8 @@ Jos sovelluksesta on sinulle hyötyä, voit tukea sen kehitystä:
 [Kirjoitetun suomen kielen sanojen taajuuksia](https://kaino.kotus.fi/sanat/taajuuslista/parole.php)
 (EUPL) ja
 [Nykysuomen sanalista 2024](https://kotus.fi/sanakirjat/kielitoimiston-sanakirja/nykysuomen-sana-aineistot/nykysuomen-sanalista/)
-(CC BY 4.0). Aineistoja on muokattu, ks. [docs/sanalista.md](docs/sanalista.md).
+(CC BY 4.0) sekä englannin osalta [English Speller Databaseen](https://app.aspell.net/create)
+(© Kevin Atkinson). Aineistoja on muokattu, ks. [docs/sanalista.md](docs/sanalista.md).
 Emojiaineisto: Unicode, ks.
 [docs/emojit.md](docs/emojit.md). Kuvakkeet:
 [Material Symbols](https://fonts.google.com/icons) (Apache 2.0).

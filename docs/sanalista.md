@@ -1,8 +1,8 @@
 # Yleinen sanalista
 
-Näppäimistön yleinen suomen sanalista (`app/src/main/assets/sanalista.txt`) on
-muodostettu kahdesta Kotimaisten kielten keskuksen (Kotus) julkaisemasta
-aineistosta:
+Näppäimistön yleinen sanalista (`app/src/main/assets/sanalista.txt`) on muodostettu
+kahdesta Kotimaisten kielten keskuksen (Kotus) julkaisemasta suomen aineistosta ja
+englannin sanastosta:
 
 **1. Parole-taajuuslista** — sanamuodot taajuuksineen suomen kielen
 Parole-korpuksesta (noin 17 miljoonaa sanetta kirjoitettua suomea, koottu
@@ -38,6 +38,17 @@ taajuuslistaa harvinaisemmilla sanoilla.
   pienellä oletustaajuudella (2), jolloin ne ovat täydennyksissä tarjolla
   mutta yleisyydeltään tunnettujen sanojen takana.
 
+**3. English Speller Database (ESDB, aiemmin SCOWL)** — englannin sanat koossa 50,
+jotta `she` tai `wait` ei muutu automaattikorjauksessa suomen sanaksi.
+
+* Aineisto: <https://app.aspell.net/create>, tekijä Kevin Atkinson
+* Lisenssi: käyttö, muokkaus, levitys ja myynti sallittu, kunhan tekijänoikeustiedot
+  säilytetään; koko teksti tiedostossa
+  [`esdb-copyright.txt`](../app/src/main/assets/esdb-copyright.txt), joka kulkee sovelluksen mukana
+* Mukaan otetaan vain pienellä kirjoitetut sanat ilman heittomerkkejä, joita
+  listalla ei jo ole. Taajuus on 1, joten suomen sanat ovat ehdotuksissa edellä, eikä
+  sanaa tarjota kirjoitusvirheen korjaukseksi, ellei käyttäjä itse käytä sitä.
+
 ## Lähdemerkintä
 
 Kotus edellyttää, että lähde nimetään, alkuperäiseen aineistoon linkitetään ja
@@ -50,6 +61,9 @@ muokkauksesta kerrotaan:
 > (CC BY 4.0). Aineistoja on muokattu: sanamuodot on pienennetty ja siivottu,
 > harvinaisia todennäköisiä virhemuotoja on jätetty pois, listat on yhdistetty ja
 > Nykysuomen sanalistasta on käytetty vain hakusanat.
+>
+> Englannin sanat: [English Speller Database](https://app.aspell.net/create), Copyright
+> Kevin Atkinson, ks. [`esdb-copyright.txt`](../app/src/main/assets/esdb-copyright.txt).
 
 ## Käsittely
 
@@ -65,11 +79,13 @@ Lista on muodostettu työkalulla [`tools/sanalista.py`](../tools/sanalista.py):
    ei korjata (esim. `ensimäisen`, 16 esiintymää)
 4. Nykysuomen sanalistan perusmuodot, joita edellä ei jo ole, lisätään
    oletustaajuudella 2 (`--kotus`-parametri)
+5. englannin sanat, joita edellä ei jo ole, lisätään taajuudella 1
+   (`--englanti`-parametri)
 
 Tulostiedoston muoto: yksi rivi per sana, `sananmuoto taajuus`,
 aakkosjärjestyksessä, UTF-8. Järjestys säästää latauksessa aikaa ja muistia.
-Nykyinen lista: 410 162 sanaa, joista 68 006 Nykysuomen sanalistalta; 6 652
-todennäköistä virhettä jäi pois.
+Nykyinen lista: 466 826 sanaa, joista 68 006 Nykysuomen sanalistalta ja 56 664
+englannin sanoja; 6 652 todennäköistä virhettä jäi pois.
 
 ## Kattavuus
 

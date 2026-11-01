@@ -2,7 +2,7 @@
 
 Käyttö:
     python tools/sanalista.py parole_frek_3.txt app/src/main/assets/sanalista.txt \
-        --kotus nykysuomensanalista2024.csv
+        --kotus nykysuomensanalista2024.csv --englanti esdb-koko-50.txt
 
 Syöterivin muoto: "järjestysnro taajuus sananmuoto (osuus %)", Latin-1-koodattu.
 Tulos: "sananmuoto taajuus" -rivit aakkosjärjestyksessä, UTF-8. Järjestys säästää
@@ -18,6 +18,11 @@ jos yhden muokkauksen päässä on --suhde kertaa yleisempi sana.
 Valinnainen --kotus lisää Kotuksen nykysuomen sanalistan (TSV, 1. sarake
 Hakusana) perusmuodot, joita taajuuslistalla ei jo ole, listan jatkoksi
 pienellä oletustaajuudella. Perusmuotoja ei karsita virheinä.
+
+Valinnainen --englanti lisää englannin sanat (ESDB/SCOWL, app.aspell.net/create;
+sanat viivarivin jälkeen, yksi riviä kohden). Vain pienellä kirjoitetut kelpaavat,
+ja niiden taajuus on pienin, mikä erottaa ne suomen sanoista: sovellus ei tarjoa
+niitä kirjoitusvirheen korjaukseksi.
 """
 import argparse
 import re
@@ -83,6 +88,8 @@ def main() -> None:
     p.add_argument("--suhde", type=int, default=100)
     p.add_argument("--kotus")
     p.add_argument("--kotus-taajuus", type=int, default=2)
+    p.add_argument("--englanti")
+    p.add_argument("--englanti-taajuus", type=int, default=1)
     a = p.parse_args()
 
     maarat: dict[str, int] = {}
@@ -122,12 +129,25 @@ def main() -> None:
             sanat[sana] = a.kotus_taajuus
             lisatyt += 1
 
+    englanti = 0
+    if a.englanti:
+        with open(a.englanti, encoding="utf-8") as f:
+            for rivi in f:
+                if rivi.startswith("---"):
+                    break
+            for rivi in f:
+                sana = rivi.strip()
+                if len(sana) >= 2 and SANA.match(sana) and sana not in sanat:
+                    sanat[sana] = a.englanti_taajuus
+                    englanti += 1
+
     with open(a.tulos, "w", encoding="utf-8", newline="\n") as f:
         for sana in sorted(sanat):
             f.write(f"{sana} {sanat[sana]}\n")
     print(
         f"{len(sanat)} sanaa kirjoitettu "
-        f"({lisatyt} Kotuksen listalta, {len(virheet)} todennäköistä virhettä pois)"
+        f"({lisatyt} Kotuksen listalta, {englanti} englannin sanaa, "
+        f"{len(virheet)} todennäköistä virhettä pois)"
     )
 
 

@@ -201,9 +201,15 @@ class DictionaryEngine {
         return best.sortedByDescending { list.freqs[it] }
     }
 
-    private companion object {
+    companion object {
+        /**
+         * Lisäsanaston (englanti) taajuus. Suomen sanoilla on aina suurempi taajuus,
+         * joten ne ovat ehdotuksissa edellä.
+         */
+        const val SUPPLEMENT_FREQUENCY = 1L
+
         /** Sanan kirjaimet bitteinä; samaan bittiin osuvat kirjaimet vain heikentävät karsintaa. */
-        fun letterSet(word: String): Int {
+        private fun letterSet(word: String): Int {
             var set = 0
             for (c in word) set = set or (1 shl (c.code and 31))
             return set

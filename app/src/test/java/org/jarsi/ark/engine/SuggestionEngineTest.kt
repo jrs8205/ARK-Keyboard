@@ -126,6 +126,33 @@ class SuggestionEngineTest {
     }
 
     @Test
+    fun `englannin sana ei muutu suomeksi`() {
+        val (s, _) = build("se 100000", "she 1", "wait 1", "lait 300")
+        assertEquals(null, s.autoCorrect("she"))
+        assertEquals(null, s.autoCorrect("wait"))
+    }
+
+    @Test
+    fun `suomen kirjoitusvirhe ei muutu englanniksi`() {
+        val (s, _) = build("meeting 1", "koira 100")
+        assertEquals(null, s.autoCorrect("meetin"))
+        assertEquals("koira", s.autoCorrect("koirra"))
+    }
+
+    @Test
+    fun `itse kaytetty englannin sana kelpaa korjaukseksi`() {
+        val (s, l) = build("meeting 1")
+        l.onWordCommitted("meeting")
+        assertEquals("meeting", s.autoCorrect("meetin"))
+    }
+
+    @Test
+    fun `englannin sana on ehdotuksissa suomen sanojen jalkeen`() {
+        val (s, _) = build("meeting 1", "meetingit 50")
+        assertEquals(listOf("meetingit", "meeting"), s.suggest("meet"))
+    }
+
+    @Test
     fun `autoCorrect korjaa tuntemattoman lahimpaan tunnettuun`() {
         val (s, _) = build("koira 100", "kissa 90")
         assertEquals("koira", s.autoCorrect("koirra"))

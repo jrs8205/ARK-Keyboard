@@ -144,6 +144,17 @@ object WordTools {
         return words.toList()
     }
 
+    /** Liu'utuspoiston pituus: [words] sanaa kursorin edeltä, enintään koko teksti. */
+    fun wordsBackspaceLength(textBefore: CharSequence, words: Int): Int {
+        var length = 0
+        repeat(words) {
+            val rest = textBefore.subSequence(0, textBefore.length - length)
+            if (rest.isEmpty()) return length
+            length += wordBackspaceLength(rest)
+        }
+        return length
+    }
+
     /** Grafeemien määrä: montako näppäintapahtumana lähetettyä poistoa teksti vaatii. */
     fun graphemeCount(text: CharSequence): Int {
         val iterator = BreakIterator.getCharacterInstance()

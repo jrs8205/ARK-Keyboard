@@ -43,7 +43,8 @@ class CursorExpectation {
     /** Teksti kirjoitettiin kursorin kohdalle; mahdollinen valinta korvautuu. */
     fun onCommit(length: Int) {
         if (!known) return
-        start += length
+        // Vasemmalle laajennetussa valinnassa alku on lopun jäljessä.
+        start = minOf(start, end) + length
         end = start
     }
 

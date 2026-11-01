@@ -67,6 +67,16 @@ class LayoutsTest {
     }
 
     @Test
+    fun `kursoritilassa on nuolet ja kaikki muokkaustoiminnot`() {
+        val keys = Layouts.arrows.rows.flatten()
+        val commands = keys.mapNotNull { (it.action as? KeyAction.Edit)?.command }
+        assertEquals(EditCommand.entries.toSet(), commands.toSet())
+        assertEquals(4, keys.count { it.action is KeyAction.Arrow })
+        assertTrue(keys.any { it.action == KeyAction.Backspace })
+        assertTrue(keys.none { it.action == KeyAction.None })
+    }
+
+    @Test
     fun `numerorivin kanssa ylarivilla ei ole numeropainalluksia`() {
         val layout = Layouts.letters()
         assertTrue(layout.rows[1].all { it.longPress.isEmpty() })

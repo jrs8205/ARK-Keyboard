@@ -229,6 +229,26 @@ class WordToolsTest {
     }
 
     @Test
+    fun `wordsBackspaceLength laskee usean sanan pituuden`() {
+        assertEquals(0, WordTools.wordsBackspaceLength("yksi kaksi kolme", 0))
+        assertEquals(5, WordTools.wordsBackspaceLength("yksi kaksi kolme", 1))
+        assertEquals(11, WordTools.wordsBackspaceLength("yksi kaksi kolme", 2))
+        assertEquals(16, WordTools.wordsBackspaceLength("yksi kaksi kolme", 3))
+    }
+
+    @Test
+    fun `wordsBackspaceLength ei ylita tekstin alkua`() {
+        assertEquals(4, WordTools.wordsBackspaceLength("yksi", 5))
+        assertEquals(0, WordTools.wordsBackspaceLength("", 2))
+    }
+
+    @Test
+    fun `graphemeCount laskee emojin yhdeksi`() {
+        assertEquals(5, WordTools.graphemeCount("sana😀"))
+        assertEquals(0, WordTools.graphemeCount(""))
+    }
+
+    @Test
     fun `wordBackspaceLength pelkka valilyontijono`() {
         assertEquals(3, WordTools.wordBackspaceLength("   "))
         assertEquals(0, WordTools.wordBackspaceLength(""))

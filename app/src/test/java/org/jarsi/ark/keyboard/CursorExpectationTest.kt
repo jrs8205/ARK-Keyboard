@@ -79,6 +79,16 @@ class CursorExpectationTest {
     }
 
     @Test
+    fun `kirjoitus korvaa myos takaperin tehdyn valinnan`() {
+        val cursor = CursorExpectation()
+        cursor.begin(9, 4, 9, lookback)
+        cursor.onSetSelection(9, 4)
+        cursor.onCommit(2)
+        assertEquals(6, cursor.start)
+        assertEquals(6, cursor.end)
+    }
+
+    @Test
     fun `nappaintapahtuman jalkeen sijainti on tuntematon kunnes paivitys kertoo sen`() {
         val cursor = at(10)
         cursor.onUnknownEdit()

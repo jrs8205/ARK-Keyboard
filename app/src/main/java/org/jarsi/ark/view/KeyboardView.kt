@@ -24,6 +24,7 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
 import org.jarsi.ark.R
+import org.jarsi.ark.keyboard.EditCommand
 import org.jarsi.ark.keyboard.Key
 import org.jarsi.ark.keyboard.KeyAction
 import org.jarsi.ark.keyboard.KeyboardHeight
@@ -48,12 +49,32 @@ class KeyboardView(context: Context) : View(context) {
 
         /** Pohjassa pidetyn näppäimen toistokerta; oletuksena kuin napautus. */
         fun onKeyRepeat(action: KeyAction) = onKey(action)
+
+        /** Välilyönnin pitkä painallus: näppäimistön vaihto. */
+        fun onSpaceLongPress()
+
+        /** Liu'utus askelpalauttimesta vasemmalle: [words] sanaa valittuna poistoa varten. */
+        fun onBackspaceSwipe(words: Int)
+
+        /** Sormi nousi liu'utuksen lopuksi: valittu poistetaan. */
+        fun onBackspaceSwipeEnd()
+
+        /** Liu'utus keskeytyi: valinta perutaan eikä mitään poisteta. */
+        fun onBackspaceSwipeCancel()
     }
 
     var listener: Listener? = null
 
     var shiftState: ShiftState = ShiftState.OFF
         set(value) {
+            field = value
+            invalidate()
+        }
+
+    /** Korostaa Valitse-näppäimen, kun nuolet laajentavat valintaa. */
+    var selectionActive = false
+        set(value) {
+            if (field == value) return
             field = value
             invalidate()
         }
@@ -107,6 +128,9 @@ class KeyboardView(context: Context) : View(context) {
     private inner class PressInfo(val bounded: BoundedKey) {
         var spaceAnchorX = 0f
         var spaceSwiping = false
+        var backspaceAnchorX = 0f
+        var backspaceSwiping = false
+        var backspaceWords = 0
         var committed = false
         var alternatesOpen = false
         val longPressRunnable = Runnable { handleLongPress(this) }
@@ -115,6 +139,7 @@ class KeyboardView(context: Context) : View(context) {
                 val action = bounded.key.action
                 if (action == KeyAction.Backspace) {
                     // Pohjassa pidetty askelpalautin siirtyy sanapoistoon.
+                    committed = true
                     listener?.onKeyRepeat(action)
                     postDelayed(this, REPEAT_WORD_INTERVAL_MS)
                 } else {
@@ -241,10 +266,13 @@ class KeyboardView(context: Context) : View(context) {
         }
     }
 
+    private fun isAccentKey(key: Key): Boolean = key.action == KeyAction.Enter ||
+        (key.action == KeyAction.Shift && shiftState != ShiftState.OFF) ||
+        (selectionActive && key.action == KeyAction.Edit(EditCommand.SELECT))
+
     private fun keyColor(key: Key, isPressed: Boolean): Int = when {
         isPressed -> theme.keyPressed
-        key.action == KeyAction.Enter -> theme.accent
-        key.action == KeyAction.Shift && shiftState != ShiftState.OFF -> theme.accent
+        isAccentKey(key) -> theme.accent
         key.action is KeyAction.Text || key.action == KeyAction.Space -> theme.key
         else -> theme.specialKey
     }
@@ -259,11 +287,9 @@ class KeyboardView(context: Context) : View(context) {
 
     private fun drawLabel(canvas: Canvas, key: Key, rect: RectF) {
         val label = labelFor(key)
-        val accentKey = key.action == KeyAction.Enter ||
-            (key.action == KeyAction.Shift && shiftState != ShiftState.OFF)
         val contentColor = when {
             key.action == KeyAction.Space -> theme.hint
-            accentKey -> theme.accentText
+            isAccentKey(key) -> theme.accentText
             else -> theme.text
         }
         val icon = iconFor(key)
@@ -340,13 +366,18 @@ class KeyboardView(context: Context) : View(context) {
         val info = PressInfo(bounded)
         pressed[pointerId] = info
         val key = bounded.key
-        if (key.repeatable) {
-            // Toistuva näppäin poistaa heti ja jatkaa pohjassa pidettäessä.
+        if (key.action == KeyAction.Backspace) {
+            // Poisto tapahtuu vasta sormen noustessa, koska painallus voi
+            // olla liu'utuksen alku; pohjassa pito alkaa toistaa viiveellä.
+            info.backspaceAnchorX = x
+            postDelayed(info.repeatRunnable, REPEAT_DELAY_MS)
+        } else if (key.repeatable) {
+            // Toistuva näppäin toimii heti ja jatkaa pohjassa pidettäessä.
             info.committed = true
             commit(key)
             postDelayed(info.repeatRunnable, REPEAT_DELAY_MS)
         } else {
-            if (key.longPress.isNotEmpty()) {
+            if (key.longPress.isNotEmpty() || key.action == KeyAction.Space) {
                 postDelayed(info.longPressRunnable, ViewConfiguration.getLongPressTimeout().toLong())
             }
             if (key.action == KeyAction.Space) {
@@ -362,7 +393,7 @@ class KeyboardView(context: Context) : View(context) {
     private fun handleMove(pointerId: Int, x: Float) {
         val info = pressed[pointerId] ?: return
         if (info.alternatesOpen) return
-        if (info.bounded.key.action == KeyAction.Space) {
+        if (info.bounded.key.action == KeyAction.Space && !info.committed) {
             val threshold = dp(16f)
             var dx = x - info.spaceAnchorX
             while (abs(dx) >= threshold) {
@@ -370,8 +401,31 @@ class KeyboardView(context: Context) : View(context) {
                 listener?.onSpaceSwipe(step)
                 info.spaceAnchorX += step * threshold
                 info.spaceSwiping = true
+                removeCallbacks(info.longPressRunnable)
                 dx = x - info.spaceAnchorX
             }
+        }
+        if (info.bounded.key.action == KeyAction.Backspace && !info.committed) {
+            handleBackspaceSwipe(info, x)
+        }
+    }
+
+    /**
+     * Gboardin tapaan: liu'utus vasemmalle valitsee sana kerrallaan, takaisin
+     * vedetty valinta pienenee, ja poisto tapahtuu vasta sormen noustessa.
+     */
+    private fun handleBackspaceSwipe(info: PressInfo, x: Float) {
+        val distance = info.backspaceAnchorX - x
+        if (!info.backspaceSwiping) {
+            if (distance < dp(BACKSPACE_SWIPE_START_DP)) return
+            info.backspaceSwiping = true
+            removeCallbacks(info.repeatRunnable)
+        }
+        val past = distance - dp(BACKSPACE_SWIPE_START_DP)
+        val words = if (past < 0f) 0 else 1 + (past / dp(BACKSPACE_SWIPE_STEP_DP)).toInt()
+        if (words != info.backspaceWords) {
+            info.backspaceWords = words
+            listener?.onBackspaceSwipe(words)
         }
     }
 
@@ -383,6 +437,7 @@ class KeyboardView(context: Context) : View(context) {
         when {
             // Valikko jää auki; merkki valitaan napauttamalla.
             info.alternatesOpen -> Unit
+            info.backspaceSwiping -> listener?.onBackspaceSwipeEnd()
             info.spaceSwiping || info.committed -> Unit
             else -> commit(info.bounded.key)
         }
@@ -400,6 +455,7 @@ class KeyboardView(context: Context) : View(context) {
         for (info in pressed.values) {
             removeCallbacks(info.longPressRunnable)
             removeCallbacks(info.repeatRunnable)
+            if (info.backspaceSwiping) listener?.onBackspaceSwipeCancel()
         }
         pressed.clear()
         hidePreview()
@@ -427,6 +483,13 @@ class KeyboardView(context: Context) : View(context) {
 
     private fun handleLongPress(info: PressInfo) {
         val key = info.bounded.key
+        if (key.action == KeyAction.Space) {
+            // Väli ei enää kirjoitu sormen noustessa.
+            info.committed = true
+            if (hapticsEnabled) performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            listener?.onSpaceLongPress()
+            return
+        }
         if (key.longPress.isEmpty() || alternatesPopup != null) return
         info.alternatesOpen = true
         // Valikon avautuminen tuntuu samoin kuin valinta siitä (vrt. Gboard).
@@ -581,5 +644,8 @@ class KeyboardView(context: Context) : View(context) {
         // Sanapoisto etenee harvemmin kuin merkkipoisto, jotta pitkän
         // painalluksen voi lopettaa halutun sanan kohdalle.
         const val REPEAT_WORD_INTERVAL_MS = 250L
+
+        const val BACKSPACE_SWIPE_START_DP = 20f
+        const val BACKSPACE_SWIPE_STEP_DP = 28f
     }
 }

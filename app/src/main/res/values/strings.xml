@@ -141,6 +141,8 @@
     <string name="kaannos_kopioi">Kopioi</string>
     <string name="kaannos_valitse_kaikki">Valitse kaikki</string>
     <string name="kaannos_kopioitu">Kopioitu</string>
+    <string name="muokkaus_valitse_ensin">Valitse ensin teksti</string>
+    <string name="muokkaus_kaannos_valinta">Käännösnäkymässä valitaan pitkällä painalluksella</string>
     <string name="kaannos_ladataan">Valmistellaan käännösmalleja…</string>
     <string name="kaannos_mallit_puuttuvat">Kääntäjä lataa kieliparin mallit kerran (noin 30 Mt kieltä kohden). Sen jälkeen käännökset tehdään laitteella.</string>
     <string name="kaannos_lataa_mallit">Lataa mallit</string>

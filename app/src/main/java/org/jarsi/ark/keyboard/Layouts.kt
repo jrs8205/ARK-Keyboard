@@ -159,26 +159,34 @@ object Layouts {
         )
     )
 
+    private fun edit(command: EditCommand, label: String) = Key(KeyAction.Edit(command), label)
+
     /**
-     * Nuolitila: isot suuntanäppäimet ristikkona koko näppäinalueelle.
+     * Kursoritila: isot suuntanäppäimet ristikkona ja niiden ympärillä
+     * muokkaustoiminnot kuten Gboardin tekstinmuokkausnäkymässä.
      * Takaisin näppäimistöön palataan työkalurivin nuolikuvakkeesta.
      */
     val arrows = KeyboardLayout(
         listOf(
             listOf(
-                Key(KeyAction.None),
+                edit(EditCommand.HOME, "Alkuun"),
                 Key(KeyAction.Arrow(KeyEvent.KEYCODE_DPAD_UP), "▲", repeatable = true),
-                Key(KeyAction.None),
+                edit(EditCommand.END, "Loppuun"),
             ),
             listOf(
                 Key(KeyAction.Arrow(KeyEvent.KEYCODE_DPAD_LEFT), "◀", repeatable = true),
-                Key(KeyAction.None),
+                edit(EditCommand.SELECT, "Valitse"),
                 Key(KeyAction.Arrow(KeyEvent.KEYCODE_DPAD_RIGHT), "▶", repeatable = true),
             ),
             listOf(
-                Key(KeyAction.None),
+                edit(EditCommand.COPY, "Kopioi"),
                 Key(KeyAction.Arrow(KeyEvent.KEYCODE_DPAD_DOWN), "▼", repeatable = true),
-                Key(KeyAction.None),
+                edit(EditCommand.PASTE, "Liitä"),
+            ),
+            listOf(
+                edit(EditCommand.SELECT_ALL, "Valitse kaikki"),
+                edit(EditCommand.CUT, "Leikkaa"),
+                Key(KeyAction.Backspace, "⌫", repeatable = true),
             ),
         )
     )

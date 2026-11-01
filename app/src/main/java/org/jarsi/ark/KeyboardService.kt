@@ -30,13 +30,17 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.view.HapticFeedbackConstants
+import android.view.InputDevice
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.Gravity
 import android.view.View
 import android.view.ViewConfiguration
 import android.os.SystemClock
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.InputMethodManager
 import android.webkit.MimeTypeMap
 import android.widget.LinearLayout
 import android.widget.PopupWindow
@@ -50,6 +54,7 @@ import androidx.preference.PreferenceManager
 import org.jarsi.ark.clipboard.Clip
 import org.jarsi.ark.clipboard.ClipStore
 import org.jarsi.ark.clipboard.NewClipActivity
+import org.jarsi.ark.clipboard.RecentClipOffer
 import org.jarsi.ark.data.ApiKeyStore
 import org.jarsi.ark.data.ChatGptPlan
 import org.jarsi.ark.data.ClipEntity
@@ -72,6 +77,7 @@ import org.jarsi.ark.engine.SuggestionEngine
 import org.jarsi.ark.engine.WordTools
 import org.jarsi.ark.keyboard.AutoCaps
 import org.jarsi.ark.keyboard.CursorExpectation
+import org.jarsi.ark.keyboard.EditCommand
 import org.jarsi.ark.keyboard.FieldProfile
 import org.jarsi.ark.keyboard.InlineChips
 import org.jarsi.ark.keyboard.KeyAction
@@ -81,6 +87,7 @@ import org.jarsi.ark.keyboard.ShiftState
 import org.jarsi.ark.keyboard.ShiftTracker
 import org.jarsi.ark.keyboard.SlowConnectionGuard
 import org.jarsi.ark.keyboard.SmartSpace
+import org.jarsi.ark.keyboard.SuggestionItem
 import org.jarsi.ark.keyboard.SymbolOrder
 import org.jarsi.ark.keyboard.TextUndo
 import org.jarsi.ark.keyboard.ToolbarOrder
@@ -141,6 +148,21 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private var pendingClipboardPanel = false
 
     private val clipStore = ClipStore()
+
+    // Tuore kopio tarjotaan ehdotusrivillä, kunnes tarjous vanhenee.
+    private val recentClip = RecentClipOffer()
+    private val recentClipExpiry = Runnable { refreshSuggestionRow() }
+
+    // Kursoritilan Valitse: nuolet laajentavat valintaa.
+    private var selectionMode = false
+
+    // Askelpalauttimen liu'utus: teksti luetaan kerran liu'utuksen alussa.
+    private class BackspaceSwipe(val before: CharSequence, val end: Int) {
+        var selected = 0
+    }
+
+    private var backspaceSwipe: BackspaceSwipe? = null
+    private var translateSwipeWords = 0
     private val pendingClips = mutableListOf<Clip>()
     private var clipboardPanel: ClipboardPanelView? = null
     private var emojiPanel: EmojiPanelView? = null
@@ -468,6 +490,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     override fun onDestroy() {
         editorSessionId++
         cancelDeferredFieldWork()
+        mainHandler.removeCallbacks(recentClipExpiry)
         dictation.stop()
         openAiDictation?.destroy()
         translator?.close()
@@ -654,6 +677,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 persistClip(saved)
                 pruneClips()
                 refreshClipboardPanel()
+                saved.text?.let { recentClip.offer(saved.id, it) }
+                mainHandler.removeCallbacks(recentClipExpiry)
+                mainHandler.postDelayed(recentClipExpiry, RecentClipOffer.OFFER_MS)
+                refreshSuggestionRow()
             } else {
                 val uri = item.uri ?: return
                 // Tyyppi tarjoajalta; jos se ei kerro, leikkeen oma kuvaus
@@ -790,6 +817,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (page == Page.ARROWS || page == Page.SYMBOLS3) {
             page = Page.LETTERS
             updateLayout()
+            updateAutoCaps()
         }
     }
 
@@ -1663,6 +1691,213 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         return true
     }
 
+    override fun onSpaceLongPress() {
+        getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
+    }
+
+    override fun onBackspaceSwipe(words: Int) {
+        if (translateMode) {
+            // Käännösnäkymässä ei ole valintaa näytettäväksi: poisto tehdään lopuksi.
+            translateSwipeWords = words
+            swipeTick()
+            return
+        }
+        val ic = currentInputConnection ?: return
+        val swipe = backspaceSwipe ?: startBackspaceSwipe(ic) ?: return
+        val length = WordTools.wordsBackspaceLength(swipe.before, words)
+        if (length == swipe.selected) return
+        swipe.selected = length
+        markOwnEdit()
+        selectInField(ic, swipe.end - length, swipe.end)
+        swipeTick()
+    }
+
+    /**
+     * Aloittaa liu'utuksen kursorista. Jos kentässä on jo valinta tai kursorin
+     * sijaintia ei saa selville, liu'utus jää pelkäksi poistoksi lopussa.
+     */
+    private fun startBackspaceSwipe(ic: InputConnection): BackspaceSwipe? {
+        if (cursor.known && cursor.start != cursor.end) return null
+        val end = if (cursor.known) {
+            cursor.end
+        } else {
+            ic.getExtractedText(ExtractedTextRequest(), 0)
+                ?.takeIf { it.selectionStart == it.selectionEnd && it.selectionEnd >= 0 }
+                ?.let { it.startOffset + it.selectionEnd }
+                ?: return null
+        }
+        val before = readBefore(ic, BACKSPACE_SWIPE_LOOKBACK) ?: return null
+        return BackspaceSwipe(before, end).also { backspaceSwipe = it }
+    }
+
+    private fun selectInField(ic: InputConnection, start: Int, end: Int) {
+        ic.setSelection(start, end)
+        cursor.onSetSelection(start, end)
+    }
+
+    private fun swipeTick() {
+        if (vibrationEnabled) {
+            keyboardView?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+    }
+
+    override fun onBackspaceSwipeEnd() {
+        autoSpaceState = 0
+        punctSpaceAdded = false
+        pendingRevert = null
+        pendingPeriodRevert = false
+        textUndo.clear()
+        markOwnEdit()
+        if (translateMode) {
+            val words = translateSwipeWords
+            translateSwipeWords = 0
+            if (words > 0 && activeTranslateBuffer().isNotEmpty()) {
+                repeat(words) { activeTranslateBuffer().backspaceWord() }
+                onTranslateBufferChanged()
+            }
+            feedback(AudioManager.FX_KEYPRESS_DELETE)
+            return
+        }
+        val swipe = backspaceSwipe
+        backspaceSwipe = null
+        // Ilman liu'utustilaa (kentässä valmis valinta) poistetaan valinta.
+        if (swipe == null || swipe.selected > 0) {
+            sendKeyToField(KeyEvent.KEYCODE_DEL)
+            learning.resetContext()
+        }
+        feedback(AudioManager.FX_KEYPRESS_DELETE)
+    }
+
+    override fun onBackspaceSwipeCancel() {
+        translateSwipeWords = 0
+        val swipe = backspaceSwipe ?: return
+        backspaceSwipe = null
+        if (swipe.selected > 0) {
+            currentInputConnection?.let { selectInField(it, swipe.end, swipe.end) }
+        }
+    }
+
+    /** Kursoritilan muokkaustoiminnot; käännösnäkymässä ne koskevat kirjoitettavaa aluetta. */
+    private fun handleEdit(command: EditCommand) {
+        feedback()
+        if (translateMode) {
+            handleTranslateEdit(command)
+            return
+        }
+        val ic = currentInputConnection ?: return
+        when (command) {
+            EditCommand.SELECT -> {
+                selectionMode = !selectionMode
+                keyboardView?.selectionActive = selectionMode
+            }
+            EditCommand.SELECT_ALL -> ic.performContextMenuAction(android.R.id.selectAll)
+            EditCommand.COPY -> {
+                if (cursor.known && cursor.start == cursor.end) {
+                    showMessage(R.string.muokkaus_valitse_ensin)
+                } else {
+                    ic.performContextMenuAction(android.R.id.copy)
+                    showMessage(R.string.kaannos_kopioitu)
+                }
+            }
+            EditCommand.CUT -> {
+                if (cursor.known && cursor.start == cursor.end) {
+                    showMessage(R.string.muokkaus_valitse_ensin)
+                } else {
+                    normalizeSelection(ic)
+                    ic.performContextMenuAction(android.R.id.cut)
+                    endSelectionMode()
+                }
+            }
+            EditCommand.PASTE -> {
+                normalizeSelection(ic)
+                ic.performContextMenuAction(android.R.id.paste)
+                endSelectionMode()
+            }
+            EditCommand.HOME -> sendMovementKey(KeyEvent.KEYCODE_MOVE_HOME)
+            EditCommand.END -> sendMovementKey(KeyEvent.KEYCODE_MOVE_END)
+        }
+        if (command != EditCommand.HOME && command != EditCommand.END) cursor.onUnknownEdit()
+        learning.resetContext()
+    }
+
+    /**
+     * Vasemmalle laajennetussa valinnassa alku on lopun jäljessä. Osa
+     * sovelluksista ei kestä sitä liittäessään (Google Messages kaatui:
+     * "replace (14 ... 12) has end before start"), joten valinta käännetään.
+     */
+    private fun normalizeSelection(ic: InputConnection) {
+        val extracted = ic.getExtractedText(ExtractedTextRequest(), 0) ?: return
+        if (extracted.selectionStart <= extracted.selectionEnd) return
+        selectInField(
+            ic,
+            extracted.startOffset + extracted.selectionEnd,
+            extracted.startOffset + extracted.selectionStart,
+        )
+    }
+
+    private fun handleTranslateEdit(command: EditCommand) {
+        val buffer = activeTranslateBuffer()
+        when (command) {
+            EditCommand.HOME -> {
+                buffer.moveToStart()
+                updateTranslateBar()
+            }
+            EditCommand.END -> {
+                buffer.moveToEnd()
+                updateTranslateBar()
+            }
+            EditCommand.COPY, EditCommand.CUT -> {
+                if (buffer.isEmpty()) return
+                clipboardManager?.setPrimaryClip(ClipData.newPlainText("", buffer.text))
+                showMessage(R.string.kaannos_kopioitu)
+                if (command == EditCommand.CUT) {
+                    buffer.clear()
+                    onTranslateBufferChanged()
+                }
+            }
+            EditCommand.PASTE -> {
+                val clipText = clipboardManager?.primaryClip
+                    ?.takeIf { it.itemCount > 0 }
+                    ?.getItemAt(0)?.coerceToText(this)?.toString()
+                if (clipText.isNullOrEmpty()) return
+                buffer.insert(clipText)
+                onTranslateBufferChanged()
+            }
+            // Käännösnäkymän oma valinta tehdään pitkällä painalluksella.
+            EditCommand.SELECT, EditCommand.SELECT_ALL ->
+                showMessage(R.string.muokkaus_kaannos_valinta)
+        }
+    }
+
+    private fun endSelectionMode() {
+        selectionMode = false
+        keyboardView?.selectionActive = false
+    }
+
+    /** Nuoli tai rivin alku/loppu; Valitse-tilassa shift pohjassa, jolloin valinta laajenee. */
+    private fun sendMovementKey(keyCode: Int) {
+        if (!selectionMode) {
+            sendKeyToField(keyCode)
+            return
+        }
+        val ic = currentInputConnection ?: return
+        val time = SystemClock.uptimeMillis()
+        val meta = KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON
+        fun event(action: Int, code: Int, state: Int) = KeyEvent(
+            time, time, action, code, 0, state,
+            KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+            KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE,
+            InputDevice.SOURCE_KEYBOARD,
+        )
+        // Tekstikenttä lukee shift-tilan shift-näppäimen omasta tapahtumasta,
+        // ei pelkästä nuolen metatilasta.
+        ic.sendKeyEvent(event(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT, meta))
+        ic.sendKeyEvent(event(KeyEvent.ACTION_DOWN, keyCode, meta))
+        ic.sendKeyEvent(event(KeyEvent.ACTION_UP, keyCode, meta))
+        ic.sendKeyEvent(event(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SHIFT_LEFT, 0))
+        cursor.onUnknownEdit()
+    }
+
     /**
      * Askelpalautin heti kaksoisvälilyönnin pisteen jälkeen palauttaa välit,
      * jos kentän teksti on yhä se, mikä pisteestä jäi.
@@ -1933,6 +2168,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     hideAllPanels()
                     page = if (page == Page.ARROWS) Page.LETTERS else Page.ARROWS
                     updateLayout()
+                    updateAutoCaps()
                     updateSuggestions()
                     feedback()
                 }
@@ -1941,6 +2177,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     hideAllPanels()
                     page = if (page == Page.SYMBOLS3) Page.LETTERS else Page.SYMBOLS3
                     updateLayout()
+                    updateAutoCaps()
                     updateSuggestions()
                     feedback()
                 }
@@ -2168,7 +2405,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             container.addView(it, LinearLayout.LayoutParams(params))
         }
         suggestionBar = SuggestionBarView(this).also {
-            it.listener = ::onSuggestionPicked
+            it.listener = ::onSuggestionItemPicked
             it.menuListener = object : SuggestionBarView.MenuListener {
                 override fun isOwnWord(word: String) = learning.isOwnWord(word)
 
@@ -2286,9 +2523,56 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     /** Ehdotusrivin paikka: täyttöchipit, kun niitä on, muuten sanaehdotukset. */
     private fun updateSuggestionRow() {
-        val state = InlineChips.rowState(suggestionsVisible, inlineChips?.count ?: 0)
+        val state = InlineChips.rowState(
+            suggestionsVisible || recentClipItem() != null,
+            inlineChips?.count ?: 0,
+        )
         inlineChips?.visibility = if (state.chipsVisible) View.VISIBLE else View.GONE
         suggestionBar?.visibility = if (state.suggestionsVisible) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Tuore kopio rivin kohteena, jos sen saa näyttää. Numerokentässäkin:
+     * vahvistuskoodin liittäminen on tavallisin käyttö. Salasanoja ei näytetä.
+     */
+    private fun recentClipItem(): SuggestionItem.RecentClip? {
+        if (field.password || field.rawKeys || page == Page.ARROWS) return null
+        if (!prefs.getBoolean("ehdotukset", true)) return null
+        return recentClip.current()?.let { SuggestionItem.RecentClip(RecentClipOffer.preview(it.text)) }
+    }
+
+    private fun refreshSuggestionRow() {
+        if (!isInputViewShown) return
+        updateSuggestionRow()
+        updateSuggestions()
+    }
+
+    private fun onSuggestionItemPicked(item: SuggestionItem) {
+        when (item) {
+            is SuggestionItem.Word -> onSuggestionPicked(item.text)
+            is SuggestionItem.Emoji -> Unit
+            is SuggestionItem.RecentClip -> pasteRecentClip()
+        }
+    }
+
+    private fun pasteRecentClip() {
+        val offer = recentClip.current() ?: return
+        recentClip.clear()
+        mainHandler.removeCallbacks(recentClipExpiry)
+        val ic = currentInputConnection
+        if (ic != null) {
+            markOwnEdit()
+            if (translateMode) {
+                activeTranslateBuffer().insert(offer.text)
+                onTranslateBufferChanged()
+            } else {
+                commitToField(ic, offer.text)
+                textUndo.record(offer.text)
+                updateAutoCaps()
+            }
+            feedback()
+        }
+        refreshSuggestionRow()
     }
 
     private fun clearInlineChips() {
@@ -2531,9 +2815,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             mainHandler.postDelayed(deferredRefresh, SLOW_REFRESH_MS)
             return
         }
+        val clipItem = recentClipItem()
         // Nuolitilassa kursoria liikutellaan tekstin yli; ehdotukset olisivat vain häiriöksi.
         if (!suggestionsVisible || page == Page.ARROWS) {
-            bar.setSuggestions(emptyList())
+            bar.setSuggestions(listOfNotNull(clipItem))
             return
         }
         // Käännöstilassa ehdotukset lasketaan siitä alueesta, jota kirjoitetaan.
@@ -2561,7 +2846,12 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             if (generation == suggestGeneration) {
                 mainHandler.post {
                     if (generation == suggestGeneration) {
-                        bar.setSuggestions(WordTools.withTypedWord(word, result))
+                        // Kopio väistyy, kun käyttäjä kirjoittaa sanaa.
+                        val clip = if (word.isEmpty()) clipItem else null
+                        bar.setSuggestions(
+                            listOfNotNull(clip) +
+                                WordTools.withTypedWord(word, result).map(SuggestionItem::Word)
+                        )
                         shownCompletions =
                             if (word.isNotEmpty()) result.take(SHOWN_TOP_COUNT) else emptyList()
                     }
@@ -2590,6 +2880,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         keyboardView?.setKeyboardLayout(layout)
         keyboardView?.shiftState = shift.state
+        if (page != Page.ARROWS) endSelectionMode()
         // Työkalurivin korostukset seuraavat aina nykyistä sivua.
         toolbar?.arrowsActive = page == Page.ARROWS
         toolbar?.webActive = page == Page.SYMBOLS3
@@ -2673,7 +2964,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     override fun onKey(action: KeyAction) {
         // Tekstiä muuttava näppäin katkaisee automaattivälin seurannan.
         when (action) {
-            KeyAction.Backspace, KeyAction.Enter, is KeyAction.Arrow -> {
+            KeyAction.Backspace, KeyAction.Enter, is KeyAction.Arrow, is KeyAction.Edit -> {
                 autoSpaceState = 0
                 punctSpaceAdded = false
                 markOwnEdit()
@@ -2770,12 +3061,13 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     }
                     updateTranslateBar()
                 } else {
-                    sendKeyToField(action.keyCode)
+                    sendMovementKey(action.keyCode)
                     // Kursorin siirto katkaisee sanaketjun.
                     learning.resetContext()
                 }
                 feedback()
             }
+            is KeyAction.Edit -> handleEdit(action.command)
             KeyAction.None -> Unit
             is KeyAction.Text -> Unit
         }
@@ -2950,6 +3242,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         const val LIVE_TRANSLATE_DELAY_MS = 300L
         const val EXTERNAL_SELECTION_MS = 1000L
         const val CURSOR_CHECK_LOOKBACK = 1024
+        const val BACKSPACE_SWIPE_LOOKBACK = 1024
         const val SLOW_REFRESH_MS = 150L
         const val WORD_DELETE_CHECK_MS = 200L
         const val MAX_IMAGE_CLIP_BYTES = 10L * 1024 * 1024

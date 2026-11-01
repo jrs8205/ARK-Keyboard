@@ -1,5 +1,8 @@
 package org.jarsi.ark.keyboard
 
+/** Kursoritilan muokkaustoiminto. */
+enum class EditCommand { SELECT, SELECT_ALL, COPY, CUT, PASTE, HOME, END }
+
 /** Näppäimen toiminto: joko tekstin syöttö tai erikoistoiminto. */
 sealed interface KeyAction {
     data class Text(val text: String) : KeyAction
@@ -13,6 +16,8 @@ sealed interface KeyAction {
 
     /** Nuolinäppäin: lähettää annetun näppäinkoodin (DPAD-suunnat). */
     data class Arrow(val keyCode: Int) : KeyAction
+
+    data class Edit(val command: EditCommand) : KeyAction
 
     /** Tyhjä paikka asettelussa; ei piirretä eikä reagoi kosketukseen. */
     data object None : KeyAction

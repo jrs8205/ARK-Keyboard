@@ -14,6 +14,7 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import org.jarsi.ark.R
 import org.jarsi.ark.keyboard.KeyboardHeight
+import org.jarsi.ark.keyboard.SuggestionItem
 import org.jarsi.ark.theme.KeyboardTheme
 import kotlin.math.abs
 import kotlin.math.max
@@ -34,12 +35,12 @@ class SuggestionBarView(context: Context) : View(context) {
         fun onBlockWord(word: String)
     }
 
-    var listener: ((String) -> Unit)? = null
+    var listener: ((SuggestionItem) -> Unit)? = null
     var menuListener: MenuListener? = null
 
     private var theme = KeyboardTheme.load(context)
     private var heightScale = 1f
-    private var suggestions: List<String> = emptyList()
+    private var suggestions: List<SuggestionItem> = emptyList()
     private var slotWidths = FloatArray(0)
     private var contentWidth = 0f
     private var scrollOffset = 0f
@@ -75,6 +76,10 @@ class SuggestionBarView(context: Context) : View(context) {
     private val dividerPaint = Paint()
     private val pressedPaint = Paint()
     private val pinPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val clipIcon = context.getDrawable(R.drawable.ic_clipboard)?.mutate()
+
+    // Tuoreen kopion kohdassa teksti siirtyy kuvakkeen verran oikealle.
+    private fun clipIconSize() = height * 0.42f
 
     fun applySettings(newTheme: KeyboardTheme, scale: Float) {
         theme = newTheme
@@ -85,10 +90,10 @@ class SuggestionBarView(context: Context) : View(context) {
         invalidate()
     }
 
-    fun setSuggestions(words: List<String>) {
-        if (words == suggestions) return
+    fun setSuggestions(items: List<SuggestionItem>) {
+        if (items == suggestions) return
         closeMenu()
-        suggestions = words
+        suggestions = items
         scrollOffset = 0f
         pressedIndex = -1
         computeSlots()
@@ -109,8 +114,9 @@ class SuggestionBarView(context: Context) : View(context) {
         textPaint.textSize = height * 0.38f
         slotWidths = FloatArray(suggestions.size)
         var total = 0f
-        suggestions.forEachIndexed { i, word ->
-            slotWidths[i] = max(textPaint.measureText(word) + dp(28f), dp(60f))
+        suggestions.forEachIndexed { i, item ->
+            val iconWidth = if (item is SuggestionItem.RecentClip) clipIconSize() + dp(6f) else 0f
+            slotWidths[i] = max(textPaint.measureText(item.text) + iconWidth + dp(28f), dp(60f))
             total += slotWidths[i]
         }
         // Jos ehdotukset eivät täytä riviä, ne levitetään koko leveydelle.
@@ -128,7 +134,7 @@ class SuggestionBarView(context: Context) : View(context) {
         textPaint.textSize = height * 0.38f
         dividerPaint.color = theme.hint and 0x60FFFFFF.toInt()
         var x = -scrollOffset
-        suggestions.forEachIndexed { i, word ->
+        suggestions.forEachIndexed { i, item ->
             val slot = slotWidths[i]
             if (x + slot > 0 && x < width) {
                 if (i == pressedIndex) {
@@ -136,14 +142,29 @@ class SuggestionBarView(context: Context) : View(context) {
                     canvas.drawRect(x, 0f, x + slot, height.toFloat(), pressedPaint)
                 }
                 textPaint.color = theme.text
+                var textCenter = x + slot / 2f
+                if (item is SuggestionItem.RecentClip) {
+                    val size = clipIconSize()
+                    val total = size + dp(6f) + textPaint.measureText(item.text)
+                    val left = x + (slot - total) / 2f
+                    clipIcon?.setTint(theme.text)
+                    clipIcon?.setBounds(
+                        left.roundToInt(),
+                        ((height - size) / 2f).roundToInt(),
+                        (left + size).roundToInt(),
+                        ((height + size) / 2f).roundToInt(),
+                    )
+                    clipIcon?.let { it.draw(canvas) }
+                    textCenter = left + size + dp(6f) + textPaint.measureText(item.text) / 2f
+                }
                 canvas.drawText(
-                    word,
-                    x + slot / 2f,
+                    item.text,
+                    textCenter,
                     height / 2f + textPaint.textSize * 0.35f,
                     textPaint,
                 )
                 // Kiinnitetty sana merkitään pienellä korostuspisteellä.
-                if (menuListener?.isPinned(word) == true) {
+                if (item is SuggestionItem.Word && menuListener?.isPinned(item.text) == true) {
                     pinPaint.color = theme.accent
                     canvas.drawCircle(x + slot - dp(9f), dp(9f), dp(3f), pinPaint)
                 }
@@ -162,7 +183,10 @@ class SuggestionBarView(context: Context) : View(context) {
                 downOffset = scrollOffset
                 dragging = false
                 pressedIndex = indexAt(event.x)
-                if (pressedIndex >= 0 && menuListener != null) {
+                // Valikko koskee vain sanoja.
+                if (suggestions.getOrNull(pressedIndex) is SuggestionItem.Word &&
+                    menuListener != null
+                ) {
                     postDelayed(
                         longPressRunnable,
                         ViewConfiguration.getLongPressTimeout().toLong(),
@@ -211,7 +235,7 @@ class SuggestionBarView(context: Context) : View(context) {
 
     private fun openMenu() {
         val menu = menuListener ?: return
-        val word = suggestions.getOrNull(pressedIndex) ?: return
+        val word = (suggestions.getOrNull(pressedIndex) as? SuggestionItem.Word)?.text ?: return
         menuWord = word
         menuActions = buildList {
             add(MenuAction.PIN)

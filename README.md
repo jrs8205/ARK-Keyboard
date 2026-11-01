@@ -49,7 +49,11 @@ Jos sovelluksesta on sinulle hyötyä, voit tukea sen kehitystä:
 
 ## Lisenssi
 
-[GPL-3.0](LICENSE). Sanalista: Kotimaisten kielten keskus, lähteet ja lisenssit:
-[docs/sanalista.md](docs/sanalista.md). Emojiaineisto: Unicode, ks.
+[GPL-3.0](LICENSE). Sanalista perustuu Kotimaisten kielten keskuksen aineistoihin
+[Kirjoitetun suomen kielen sanojen taajuuksia](https://kaino.kotus.fi/sanat/taajuuslista/parole.php)
+(EUPL) ja
+[Nykysuomen sanalista 2024](https://kotus.fi/sanakirjat/kielitoimiston-sanakirja/nykysuomen-sana-aineistot/nykysuomen-sanalista/)
+(CC BY 4.0). Aineistoja on muokattu, ks. [docs/sanalista.md](docs/sanalista.md).
+Emojiaineisto: Unicode, ks.
 [docs/emojit.md](docs/emojit.md). Kuvakkeet:
 [Material Symbols](https://fonts.google.com/icons) (Apache 2.0).

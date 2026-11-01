@@ -12,15 +12,18 @@ vuosina 1996–1998).
   <https://kaino.kotus.fi/sanat/taajuuslista/parole.php>
 * Julkaisija: Kotimaisten kielten keskus (Kotus), aineisto listattu myös
   Kielipankissa
-* Lisenssi: **varmistamatta, tiedot ovat ristiriitaiset.**
-  [Kielipankin metatietueen](https://urn.fi/urn:nbn:fi:lb-20140730146) kuvaus ja
-  [ISLRN-rekisteri](https://islrn.org/resources/245-100-606-282-0/) ilmoittavat
-  lisenssiksi EUPL:n. Saman metatietueen rakenteiset kentät sanovat kuitenkin
+* Lisenssi: EUPL [Kielipankin metatietueen](https://urn.fi/urn:nbn:fi:lb-20140730146)
+  kuvauksen ja [ISLRN-rekisterin](https://islrn.org/resources/245-100-606-282-0/)
+  mukaan. Kotuksen [periaatepäätöksen](https://kotus.fi/kotus/kieliaineistot/kieliaineistojen-kaytto/)
+  mukaan sen julkiset sähköiset kieliaineistot, joiden vapaata käyttöä laki tai
+  sopimukset eivät rajoita, ovat vapaasti käytettävissä. Aineisto on ladattavissa
+  ilman kirjautumista, eikä Kotuksen sivuilla ole sen käyttöä kieltävää tietoa.
+* Avoin huomio: Kotuksen [aineistosivulla](https://kotus.fi/kotus/kieliaineistot/aineistot-verkossa/)
+  listalla ei ole omaa lisenssimerkintää, ja metatietueen rakenteiset kentät sanovat
   `Licence: other` ja `Restrictions of use: academic-nonCommercialUse, other,
-  shareAlike` (tarkistettu 1.11.2026). Kotuksen
-  [aineistosivulla](https://kotus.fi/kotus/kieliaineistot/aineistot-verkossa/) listalla
-  ei ole lisenssimerkintää, ja aineiston saa ladattua ilman kirjautumista. Asia
-  varmistetaan Kotukselta (arkisto@kotus.fi) ennen seuraavaa julkaisua.
+  shareAlike` (tarkistettu 1.11.2026). Tietue on muunnettu vanhasta
+  META-SHARE-tietueesta, jossa on sama rajoitus, joten kentät ovat todennäköisesti
+  vanhentuneita. Kotus ei ole tätä vahvistanut. Jos Kotus ilmoittaa toisin, lista vaihdetaan.
 * Lähtötiedosto: `parole_frek3.zip` (sanamuodot, jotka esiintyvät korpuksessa
   vähintään kolmesti)
 
@@ -34,6 +37,19 @@ taajuuslistaa harvinaisemmilla sanoilla.
 * Perusmuodot, joita taajuuslistalla ei jo ole, lisätään listan jatkoksi
   pienellä oletustaajuudella (2), jolloin ne ovat täydennyksissä tarjolla
   mutta yleisyydeltään tunnettujen sanojen takana.
+
+## Lähdemerkintä
+
+Kotus edellyttää, että lähde nimetään, alkuperäiseen aineistoon linkitetään ja
+muokkauksesta kerrotaan:
+
+> Sanalista perustuu Kotimaisten kielten keskuksen aineistoihin
+> [Kirjoitetun suomen kielen sanojen taajuuksia](https://kaino.kotus.fi/sanat/taajuuslista/parole.php)
+> (Parole-korpus 1996–1998) ja
+> [Nykysuomen sanalista 2024](https://kotus.fi/sanakirjat/kielitoimiston-sanakirja/nykysuomen-sana-aineistot/nykysuomen-sanalista/)
+> (CC BY 4.0). Aineistoja on muokattu: sanamuodot on pienennetty ja siivottu,
+> harvinaisia todennäköisiä virhemuotoja on jätetty pois, listat on yhdistetty ja
+> Nykysuomen sanalistasta on käytetty vain hakusanat.
 
 ## Käsittely
 

@@ -3081,7 +3081,12 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         keyboardView?.obscureKeyLabels = shouldObscureKeyLabels()
         if (lockedMode) toolbar?.visibility = View.GONE
 
-        page = if (field.numeric) Page.NUMERIC else Page.LETTERS
+        // Kentän vaihtuessa haku suljetaan ensin, ettei sen palauttama sivu jää
+        // voimaan uudessa kentässä. Saman kentän uudelleenkäynnistys jättää
+        // haun auki, ja sivu palaa siitä kentän mukaisena.
+        if (!restarting) closeEmojiSearch(returnToPanel = false)
+        val fieldPage = if (field.numeric) Page.NUMERIC else Page.LETTERS
+        if (emojiSearchActive) pageBeforeSearch = fieldPage else page = fieldPage
 
         keyboardView?.enterText = enterLabel()
         editorSessionId++

@@ -19,7 +19,11 @@ laitteella.
 - **Käännösnäkymä** laitteella sekä valinnainen ✨ AI-käännös (ChatGPT-tilauksella tai API-avaimella)
 - **Sanelu** laitteen tai OpenAI:n puheentunnistuksella
 - **Leikepöytä** kiinnitettävine leikkeineen
-- **Emojit**, kursoritila ja muokattava työkalurivi
+- **Emojit** sivuittain, suomenkielisellä haulla ja ehdotuksilla
+- **Kursoritila** valinnalla, kopioinnilla ja liittämisellä sekä muokattava työkalurivi
+- **Teemat:** järjestelmän mukaan, vaalea, tumma, musta tai taustakuvan värit
+- **Yhden käden tila** ja tuore kopio ehdotusriviltä liitettävänä
+- **TalkBack-tuki** ja toiminta lukitusnäytöllä heti käynnistyksen jälkeen
 - **Salasanojen täyttö** suoraan ehdotusriviltä
 - **Yksityinen:** ei analytiikkaa eikä mainoksia, oppiminen pysyy laitteella
 
@@ -47,4 +51,6 @@ Jos sovelluksesta on sinulle hyötyä, voit tukea sen kehitystä:
 
 [GPL-3.0](LICENSE). Sanalista: Kotimaisten kielten keskus
 ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.fi)), ks.
-[docs/sanalista.md](docs/sanalista.md).
+[docs/sanalista.md](docs/sanalista.md). Emojiaineisto: Unicode, ks.
+[docs/emojit.md](docs/emojit.md). Kuvakkeet:
+[Material Symbols](https://fonts.google.com/icons) (Apache 2.0).

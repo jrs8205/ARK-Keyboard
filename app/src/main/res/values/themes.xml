@@ -45,7 +45,7 @@
         <item name="iconSpaceReserved">false</item>
     </style>
 
-    <!-- Valintalistat (teema, sanelun tunnistus, AI-palvelu) samoina kortteina. -->
+    <!-- Valintalistat samoina kortteina. -->
     <style name="ArkDialogPreference" parent="@style/Preference.DialogPreference.Material">
         <item name="android:layout">@layout/asetus_rivi</item>
         <item name="iconSpaceReserved">false</item>

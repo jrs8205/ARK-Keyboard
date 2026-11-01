@@ -194,6 +194,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     // Emojihaku: näppäily kertyy hakusanaksi eikä mene kenttään.
     private var emojiSearchActive = false
     private val emojiQuery = TranslateBuffer()
+    private var pageBeforeSearch = Page.LETTERS
     private var translateBar: TranslateBarView? = null
     private var translateMode = false
     private val translateBuffer = TranslateBuffer()
@@ -520,7 +521,6 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             } catch (e: IOException) {
                 // Sanalista puuttuu tai ei aukea: ehdotusrivi jää tyhjäksi.
             }
-            loadEmojiIndex()
             try {
                 val db = LearnedDatabase.create(this)
                 val stamp = LearnedDataStamp.stamp
@@ -543,6 +543,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 // Tietokanta ei auennut: oppiminen jää pois, näppäimistö toimii silti.
             }
             mainHandler.post { updateSuggestions() }
+            // Viimeisenä: fonttituen tarkistus ei saa viivästyttää omia sanoja.
+            loadEmojiIndex()
         }.start()
     }
 
@@ -958,6 +960,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         hideEmojiPanel()
         emojiSearchActive = true
         emojiQuery.clear()
+        // Haku kirjoitetaan kirjaimilla myös numerokentässä; sivu palaa haun jälkeen.
+        pageBeforeSearch = page
         page = Page.LETTERS
         shift.reset()
         updateLayout()
@@ -973,6 +977,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         emojiQuery.clear()
         emojiSearchBar?.visibility = View.GONE
         toolbar?.visibility = View.VISIBLE
+        page = pageBeforeSearch
+        updateLayout()
         updateSuggestionRow()
         if (returnToPanel) {
             showEmojiPanel()
@@ -1943,7 +1949,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 ?.let { it.startOffset + it.selectionEnd }
                 ?: return null
         }
-        val before = readBefore(ic, BACKSPACE_SWIPE_LOOKBACK) ?: return null
+        val before = ic.getTextBeforeCursor(BACKSPACE_SWIPE_LOOKBACK, 0) ?: return null
         return BackspaceSwipe(before, end).also { backspaceSwipe = it }
     }
 
@@ -2179,6 +2185,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun deleteWordFromField(ic: InputConnection, before: CharSequence) {
         val length = WordTools.wordBackspaceLength(before)
         val word = before.subSequence(before.length - length, before.length).toString()
+        val fullBefore = before.toString()
         if (deleteWordsWithKeys) {
             repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
             return
@@ -2194,7 +2201,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 return@Runnable
             }
             val current = currentInputConnection ?: return@Runnable
-            if (readBefore(current, length)?.toString() == word) {
+            // Koko alkuperäinen häntä: "ja ja " näyttäisi lyhyellä vertailulla poistamattomalta.
+            if (readBefore(current, fullBefore.length)?.toString() == fullBefore) {
                 deleteWordsWithKeys = true
                 repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
             }
@@ -3061,7 +3069,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         cursor.begin(
             info.initialSelStart,
             info.initialSelEnd,
-            readBefore(CURSOR_CHECK_LOOKBACK)?.length,
+            // Kynnys koskee lyhyitä näppäilyn aikaisia lukuja, ei tätä isoa kertalukua.
+            currentInputConnection?.getTextBeforeCursor(CURSOR_CHECK_LOOKBACK, 0)?.length,
             CURSOR_CHECK_LOOKBACK,
         )
         shownCompletions = emptyList()

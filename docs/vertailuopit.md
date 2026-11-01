@@ -20,34 +20,26 @@ joten sitä käytetään vain käytöksen vertailukohtana.
 - Käännösrivin puskuri käsittelee grafeemit (emojit) BreakIteratorilla
   kuten HeliBoardin poistologiikka.
 
-## Poimittavaa (tehtävälistalle, tärkeysjärjestyksessä)
+## Otettu käyttöön
 
-1. **Hitaan InputConnectionin tunnistus ja kevennys** (LatinIME
-   RichInputConnection: 200 ms / 1000 ms kynnykset, 10 min muisti):
-   mitataan tekstikyselyjen kesto; hitaassa kentässä ohitetaan
-   raskaat kyselyt (ehdotusten kontekstihaku), jottei UI jäädy
-   raskaissa chat- ja web-sovelluksissa.
-2. **Odotettuun kursoripositioon perustuva oma/vieras-muutosten
-   erottelu** (isBelatedExpectedUpdate): nykyinen aikaperusteinen
-   heuristiikka (1 s) korvataan odotetuilla positioilla, jolloin
-   sanaketjun katkaisu ja automaatti-isot osuvat tarkemmin.
-3. **Keskitetty sovelluskohtaisten kikkojen paikka** (HeliBoard
-   AppWorkarounds.kt): paketin nimen perusteella korjataan kentän
-   liput ennen muuta logiikkaa — esim. Firefox ei merkitse
-   web-kenttiään, jolloin liput pakotetaan itse.
-4. **Puolustava tarkistus ennen peruutuksia**: ennen välinsiirron tai
-   automaattikorjauksen peruutusta varmistetaan, että kentän sisältö
-   on yhä odotettu, ja luovutetaan hallitusti jos sovellus ehti
-   muuttaa tekstiä (LatinIME revertDoubleSpacePeriod-malli).
-5. **Valehteleva alkukursori** (tryFixLyingCursorPosition): laitteen
-   kääntö tai kentän uudelleenfokusointi voi antaa vanhentuneen
-   kursoriposition; tarkistetaan tekstin todellinen pituus.
-6. **Kaksoisvälilyönti pisteeksi** — Gboard-käytös, joka meiltä
-   puuttuu kokonaan; ehdot LatinIME:ssa (edeltävä merkki kirjain tai
-   sulkeva merkki, aikaraja, vain yleistekstikentissä). Kysytään
-   käyttäjältä halutaanko.
-7. **Sanapoiston varareitti web-kentissä**: jos deleteSurroundingText
-   ei tehoa (selainkentät), poistetaan näppäintapahtumin.
+Kaikki aiemmin poimitut asiat on toteutettu:
+
+1. **Hitaan kentän tunnistus** (LatinIME: 200 ms, 10 min muisti):
+   `SlowConnectionGuard`. Hitaassa kentässä valinnaiset kyselyt odottavat
+   kirjoitustaukoa, eikä kirjaimelta kysytä kentän tekstiä missään kentässä.
+2. **Oma ja vieras muutos odotetulla kursoripositiolla**
+   (isBelatedExpectedUpdate): `CursorExpectation`. Aikaikkuna on varareittinä
+   näppäintapahtumille, joiden vaikutusta ei voi tietää.
+3. **Sovelluskohtaisten poikkeusten paikka** (HeliBoard AppWorkarounds):
+   `AppQuirks` ja `FieldProfile`. HeliBoardin Firefox-poikkeuksia ei otettu,
+   koska ne koskevat composing-tekstiä, jota ARK ei käytä kirjoittaessa, ja
+   NO_SUGGESTIONS-pakotus poistaisi automaattikorjauksen.
+4. **Puolustava tarkistus ennen peruutuksia**: automaattikorjauksen,
+   peruutusnapin ja kaksoisvälilyönnin pisteen peruutus tarkistavat kentän tekstin.
+5. **Valehteleva alkukursori** (tryFixLyingCursorPosition): `CursorExpectation.begin`.
+6. **Kaksoisvälilyönti pisteeksi** peruutuksineen.
+7. **Sanapoiston varareitti**: jos kenttä ei reagoi tekstipoistoon, sana
+   poistetaan näppäintapahtumin ja kentässä jatketaan niillä.
 
 ## Sanelusta
 

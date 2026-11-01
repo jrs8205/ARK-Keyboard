@@ -19,8 +19,20 @@ API-avaimet eivät kulje varmuuskopiossa.
 - **Ehdotuksen pitkä painallus:** kiinnitä, poista tai estä sana.
 - **Väärä korjaus:** askelpalautin heti korjauksen jälkeen peruu sen.
 - **Kursori:** liu'uta sormea välilyönnillä.
-- **Sana kerrallaan pois:** pidä askelpalautinta pohjassa.
-- **Piste:** kaksi nopeaa välilyöntiä.
+- **Sana kerrallaan pois:** pidä askelpalautinta pohjassa tai liu'uta siitä
+  vasemmalle; vedä takaisin, jos et halua poistaa.
+- **Piste:** kaksi nopeaa välilyöntiä. Askelpalautin heti perään palauttaa välit.
+- **Pienet kirjaimet lauseen alkuun:** napauta vaihtoa kerran. Nopea
+  tuplanapautus lukitsee isot kirjaimet.
+- **Näppäimistön vaihto:** pidä välilyöntiä pohjassa.
+- **Tuore kopio:** kopioitu teksti näkyy minuutin ajan ehdotusrivillä, josta sen
+  liittää yhdellä napautuksella.
+- **Emojin ihonväri:** pidä emojia pohjassa; valinta muistetaan.
+- **Yhden käden tila:** työkalurivin napista. Sivupalkista näppäimistö siirtyy
+  toiselle puolelle tai palaa täyteen leveyteen.
+
+Lukitusnäytöllä puhelimen käynnistyksen jälkeen näppäimistö toimii ilman
+asetuksia ja oppimista, koska ne avautuvat vasta ensimmäisen avauksen jälkeen.
 
 ## AI-käännös ja sanelu
 
@@ -85,7 +97,7 @@ makseta kahdesti.
 - Lisäksi verkkoa käytetään käännösmallien kertalataukseen (~30 Mt/kieli)
   ja AI-mallilistan hakuun.
 - API-avaimet säilyvät laitteella Android Keystorella salattuina.
-- Salasanakentissä ei opita mitään.
+- Salasana- ja incognito-kentissä ei opita mitään, ei emojihistoriaakaan.
 
 ## Kääntäminen lähdekoodista
 

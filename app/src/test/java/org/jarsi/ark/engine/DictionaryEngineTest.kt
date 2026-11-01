@@ -10,6 +10,59 @@ class DictionaryEngineTest {
         DictionaryEngine().apply { load(lines.asSequence()) }
 
     @Test
+    fun `aakkosittain ladattu ja sekaisin ladattu lista toimivat samoin`() {
+        val sorted = engine("auto 5", "koira 9", "kissa 3".let { "koti 3" })
+        val mixed = engine("koti 3", "auto 5", "koira 9")
+        for (e in listOf(sorted, mixed)) {
+            assertEquals(listOf("koira", "koti"), e.suggest("ko"))
+            assertEquals(9L, e.frequencyOf("KOIRA"))
+            assertEquals(0L, e.frequencyOf("koir"))
+            assertEquals(9L, e.maxFrequency())
+            assertEquals(listOf("koira", "auto", "koti"), e.topWords())
+        }
+    }
+
+    @Test
+    fun `near loytaa vaihdetut merkit ja kaksi muokkausta`() {
+        val e = engine("koira 100", "tuli 50", "kassi 40")
+        assertEquals(listOf("koira"), e.near("koria", 1))
+        assertEquals(listOf("tuli"), e.near("talo", 2))
+        assertEquals(listOf("kassi"), e.near("kissa", 2))
+    }
+
+    @Test
+    fun `near ei loyda kauempaa kuin raja`() {
+        val e = engine("koira 100")
+        assertEquals(emptyList<String>(), e.near("kuura", 1))
+    }
+
+    @Test
+    fun `aakkoset sailyvat tiiviissa muodossa`() {
+        val e = engine("äiti 10", "öljy 5", "åbo 3", "yö-työ 2")
+        assertEquals(listOf("äiti"), e.suggest("äi"))
+        assertEquals(listOf("öljy"), e.near("öljä", 1))
+        assertEquals(listOf("åbo"), e.suggest("å"))
+        assertEquals(listOf("yö-työ"), e.suggest("yö"))
+    }
+
+    @Test
+    fun `listan ulkopuoliset merkit eivat kaada hakua`() {
+        val e = engine("привет 5", "auto 3")
+        assertEquals(listOf("auto"), e.suggest("a"))
+        assertEquals(emptyList<String>(), e.suggest("при"))
+        assertEquals(0L, e.frequencyOf("привет"))
+        assertEquals(emptyList<String>(), e.near("привет", 1))
+    }
+
+    @Test
+    fun `uusi lataus korvaa vanhan`() {
+        val e = engine("auto 3")
+        e.load(sequenceOf("talo 4"))
+        assertEquals(emptyList<String>(), e.suggest("au"))
+        assertEquals(listOf("talo"), e.suggest("ta"))
+    }
+
+    @Test
     fun `etuliitehaku palauttaa sanat yleisyysjarjestyksessa`() {
         val e = engine("sovellus 50", "sovelluksen 30", "sovi 80", "auto 100")
         assertEquals(listOf("sovi", "sovellus", "sovelluksen"), e.suggest("sov"))

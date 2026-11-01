@@ -3212,6 +3212,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     private fun updateSuggestions(immediate: Boolean = false) {
         val bar = suggestionBar ?: return
+        // Jokainen päivitys mitätöi kesken olevan laskennan, myös silloin kun
+        // uutta ei aloiteta: vanha tulos ei saa ylikirjoittaa uuden kentän riviä.
+        val generation = ++suggestGeneration
         if (emojiSearchActive) return
         // Hitaassa kentässä tekstikysely odottaa kirjoitustaukoa, ettei
         // jokainen näppäily jää odottamaan sovelluksen vastausta.
@@ -3235,7 +3238,6 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         // Lauseen alussa (automaattinen iso kirjain päällä) ehdotukset alkavat isolla.
         val shiftActive = shift.state != ShiftState.OFF
-        val generation = ++suggestGeneration
         val index = emojiIndex
         val recents = emojiRecents
         executeSuggest {

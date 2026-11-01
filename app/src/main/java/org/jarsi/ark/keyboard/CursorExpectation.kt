@@ -22,9 +22,11 @@ class CursorExpectation {
 
     /**
      * Kentän alku. Kentän ilmoittama alkusijainti voi olla vanhentunut
-     * (laitteen kääntö, uudelleenfokusointi), joten se tarkistetaan
+     * (laitteen kääntö, uudelleenfokusointi), joten kursori tarkistetaan
      * todellisesta tekstistä: [lookback]-rajaa lyhyempi [textBeforeLength]
-     * on kursorin koko etäisyys kentän alusta.
+     * on sen koko etäisyys kentän alusta. Valintaa ei korjata: luettu teksti
+     * päättyy sen pienempään päätepisteeseen, ja väärin korjattu valinta
+     * saisi poiston osumaan väärään tekstiin.
      */
     fun begin(initialStart: Int, initialEnd: Int, textBeforeLength: Int?, lookback: Int) {
         if (textBeforeLength == null) {
@@ -33,10 +35,10 @@ class CursorExpectation {
         }
         start = initialStart
         end = initialEnd
+        if (start != end) return
         if (textBeforeLength < lookback && (textBeforeLength > start || start < lookback)) {
-            val collapsed = start == end
             start = textBeforeLength
-            if (collapsed || start > end) end = start
+            end = textBeforeLength
         }
     }
 

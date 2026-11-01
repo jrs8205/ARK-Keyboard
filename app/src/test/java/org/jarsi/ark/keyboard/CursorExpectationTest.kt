@@ -140,6 +140,23 @@ class CursorExpectationTest {
     }
 
     @Test
+    fun `aloitus sailyttaa takaperin tehdyn valinnan`() {
+        // Kursorin edeltävä teksti päättyy valinnan pienempään päätepisteeseen.
+        val cursor = CursorExpectation()
+        cursor.begin(10, 6, 6, lookback)
+        assertEquals(10, cursor.start)
+        assertEquals(6, cursor.end)
+    }
+
+    @Test
+    fun `aloitus ei korjaa valintaa tekstin pituudella`() {
+        val cursor = CursorExpectation()
+        cursor.begin(10, 14, 5, lookback)
+        assertEquals(10, cursor.start)
+        assertEquals(14, cursor.end)
+    }
+
+    @Test
     fun `aloitus ei paattele sijaintia katkaistusta tekstista`() {
         val cursor = CursorExpectation()
         cursor.begin(5000, 5000, lookback, lookback)

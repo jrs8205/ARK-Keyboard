@@ -8,9 +8,11 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.Spannable
 import android.text.SpannableStringBuilder
+import android.text.TextUtils
 import android.text.style.BackgroundColorSpan
 import android.text.style.ReplacementSpan
 import android.view.Gravity
+import android.util.TypedValue
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
@@ -197,7 +199,7 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         textSize = 15f
         gravity = Gravity.CENTER
         maxLines = 1
-        setPadding(dp(16), dp(10), dp(16), dp(10))
+        setPadding(dp(8), dp(10), dp(8), dp(10))
         setOnClickListener { showLanguageMenu(it, sourceSide = true) }
     }
 
@@ -550,17 +552,21 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
     // Näkyy vain, kun tyhjennettävää on, joten se poistuu painettaessa.
     private val clearButton = TextView(context).apply {
         text = context.getString(R.string.kaannos_tyhjenna)
-        textSize = 15f
-        setPadding(dp(14), dp(9), dp(14), dp(9))
+        textSize = ACTION_TEXT_SP
+        maxLines = 1
+        ellipsize = TextUtils.TruncateAt.END
+        setPadding(dp(CLEAR_PADDING_DP), dp(9), dp(CLEAR_PADDING_DP), dp(9))
         visibility = GONE
         setOnClickListener { listener?.onClear() }
     }
 
     private val insertLabel = TextView(context).apply {
         text = context.getString(R.string.kaannos_vie)
-        textSize = 15f
+        textSize = ACTION_TEXT_SP
+        maxLines = 1
+        ellipsize = TextUtils.TruncateAt.END
         setTypeface(typeface, Typeface.BOLD)
-        setPadding(dp(16), dp(9), dp(16), dp(9))
+        setPadding(dp(INSERT_PADDING_DP), dp(9), dp(INSERT_PADDING_DP), dp(9))
         setOnClickListener { listener?.onInsert() }
     }
 
@@ -582,7 +588,12 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
     }
 
     // Toimintorivi käännöksen alla: ✨, kopiointi ja vienti kenttään.
-    private val actionRow = LinearLayout(context).apply {
+    private val actionRow = object : LinearLayout(context) {
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            fitActionButtons(MeasureSpec.getSize(widthMeasureSpec))
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        }
+    }.apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         minimumHeight = dp(44)
@@ -592,17 +603,46 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         addView(
             clearButton,
             LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                marginStart = dp(6)
+                marginStart = dp(ACTION_MARGIN_DP)
             },
         )
         addView(
             insertLabel,
             LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                marginStart = dp(6)
-                marginEnd = dp(12)
+                marginStart = dp(ACTION_MARGIN_DP)
+                marginEnd = dp(ACTION_END_MARGIN_DP)
             },
         )
         addView(downloadLabel)
+    }
+
+    /**
+     * Tekstinapit kutistuvat, jos rivi ei muuten mahdu (kapea näyttö tai suuri fonttikoko).
+     * Koot lasketaan aina perusarvosta, joten mittaus ei käynnisty uudelleen turhaan.
+     */
+    private fun fitActionButtons(available: Int) {
+        if (available <= 0) return
+        val buttons = listOf(clearButton to CLEAR_PADDING_DP, insertLabel to INSERT_PADDING_DP)
+            .filter { it.first.visibility != GONE }
+        if (buttons.isEmpty()) return
+        val icons = listOf(aiLabel, copyIcon).count { it.visibility != GONE }
+        val fixed = dp(44) * icons + dp(ACTION_MARGIN_DP) * buttons.size + dp(ACTION_END_MARGIN_DP)
+        val baseSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP, ACTION_TEXT_SP, resources.displayMetrics,
+        )
+        val natural = buttons.sumOf { (button, padding) ->
+            val measured = Paint(button.paint).apply { textSize = baseSize }.measureText(button.text.toString())
+            (measured + 2 * dp(padding)).toDouble()
+        }
+        val scale = ((available - fixed) / natural).toFloat().coerceIn(ACTION_MIN_SCALE, 1f)
+        for ((button, padding) in buttons) {
+            val size = baseSize * scale
+            if (abs(button.textSize - size) > 0.5f) button.setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
+            val horizontal = (dp(padding) * scale).roundToInt()
+            if (button.paddingStart != horizontal) {
+                button.setPadding(horizontal, button.paddingTop, horizontal, button.paddingBottom)
+            }
+        }
     }
 
     // Kielirivi alimpana näppäimistön yläpuolella kuten Google Kääntäjässä.
@@ -1092,6 +1132,12 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
     }
 
     private companion object {
+        const val ACTION_TEXT_SP = 15f
+        const val ACTION_MIN_SCALE = 0.6f
+        const val ACTION_MARGIN_DP = 6
+        const val ACTION_END_MARGIN_DP = 12
+        const val CLEAR_PADDING_DP = 14
+        const val INSERT_PADDING_DP = 16
         // Leveydetön merkki kantaa kursoripiirron; itse teksti ei muutu.
         const val CURSOR_PLACEHOLDER = "\u200B"
 

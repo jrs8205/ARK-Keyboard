@@ -190,6 +190,7 @@
     <string name="kaannos_lataus_virhe">Käännösmallin lataus epäonnistui – tarkista verkkoyhteys</string>
     <string name="kaannos_virhe">Käännös epäonnistui – yritä uudelleen</string>
     <string name="kaannos_vie">Vie käännös</string>
+    <string name="kaannos_ei_mahdu">Käännös ei mahtunut kenttään</string>
     <string name="kaannos_sulje">Sulje kääntäjä</string>
     <string name="kaannos_tyhjenna">Tyhjennä</string>
     <string name="kaannos_tyhja">Käännös ilmestyy tähän</string>

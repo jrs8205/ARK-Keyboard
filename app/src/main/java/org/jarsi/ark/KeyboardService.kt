@@ -114,6 +114,7 @@ import org.jarsi.ark.view.InlineChipsView
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
+import com.google.mlkit.common.sdkinternal.MlKitContext
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.languageid.LanguageIdentificationOptions
 import com.google.mlkit.nl.languageid.LanguageIdentifier
@@ -521,6 +522,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     private fun startUserServices() {
+        // Kirjaston oma alustus ei käynnisty, jos prosessi syntyi ennen laitteen avausta.
+        MlKitContext.initializeIfNeeded(applicationContext)
         prefs = PreferenceManager.getDefaultSharedPreferences(this)
         prefs.registerOnSharedPreferenceChangeListener(prefListener)
         clipboardManager = getSystemService(ClipboardManager::class.java)
@@ -1180,7 +1183,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             return
         }
         insertTranslation {
-            translationExported = true
+            // Kenttään ei mennyt mitään: lähde säilyy, koska mitään ei lähetetty.
+            translationExported = exportedTranslation.text.isNotEmpty()
             hideTranslateBar()
         }
     }
@@ -1578,15 +1582,26 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun commitTranslation(translation: String) {
         val ic = currentInputConnection ?: return
         markOwnEdit()
+        val positionBefore = fieldPosition(ic)
         ic.beginBatchEdit()
         val previous = exportedTranslation.text
-        if (previous.isNotEmpty() && readBefore(ic, previous.length)?.toString() == previous) {
-            deleteFromField(ic, previous.length)
-        }
+        val replaced = previous.isNotEmpty() && readBefore(ic, previous.length)?.toString() == previous
+        if (replaced) deleteFromField(ic, previous.length)
         commitToField(ic, translation)
         ic.endBatchEdit()
-        textUndo.record(translation)
-        exportedTranslation.record(translation)
+        val positionAfter = fieldPosition(ic)
+        positionAfter?.let { cursor.onSetSelection(it, it) }
+        val moved = if (positionBefore != null && positionAfter != null) {
+            positionAfter - positionBefore + if (replaced) previous.length else 0
+        } else {
+            null
+        }
+        val inserted = ExportedTranslation.insertedPart(
+            translation, readBefore(ic, translation.length)?.toString(), moved,
+        )
+        if (inserted.isNotEmpty()) textUndo.record(inserted)
+        exportedTranslation.record(inserted)
+        if (inserted != translation) showMessage(R.string.kaannos_ei_mahdu)
         feedback()
     }
 
@@ -2284,7 +2299,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         } else {
             val ic = currentInputConnection ?: return
             markOwnEdit()
-            val before = readBefore(ic, WORD_BACKSPACE_LOOKBACK)
+            // Valinta poistetaan ensin: tekstipoisto osuisi valinnan edellä olevaan tekstiin.
+            val hasSelection = !ic.getSelectedText(0).isNullOrEmpty() ||
+                (cursor.known && cursor.start != cursor.end)
+            val before = if (hasSelection) null else readBefore(ic, WORD_BACKSPACE_LOOKBACK)
             if (before.isNullOrEmpty()) {
                 sendKeyToField(KeyEvent.KEYCODE_DEL)
             } else {
@@ -2315,7 +2333,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val word = before.subSequence(before.length - length, before.length).toString()
         val fullBefore = before.toString()
         if (deleteWordsWithKeys) {
-            repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
+            deleteWordWithKeys(ic, word)
             return
         }
         val positionBefore = if (cursor.known) cursor.start else null
@@ -2343,6 +2361,24 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         wordDeleteCheck = check
         mainHandler.postDelayed(check, WORD_DELETE_CHECK_MS)
+    }
+
+    /**
+     * Näppäintapahtumien määrä ei vastaa grafeemeja (yhdistävä tarke poistuu erikseen), joten
+     * sana valitaan ja poistetaan kerralla. Jos kenttä ei tue valintaa, yksi tapahtuma grafeemia
+     * kohden voi jättää sanaa osittain, mutta ei poista koskaan liikaa.
+     */
+    private fun deleteWordWithKeys(ic: InputConnection, word: String) {
+        val end = fieldPosition(ic)
+        if (end != null && end >= word.length) {
+            selectInField(ic, end - word.length, end)
+            if (ic.getSelectedText(0)?.toString() == word) {
+                sendKeyToField(KeyEvent.KEYCODE_DEL)
+                return
+            }
+            selectInField(ic, end, end)
+        }
+        repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
     }
 
     private fun fieldPosition(ic: InputConnection): Int? =

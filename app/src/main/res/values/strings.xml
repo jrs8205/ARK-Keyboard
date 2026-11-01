@@ -189,7 +189,8 @@
     <string name="kaannos_lataa_mallit">Download models</string>
     <string name="kaannos_lataus_virhe">Could not download the translation model – check your connection</string>
     <string name="kaannos_virhe">Translation failed – please try again</string>
-    <string name="kaannos_vie">Insert translation</string>
+    <string name="kaannos_vie">Insert</string>
+    <string name="kaannos_ei_mahdu">The translation did not fit in the field</string>
     <string name="kaannos_sulje">Close translator</string>
     <string name="kaannos_tyhjenna">Clear</string>
     <string name="kaannos_tyhja">The translation appears here</string>

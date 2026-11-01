@@ -29,4 +29,18 @@ class ExportedTranslation {
     fun clear() {
         text = ""
     }
+
+    companion object {
+        /**
+         * Kenttään todella mennyt osa viennistä: pituusraja voi katkaista sen tai hylätä
+         * kokonaan. Ilman varmuutta vientiä ei pidetä perille menneenä, jolloin lähde säilyy
+         * eikä seuraava vienti korvaa kentän tekstiä.
+         */
+        fun insertedPart(exported: String, textBeforeCursor: String?, cursorMoved: Int?): String =
+            when {
+                textBeforeCursor == exported -> exported
+                cursorMoved == null -> ""
+                else -> exported.take(cursorMoved.coerceIn(0, exported.length))
+            }
+    }
 }

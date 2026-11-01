@@ -35,7 +35,7 @@ The app follows your phone's language: Finnish if the phone is in Finnish, other
 - **Switch keyboard:** hold the space bar.
 - **Recent copy:** copied text stays on the suggestion row for a minute, and one tap pastes it.
 - **Emoji skin tone:** hold an emoji; your choice is remembered.
-- **Translation:** Insert translation puts the text in the field and closes the translator, so you
+- **Translation:** Insert puts the text in the field and closes the translator, so you
   can send the message right away. If you reopen the translator before sending, you can continue
   the same text, and a new insert replaces the translation in the field. After sending, the
   translator opens empty. The Back button closes the translator first.

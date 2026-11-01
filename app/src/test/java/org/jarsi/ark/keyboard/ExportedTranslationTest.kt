@@ -44,6 +44,33 @@ class ExportedTranslationTest {
     }
 
     @Test
+    fun `kokonaan kenttaan mennyt vienti tunnistetaan tekstista`() {
+        assertEquals("Hi there", ExportedTranslation.insertedPart("Hi there", "Hi there", null))
+    }
+
+    @Test
+    fun `pituusrajan katkaisema vienti on kursorin siirtyman mittainen`() {
+        assertEquals("Hi th", ExportedTranslation.insertedPart("Hi there", "Hi th", 5))
+    }
+
+    @Test
+    fun `hylatty vienti on tyhja`() {
+        assertEquals("", ExportedTranslation.insertedPart("Hi there", "Abcde", 0))
+    }
+
+    @Test
+    fun `ilman varmuutta vientia ei oleteta perille menneeksi`() {
+        assertEquals("", ExportedTranslation.insertedPart("Hi there", "Abcde", null))
+        assertEquals("", ExportedTranslation.insertedPart("Hi there", null, null))
+    }
+
+    @Test
+    fun `siirtyma rajataan viennin mittaan`() {
+        assertEquals("Hi there", ExportedTranslation.insertedPart("Hi there", "x", 99))
+        assertEquals("", ExportedTranslation.insertedPart("Hi there", "x", -3))
+    }
+
+    @Test
     fun `tyhjennys unohtaa viennin`() {
         val export = exported(chat)
         export.clear()

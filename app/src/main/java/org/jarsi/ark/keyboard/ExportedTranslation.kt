@@ -2,8 +2,9 @@ package org.jarsi.ark.keyboard
 
 /**
  * Viimeksi kenttään viety käännös. Se säilyy, kun näppäimistö piilotetaan ja
- * sama kenttä avataan uudelleen, ja unohtuu vasta oikeassa kentän vaihdossa:
- * muuten kääntäjä tulkitsisi lähettämättömän viestin lähetetyksi.
+ * sama kenttä avataan uudelleen: muuten kääntäjä tulkitsisi lähettämättömän
+ * viestin lähetetyksi. Uusi syöteistunto unohtaa sen, koska tunnisteet eivät
+ * yksin erota verkko- ja Compose-kenttiä toisistaan.
  */
 class ExportedTranslation {
 

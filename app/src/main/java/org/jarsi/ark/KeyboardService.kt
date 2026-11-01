@@ -2287,11 +2287,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     /**
-     * Poistaa sanan kursorin edeltä. Jos kenttä ei reagoi tekstipoistoon
-     * (eräät selainkentät), sana poistetaan näppäintapahtumin ja kentässä
-     * jatketaan niillä. Tarkistus odottaa hetken, koska osa kentistä vastaa
-     * vanhentuneesta tekstistä heti poiston perään; ilman tätä sana voisi
-     * poistua kahdesti.
+     * Poistaa sanan kursorin edeltä. Jos kenttä ei näytä reagoivan tekstipoistoon
+     * (eräät selainkentät), seuraavat poistot tehdään näppäintapahtumin. Tätä
+     * sanaa ei poisteta uudelleen: muuttumaton teksti ei todista, ettei poisto
+     * ole vielä matkalla, ja uusinta voisi viedä myös edeltävää tekstiä. Parempi
+     * yksi tehoton painallus kuin hävinnyttä tekstiä.
      */
     private fun deleteWordFromField(ic: InputConnection, before: CharSequence) {
         val length = WordTools.clampToWholeCharacter(
@@ -2330,7 +2330,6 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             }
             if (WordDeleteCheck.failed(fullBefore, textNow, truncated, positionBefore, positionNow)) {
                 deleteWordsWithKeys = true
-                repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
             }
         }
         wordDeleteCheck = check
@@ -3206,6 +3205,13 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_FRAME
     }
 
+    override fun onStartInput(attribute: EditorInfo, restarting: Boolean) {
+        super.onStartInput(attribute, restarting)
+        // Eri kentillä voi olla samat tunnisteet, joten viety käännös sidotaan
+        // syöteistuntoon. Näppäimistön piilotus ei aloita uutta istuntoa.
+        if (!restarting) exportedTranslation.clear()
+    }
+
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         if (lockedMode && DeviceLock.isUnlocked(this)) completeUnlock()
@@ -3357,6 +3363,14 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         // uutta ei aloiteta: vanha tulos ei saa ylikirjoittaa uuden kentän riviä.
         val generation = ++suggestGeneration
         if (emojiSearchActive) return
+        // Hitaassa kentässä tekstikysely odottaa kirjoitustaukoa, ettei
+        // jokainen näppäily jää odottamaan sovelluksen vastausta. Ajastus tehdään
+        // myös ilman ehdotuksia, koska se päivittää myös ison alkukirjaimen.
+        val deferred = !immediate && !translateMode && slowConnection.isSlow(SystemClock.uptimeMillis())
+        if (deferred) {
+            mainHandler.removeCallbacks(deferredRefresh)
+            mainHandler.postDelayed(deferredRefresh, SLOW_REFRESH_MS)
+        }
         val clipItem = recentClipItem()
         // Nuolitilassa kursoria liikutellaan tekstin yli; ehdotukset olisivat vain häiriöksi.
         // Tämä ei kysele kentältä mitään, joten vanhat sanat eivät jää salasanakentän
@@ -3365,13 +3379,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             bar.setSuggestions(listOfNotNull(clipItem))
             return
         }
-        // Hitaassa kentässä tekstikysely odottaa kirjoitustaukoa, ettei
-        // jokainen näppäily jää odottamaan sovelluksen vastausta.
-        if (!immediate && !translateMode && slowConnection.isSlow(SystemClock.uptimeMillis())) {
-            mainHandler.removeCallbacks(deferredRefresh)
-            mainHandler.postDelayed(deferredRefresh, SLOW_REFRESH_MS)
-            return
-        }
+        if (deferred) return
         // Käännöstilassa ehdotukset lasketaan siitä alueesta, jota kirjoitetaan.
         val before: CharSequence = if (translateMode) {
             val buffer = activeTranslateBuffer()

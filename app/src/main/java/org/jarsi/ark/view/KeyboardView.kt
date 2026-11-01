@@ -109,6 +109,8 @@ class KeyboardView(context: Context) : View(context) {
     private var hapticsEnabled = true
 
     private val fiLocale = Locale.forLanguageTag("fi")
+    private val speechLanguage: KeySpeech.Language
+        get() = if (resources.getBoolean(R.bool.kieli_suomi)) KeySpeech.Language.FI else KeySpeech.Language.EN
     private val spaceLabel = context.getString(R.string.app_name)
     private val density = resources.displayMetrics.density
     private fun dp(value: Float) = value * density
@@ -182,7 +184,7 @@ class KeyboardView(context: Context) : View(context) {
             }
             val key = bounded.key
             node.contentDescription = KeySpeech.describe(
-                key, shiftState, enterText, selectionActive, obscureKeyLabels,
+                key, shiftState, enterText, selectionActive, obscureKeyLabels, speechLanguage,
             )
             val rect = Rect()
             bounded.rect.roundOut(rect)
@@ -653,7 +655,7 @@ class KeyboardView(context: Context) : View(context) {
             row.addView(
                 TextView(context).apply {
                     text = value
-                    contentDescription = KeySpeech.symbol(value)
+                    contentDescription = KeySpeech.symbol(value, speechLanguage)
                     gravity = Gravity.CENTER
                     textSize = 20f
                     // Painettu solu korostuu kuten painettu näppäin.

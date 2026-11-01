@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sanasto on pääosin suomea: muun kielisellä sen yleisimmät sanat ja korjaukset häiritsisivät. -->
+    <bool name="kieli_suomi">false</bool>
+</resources>

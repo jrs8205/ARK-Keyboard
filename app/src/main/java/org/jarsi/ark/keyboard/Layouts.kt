@@ -3,6 +3,17 @@ package org.jarsi.ark.keyboard
 import android.view.KeyEvent
 
 /** Näppäinasettelut: suomalainen QWERTY, symbolisivut, numerot ja nuolitila. */
+/** Kursoritilan muokkausnappien tekstit sovelluksen kielellä. */
+data class EditLabels(
+    val home: String,
+    val end: String,
+    val select: String,
+    val copy: String,
+    val paste: String,
+    val selectAll: String,
+    val cut: String,
+)
+
 object Layouts {
 
     private fun key(char: String, longPress: List<String> = emptyList()) =
@@ -166,26 +177,26 @@ object Layouts {
      * muokkaustoiminnot kuten Gboardin tekstinmuokkausnäkymässä.
      * Takaisin näppäimistöön palataan työkalurivin nuolikuvakkeesta.
      */
-    val arrows = KeyboardLayout(
+    fun arrows(labels: EditLabels) = KeyboardLayout(
         listOf(
             listOf(
-                edit(EditCommand.HOME, "Alkuun"),
+                edit(EditCommand.HOME, labels.home),
                 Key(KeyAction.Arrow(KeyEvent.KEYCODE_DPAD_UP), "▲", repeatable = true),
-                edit(EditCommand.END, "Loppuun"),
+                edit(EditCommand.END, labels.end),
             ),
             listOf(
                 Key(KeyAction.Arrow(KeyEvent.KEYCODE_DPAD_LEFT), "◀", repeatable = true),
-                edit(EditCommand.SELECT, "Valitse"),
+                edit(EditCommand.SELECT, labels.select),
                 Key(KeyAction.Arrow(KeyEvent.KEYCODE_DPAD_RIGHT), "▶", repeatable = true),
             ),
             listOf(
-                edit(EditCommand.COPY, "Kopioi"),
+                edit(EditCommand.COPY, labels.copy),
                 Key(KeyAction.Arrow(KeyEvent.KEYCODE_DPAD_DOWN), "▼", repeatable = true),
-                edit(EditCommand.PASTE, "Liitä"),
+                edit(EditCommand.PASTE, labels.paste),
             ),
             listOf(
-                edit(EditCommand.SELECT_ALL, "Valitse kaikki"),
-                edit(EditCommand.CUT, "Leikkaa"),
+                edit(EditCommand.SELECT_ALL, labels.selectAll),
+                edit(EditCommand.CUT, labels.cut),
                 Key(KeyAction.Backspace, "⌫", repeatable = true),
             ),
         )

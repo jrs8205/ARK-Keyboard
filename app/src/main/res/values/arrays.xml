@@ -1,3 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="teema_arvot" translatable="false">
+        <item>jarjestelma</item>
+        <item>vaalea</item>
+        <item>tumma</item>
+        <item>musta</item>
+        <item>taustakuva</item>
+    </string-array>
+    <string-array name="ai_palvelu_nimet" translatable="false">
+        <item>Claude (Anthropic)</item>
+        <item>ChatGPT (OpenAI)</item>
+    </string-array>
+    <string-array name="ai_palvelu_arvot" translatable="false">
+        <item>claude</item>
+        <item>chatgpt</item>
+    </string-array>
+    <string-array name="sanelu_moottori_arvot" translatable="false">
+        <item>jarjestelma</item>
+        <item>openai</item>
+    </string-array>
 </resources>

@@ -230,10 +230,10 @@ class ChatGptLoginActivity : AppCompatActivity() {
     }
 
     private fun callbackPage(): String =
-        "<!doctype html><html lang=\"fi\"><head><meta charset=\"utf-8\">" +
+        "<!doctype html><html lang=\"${resources.configuration.locales[0].language}\"><head><meta charset=\"utf-8\">" +
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
-            "<title>ARK-näppäimistö</title></head>" +
-            "<body style=\"font-family:sans-serif;margin:2em\"><h2>ARK-näppäimistö</h2>" +
+            "<title>${getString(R.string.app_name)}</title></head>" +
+            "<body style=\"font-family:sans-serif;margin:2em\"><h2>${getString(R.string.app_name)}</h2>" +
             "<p>${getString(R.string.chatgpt_paluusivu)}</p></body></html>"
 
     private fun respond(client: Socket, code: Int, body: String) {

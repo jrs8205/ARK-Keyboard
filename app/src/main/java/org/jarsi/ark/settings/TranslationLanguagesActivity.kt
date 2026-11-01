@@ -26,7 +26,7 @@ class TranslationLanguagesActivity : AppCompatActivity() {
 
     private data class Row(val code: String, val name: String)
 
-    private val fiLocale = Locale.forLanguageTag("fi")
+    private val displayLocale: Locale get() = resources.configuration.locales[0]
     private val modelManager = RemoteModelManager.getInstance()
 
     private lateinit var adapter: LanguageAdapter
@@ -34,8 +34,8 @@ class TranslationLanguagesActivity : AppCompatActivity() {
         .map { code ->
             Row(
                 code,
-                Locale(code).getDisplayLanguage(fiLocale)
-                    .replaceFirstChar { it.titlecase(fiLocale) },
+                Locale(code).getDisplayLanguage(displayLocale)
+                    .replaceFirstChar { it.titlecase(displayLocale) },
             )
         }
         .sortedBy { it.name }

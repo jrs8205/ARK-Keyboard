@@ -11,6 +11,20 @@ laitteella.
   <img src="docs/kuvat/esittely-levea.png" width="100%" alt="Neljä kuvakaappausta: sanaehdotukset kirjoitettaessa, pitkän painalluksen merkkivalikko, käännösnäkymä ja leikepöytä">
 </picture>
 
+## In English
+
+ARK Keyboard is a private Android keyboard that learns your words, entirely on your device.
+It is made for Finnish and also works in English: the app follows your phone's language
+(English or Finnish), and it knows about 57,000 English words on top of its Finnish vocabulary.
+
+- **Layout:** Finnish QWERTY with å, ä and ö.
+- **Suggestions:** the vocabulary is mainly Finnish, so English words come after Finnish ones until
+  you have used them. The keyboard learns your own words quickly.
+- **Auto-correct** is Finnish and is off by default unless the phone is set to Finnish.
+
+Download the latest APK from the [Releases page](https://github.com/jrs8205/ARK-nappaimisto/releases/latest).
+Setup, tips and privacy: **[Instructions](docs/instructions.md)**.
+
 ## Ominaisuudet
 
 - **Oppii sinun sanasi** ja ennustaa seuraavan sanan

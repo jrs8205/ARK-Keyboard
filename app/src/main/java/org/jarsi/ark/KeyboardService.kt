@@ -86,6 +86,7 @@ import org.jarsi.ark.engine.WordTools
 import org.jarsi.ark.keyboard.AutoCaps
 import org.jarsi.ark.keyboard.CursorExpectation
 import org.jarsi.ark.keyboard.EditCommand
+import org.jarsi.ark.keyboard.EditLabels
 import org.jarsi.ark.keyboard.ExportedTranslation
 import org.jarsi.ark.keyboard.FieldProfile
 import org.jarsi.ark.keyboard.InlineChips
@@ -381,7 +382,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (prefs.getString(PREF_DICTATION_ENGINE, null) == "openai") {
             if (ApiKeyStore.exists(prefs, ApiKeyStore.Slot.OPENAI)) {
                 val engine = openAiDictation
-                    ?: OpenAiDictation(prefs, dictationListener).also {
+                    ?: OpenAiDictation(prefs, resources.configuration.locales[0].language, dictationListener).also {
                         // Omat opitut sanat vihjeiksi kuten järjestelmätunnistimelle.
                         it.biasWords = { learning.biasWords(BIAS_WORD_MAX) }
                         openAiDictation = it
@@ -568,7 +569,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         try {
             // Laitteen fontista puuttuvat emojit eivät kelpaa: ne näkyisivät neliöinä.
             val paint = Paint()
-            val index = assets.open(EMOJI_ASSET).bufferedReader().useLines { lines ->
+            val asset = if (finnishUi) EMOJI_ASSET else EMOJI_ASSET_EN
+            val index = assets.open(asset).bufferedReader().useLines { lines ->
                 EmojiIndex.parse(lines) { paint.hasGlyph(it) }
             }
             mainHandler.post {
@@ -1085,20 +1087,26 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         updateSuggestions()
     }
 
-    private fun translationSource(): String =
-        prefs.getString(PREF_TRANSLATE_SOURCE, TranslateLanguage.FINNISH)
-            ?: TranslateLanguage.FINNISH
+    private fun translationSource(): String {
+        val default = if (finnishUi) TranslateLanguage.FINNISH else TranslateLanguage.ENGLISH
+        return prefs.getString(PREF_TRANSLATE_SOURCE, default) ?: default
+    }
 
-    private fun translationTarget(): String =
-        prefs.getString(PREF_TRANSLATE_TARGET, TranslateLanguage.ENGLISH)
-            ?: TranslateLanguage.ENGLISH
+    private fun translationTarget(): String {
+        val default = if (finnishUi) TranslateLanguage.ENGLISH else TranslateLanguage.FINNISH
+        return prefs.getString(PREF_TRANSLATE_TARGET, default) ?: default
+    }
+
+    private val finnishUi: Boolean get() = resources.getBoolean(R.bool.kieli_suomi)
+
+    private val uiLocale: Locale get() = resources.configuration.locales[0]
 
     private fun languageName(code: String): String =
-        Locale(code).getDisplayLanguage(fiLocale).replaceFirstChar { it.titlecase(fiLocale) }
+        Locale(code).getDisplayLanguage(uiLocale).replaceFirstChar { it.titlecase(uiLocale) }
 
-    /** Kielen nimi pienellä alkukirjaimella kielipillereitä varten. */
+    /** Kielen nimi kielipillereitä varten; suomeksi pienellä alkukirjaimella. */
     private fun languageNameLower(code: String): String =
-        Locale(code).getDisplayLanguage(fiLocale)
+        Locale(code).getDisplayLanguage(uiLocale)
 
     /**
      * Käännösnäkymä: näppäily kertyy ylärivin lähdetekstiin ja käännös
@@ -1627,8 +1635,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         translateBar?.setTranslation("", getString(R.string.kaannos_ai_kaannetaan))
         val sourceCode = translationSource()
         val targetCode = translationTarget()
-        val sourceName = languageName(sourceCode)
-        val targetName = languageName(targetCode)
+        // Palvelun ohje on suomeksi, joten kielten nimetkin ovat sitä sovelluksen kielestä riippumatta.
+        val sourceName = Locale(sourceCode).getDisplayLanguage(fiLocale)
+        val targetName = Locale(targetCode).getDisplayLanguage(fiLocale)
         val generation = ++aiTranslateGeneration
         // Tekstin muistettu merkintä pyynnön alkaessa: vastaus saa korvata
         // sen vain, jos käyttäjä ei ole korjannut käännöstä välissä.
@@ -3287,8 +3296,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         if (translateMode) watchTranslateBack(true)
         spaceAfterSuggestion = prefs.getBoolean("ehdotus_valilyonti", true)
-        commonWordsEnabled = prefs.getBoolean("ehdotus_yleiset", true)
-        autoCorrectEnabled = prefs.getBoolean("automaattikorjaus", true)
+        commonWordsEnabled = prefs.getBoolean("ehdotus_yleiset", finnishUi)
+        autoCorrectEnabled = prefs.getBoolean("automaattikorjaus", finnishUi)
         numberRowEnabled = prefs.getBoolean(PREF_NUMBER_ROW, true)
         doubleSpacePeriodEnabled = prefs.getBoolean(PREF_DOUBLE_SPACE, true)
         lastSpaceTime = 0
@@ -3440,7 +3449,17 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             Page.SYMBOLS2 -> Layouts.symbols2(symbolOrder)
             Page.SYMBOLS3 -> Layouts.symbols3
             Page.NUMERIC -> Layouts.numeric
-            Page.ARROWS -> Layouts.arrows
+            Page.ARROWS -> Layouts.arrows(
+                EditLabels(
+                    home = getString(R.string.muokkaus_alkuun),
+                    end = getString(R.string.muokkaus_loppuun),
+                    select = getString(R.string.muokkaus_valitse),
+                    copy = getString(R.string.muokkaus_kopioi),
+                    paste = getString(R.string.muokkaus_liita),
+                    selectAll = getString(R.string.muokkaus_valitse_kaikki),
+                    cut = getString(R.string.muokkaus_leikkaa),
+                )
+            )
         }
         keyboardView?.setKeyboardLayout(layout)
         keyboardView?.shiftState = shift.state
@@ -3813,6 +3832,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         const val PREF_EMOJI_RECENTS = "emoji_viimeisimmat"
         const val PREF_EMOJI_VARIANTS = "emoji_ihonvarit"
         const val EMOJI_ASSET = "emoji.tsv"
+        const val EMOJI_ASSET_EN = "emoji-en.tsv"
         val PRIVATE_AUDIO_OUTPUTS = setOf(
             AudioDeviceInfo.TYPE_WIRED_HEADSET,
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,

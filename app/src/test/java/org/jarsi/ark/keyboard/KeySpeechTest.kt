@@ -6,6 +6,18 @@ import org.junit.Test
 
 class KeySpeechTest {
 
+    @Test
+    fun `englanniksi nappaimet sanotaan englanniksi`() {
+        val space = Key(KeyAction.Space, "")
+        assertEquals("Space", KeySpeech.describe(space, ShiftState.OFF, "", false, false, KeySpeech.Language.EN))
+        assertEquals("Välilyönti", KeySpeech.describe(space, ShiftState.OFF, "", false, false))
+        assertEquals("slash", KeySpeech.symbol("/", KeySpeech.Language.EN))
+        assertEquals("kauttaviiva", KeySpeech.symbol("/"))
+        val letter = Key(KeyAction.Text("a"), "a")
+        assertEquals("capital A", KeySpeech.describe(letter, ShiftState.SHIFT, "", false, false, KeySpeech.Language.EN))
+        assertEquals("character", KeySpeech.describe(letter, ShiftState.OFF, "", false, true, KeySpeech.Language.EN))
+    }
+
     private fun say(
         key: Key,
         shift: ShiftState = ShiftState.OFF,

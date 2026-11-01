@@ -23,6 +23,12 @@ import org.jarsi.ark.R
  * kutsutaan — tunnistimen omiin hiljaisuusvihjeisiin ei luoteta, koska
  * osa laitteista ohittaa ne. Kutsut päälangalta.
  */
+/** Sanelun kieli seuraa sovelluksen kieltä; suomi aina muodossa, jonka tunnistimet tuntevat. */
+internal fun speechLanguageTag(context: Context): String {
+    val locale = context.resources.configuration.locales[0]
+    return if (locale.language == "fi") "fi-FI" else locale.toLanguageTag()
+}
+
 class DictationController(
     private val context: Context,
     private val listener: Listener,
@@ -220,7 +226,7 @@ class DictationController(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
             )
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fi-FI")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, speechLanguageTag(context))
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             // Tunnistimen omat hiljaisuusvihjeet vaikuttavat vain jakson
             // katkaisuun, eivät sanelun loppuun; nämäkin ovat vain toiveita,

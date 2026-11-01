@@ -1,284 +1,272 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ARK-näppäimistö</string>
-    <string name="subtype_suomi">suomi</string>
+    <string name="app_name">ARK Keyboard</string>
+    <string name="subtype_suomi">Finnish</string>
 
     <!-- Asetukset -->
-    <string name="asetukset_kayttoonotto">Käyttöönotto</string>
-    <string name="ota_kayttoon">Ota näppäimistö käyttöön</string>
-    <string name="ota_kayttoon_kuvaus">Avaa järjestelmän asetukset ja salli ARK-näppäimistö</string>
-    <string name="vaihda_nappaimistoksi">Vaihda näppäimistöksi</string>
-    <string name="vaihda_nappaimistoksi_kuvaus">Valitse ARK-näppäimistö käytössä olevaksi näppäimistöksi</string>
+    <string name="asetukset_kayttoonotto">Setup</string>
+    <string name="ota_kayttoon">Enable the keyboard</string>
+    <string name="ota_kayttoon_kuvaus">Open system settings and allow ARK Keyboard</string>
+    <string name="vaihda_nappaimistoksi">Switch to this keyboard</string>
+    <string name="vaihda_nappaimistoksi_kuvaus">Choose ARK Keyboard as the active keyboard</string>
 
-    <string name="asetukset_ulkoasu">Ulkoasu</string>
-    <string name="asetus_teema">Teema</string>
+    <string name="asetukset_ulkoasu">Appearance</string>
+    <string name="asetus_teema">Theme</string>
     <string-array name="teema_nimet">
-        <item>Järjestelmän mukaan</item>
-        <item>Vaalea</item>
-        <item>Tumma</item>
-        <item>Musta</item>
-        <item>Taustakuvan värit</item>
+        <item>Follow system</item>
+        <item>Light</item>
+        <item>Dark</item>
+        <item>Black</item>
+        <item>Wallpaper colours</item>
     </string-array>
-    <string-array name="teema_arvot">
-        <item>jarjestelma</item>
-        <item>vaalea</item>
-        <item>tumma</item>
-        <item>musta</item>
-        <item>taustakuva</item>
-    </string-array>
-    <string name="asetus_korkeus">Näppäimistön korkeus</string>
-    <string name="asetus_korkeus_kuvaus">Korkeus prosentteina perusarvosta</string>
+    <string name="asetus_korkeus">Keyboard height</string>
+    <string name="asetus_korkeus_kuvaus">Height as a percentage of the default</string>
 
-    <string name="asetukset_kirjoittaminen">Kirjoittaminen</string>
-    <string name="asetus_aanet">Näppäinäänet</string>
-    <string name="asetus_varina">Värinä näppäinpainalluksesta</string>
-    <string name="asetus_esikatselu">Näppäimen esikatselukupla</string>
-    <string name="asetus_numerorivi">Numerorivi</string>
-    <string name="asetus_kaksoisvali">Kaksoisvälilyönti lisää pisteen</string>
-    <string name="asetus_kaksoisvali_kuvaus">Kaksi nopeaa välilyöntiä sanan perässä muuttuu pisteeksi ja väliksi.</string>
-    <string name="asetus_numerorivi_kuvaus">Näytä numerot omana rivinään. Piilotettunakin numerot löytyvät ?123-sivulta ja ylärivin pitkällä painalluksella.</string>
+    <string name="asetukset_kirjoittaminen">Typing</string>
+    <string name="asetus_aanet">Key sounds</string>
+    <string name="asetus_varina">Vibrate on key press</string>
+    <string name="asetus_esikatselu">Key preview bubble</string>
+    <string name="asetus_numerorivi">Number row</string>
+    <string name="asetus_kaksoisvali">Double space adds a full stop</string>
+    <string name="asetus_kaksoisvali_kuvaus">Two quick spaces after a word become a full stop and a space.</string>
+    <string name="asetus_numerorivi_kuvaus">Show numbers on their own row. When hidden, numbers are on the ?123 page and on a long press of the top row.</string>
 
-    <string name="erikoismerkit">Erikoismerkkien järjestys</string>
-    <string name="tyokalurivi">Työkalurivi</string>
-    <string name="tyokalurivi_kuvaus">Järjestä napit ja valitse mitkä näkyvät</string>
-    <string name="tyokalurivi_ohje">Raahaa nappia pitkällä painalluksella järjestyksen muuttamiseksi. Kytkimestä valitset, näkyykö nappi työkalurivillä. Asetukset-nappi näkyy aina viimeisenä.</string>
-    <string name="tyokalurivi_palauta">Palauta oletukset</string>
-    <string name="tyokalurivi_palauta_varmistus">Palautetaanko työkalurivin oletusjärjestys ja oletusnapit?</string>
-    <string name="tyokalu_nuolet">Kursorin siirto</string>
-    <string name="tyokalu_www">Verkko-osoitteet (www)</string>
-    <string name="tyokalu_mikrofoni">Sanelu</string>
-    <string name="tyokalu_emojit">Emojit</string>
-    <string name="tyokalu_leikepoyta">Leikepöytä</string>
-    <string name="tyokalu_kaannos">Käännös</string>
-    <string name="tyokalu_peruutus">Peruutus</string>
-    <string name="tyokalu_yksi_kasi">Yhden käden tila</string>
-    <string name="yksi_kasi_vaihda_puoli">Siirrä näppäimistö toiselle puolelle</string>
-    <string name="yksi_kasi_sulje">Näppäimistö täyteen leveyteen</string>
-    <string name="tyokalu_asetukset">Asetukset</string>
-    <string name="erikoismerkit_kuvaus">Järjestä symbolisivujen merkit raahaamalla</string>
-    <string name="erikoismerkit_ohje">Siirrä merkkiä pitämällä sitä pohjassa ja raahaamalla uuteen kohtaan, myös sivujen välillä.</string>
-    <string name="erikoismerkit_palauta">Palauta oletusjärjestys</string>
-    <string name="erikoismerkit_palauta_varmistus">Palautetaanko erikoismerkit oletusjärjestykseen?</string>
+    <string name="erikoismerkit">Symbol order</string>
+    <string name="tyokalurivi">Toolbar</string>
+    <string name="tyokalurivi_kuvaus">Arrange the buttons and choose which ones are shown</string>
+    <string name="tyokalurivi_ohje">Long press and drag a button to change the order. The switch chooses whether the button is shown on the toolbar. The Settings button is always last.</string>
+    <string name="tyokalurivi_palauta">Restore defaults</string>
+    <string name="tyokalurivi_palauta_varmistus">Restore the default toolbar order and buttons?</string>
+    <string name="tyokalu_nuolet">Cursor control</string>
+    <string name="tyokalu_www">Web addresses (www)</string>
+    <string name="tyokalu_mikrofoni">Dictation</string>
+    <string name="tyokalu_emojit">Emoji</string>
+    <string name="tyokalu_leikepoyta">Clipboard</string>
+    <string name="tyokalu_kaannos">Translation</string>
+    <string name="tyokalu_peruutus">Undo</string>
+    <string name="tyokalu_yksi_kasi">One-handed mode</string>
+    <string name="yksi_kasi_vaihda_puoli">Move the keyboard to the other side</string>
+    <string name="yksi_kasi_sulje">Full-width keyboard</string>
+    <string name="tyokalu_asetukset">Settings</string>
+    <string name="erikoismerkit_kuvaus">Drag to arrange the characters on the symbol pages</string>
+    <string name="erikoismerkit_ohje">Press and hold a character, then drag it to a new position, also across pages.</string>
+    <string name="erikoismerkit_palauta">Restore default order</string>
+    <string name="erikoismerkit_palauta_varmistus">Restore the symbols to their default order?</string>
 
-    <string name="asetukset_ehdotukset">Ehdotukset</string>
-    <string name="asetus_ehdotukset">Näytä ehdotukset</string>
-    <string name="asetus_ehdotus_valilyonti">Välilyönti ehdotuksen jälkeen</string>
-    <string name="asetus_ehdotus_yleiset">Yleisimmät sanat tyhjällä syötteellä</string>
-    <string name="asetus_automaattikorjaus">Automaattikorjaus</string>
-    <string name="asetus_automaattikorjaus_kuvaus">Korjaa tuntemattoman sanan lähimpään tunnettuun välilyönnillä; askelpalautin peruu korjauksen</string>
+    <string name="asetukset_ehdotukset">Suggestions</string>
+    <string name="asetus_ehdotukset">Show suggestions</string>
+    <string name="asetus_ehdotus_valilyonti">Add a space after a suggestion</string>
+    <string name="asetus_ehdotus_yleiset">Most common words when nothing is typed</string>
+    <string name="asetus_automaattikorjaus">Auto-correct</string>
+    <string name="asetus_automaattikorjaus_kuvaus">Corrects an unknown word to the closest known word when you press space; backspace undoes the correction. Corrections are mainly Finnish.</string>
 
-    <string name="opitut_sanat">Opitut sanat</string>
-    <string name="opitut_sanat_kuvaus">Selaa, kiinnitä, salli ja poista opittuja sanoja</string>
-    <string name="opitut_haku">Hae sanaa</string>
-    <string name="opitut_ohje">Näppäimistö oppii sanat, jotka kirjoitat itse tai valitset ehdotusriviltä. Napauta sanaa tällä listalla, niin voit kiinnittää sen (pysyy ehdotusten kärjessä), estää sen tai poistaa sen. Samat toiminnot saat kirjoittaessa painamalla ehdotusrivin sanaa pitkään.</string>
-    <string name="opitut_osio_opitut">Opitut sanat (%d)</string>
-    <string name="opitut_osio_estetyt">Estetyt sanat (%d)</string>
-    <string name="opitut_salli">Salli taas</string>
-    <string name="opitut_tyhja">Ei vielä opittuja sanoja</string>
+    <string name="opitut_sanat">Learned words</string>
+    <string name="opitut_sanat_kuvaus">Browse, pin, allow and remove learned words</string>
+    <string name="opitut_haku">Search words</string>
+    <string name="opitut_ohje">The keyboard learns the words you type or choose from the suggestion row. Tap a word in this list to pin it (it stays at the top of the suggestions), block it or remove it. While typing, a long press on a word in the suggestion row offers the same actions.</string>
+    <string name="opitut_osio_opitut">Learned words (%d)</string>
+    <string name="opitut_osio_estetyt">Blocked words (%d)</string>
+    <string name="opitut_salli">Allow again</string>
+    <string name="opitut_tyhja">No learned words yet</string>
     <plurals name="opitut_kaytto">
-        <item quantity="one">%d käyttö</item>
-        <item quantity="other">%d käyttöä</item>
+        <item quantity="one">%d use</item>
+        <item quantity="other">%d uses</item>
     </plurals>
-    <string name="opitut_kiinnitetty">Kiinnitetty</string>
-    <string name="opitut_estetty">Estetty</string>
-    <string name="opitut_tyhjenna">Tyhjennä kaikki</string>
-    <string name="opitut_tyhjenna_varmistus">Poistetaanko kaikki opitut sanat, sanaketjut ja emojihistoria? Tätä ei voi perua.</string>
+    <string name="opitut_kiinnitetty">Pinned</string>
+    <string name="opitut_estetty">Blocked</string>
+    <string name="opitut_tyhjenna">Clear all</string>
+    <string name="opitut_tyhjenna_varmistus">Remove all learned words, word sequences and emoji history? This cannot be undone.</string>
 
-    <string name="asetukset_tekoaly">Tekoäly</string>
-    <string name="asetus_ai_avain_ohje">API-avain ei ole sama asia kuin Claude- tai ChatGPT-tilaus</string>
-    <string name="asetus_ai_avain_ohje_kuvaus">AI-käännös ja OpenAI-sanelu käyttävät palvelun omaa API-avainta. API-käyttö laskutetaan käytön mukaan erikseen eikä sisälly Claude Pro- tai ChatGPT Plus -tilaukseen. Avaimen saa osoitteesta platform.claude.com (Claude) tai platform.openai.com (OpenAI).\n\nClaude-tilauksella ei voi kirjautua: Anthropic ei salli sitä muille sovelluksille. ChatGPT Plus/Pro -tilauksella voi sen sijaan kirjautua alla: silloin AI-käännös kuluttaa tilauksen kiintiötä eikä API-avainta tarvita. OpenAI-sanelu vaatii aina OpenAI:n API-avaimen; laitteen oma puheentunnistus toimii ilman avainta.</string>
-    <string name="asetus_ai_palvelu">AI-palvelu (Claude / ChatGPT)</string>
-    <string name="asetus_ai_palvelu_nykyinen">Käytössä: %1$s (käännösnäkymän AI-käännös). Napauta vaihtaaksesi palvelua.</string>
-    <string name="asetus_ai_palvelu_ei_avainta">Ei käytössä: lisää %1$s-avain alle, niin AI-toiminnot tulevat käyttöön.</string>
-    <string name="asetus_api_avain">Claude API -avain</string>
-    <string name="asetus_api_avain_kuvaus">Ottaa käyttöön käännösnäkymän AI-käännöksen. Teksti lähetetään Anthropicin palveluun vain kun käytät toimintoa itse; avain säilyy vain tällä laitteella salattuna.</string>
-    <string name="asetus_malli">AI-käännöksen Claude-malli</string>
-    <string name="asetus_malli_nykyinen">Käytössä: %1$s. Lista haetaan Anthropicilta omalla avaimellasi.</string>
-    <string name="asetus_openai_avain">OpenAI API -avain (ChatGPT)</string>
-    <string name="asetus_openai_avain_kuvaus">Ottaa käyttöön käännösnäkymän AI-käännöksen ja OpenAI-sanelun. Teksti tai puhe lähetetään OpenAI:n palveluun vain kun käytät toimintoa itse; avain säilyy vain tällä laitteella salattuna.</string>
-    <string name="asetus_openai_malli">AI-käännöksen ChatGPT-malli</string>
-    <string name="asetus_malli_nykyinen_openai">Käytössä: %1$s. Lista haetaan OpenAI:lta omalla avaimellasi.</string>
-    <string name="malli_aseta_avain">Aseta ensin API-avain</string>
+    <string name="asetukset_tekoaly">AI</string>
+    <string name="asetus_ai_avain_ohje">An API key is not the same as a Claude or ChatGPT subscription</string>
+    <string name="asetus_ai_avain_ohje_kuvaus">AI translation and OpenAI dictation use the service\'s own API key. API use is billed separately by usage and is not included in a Claude Pro or ChatGPT Plus subscription. You can get a key at platform.claude.com (Claude) or platform.openai.com (OpenAI).\n\nYou cannot sign in with a Claude subscription: Anthropic does not allow it for other apps. You can sign in below with a ChatGPT Plus/Pro subscription: AI translation then uses your subscription\'s quota and no API key is needed. OpenAI dictation always requires an OpenAI API key; the device\'s own speech recognition works without a key.</string>
+    <string name="asetus_ai_palvelu">AI service (Claude / ChatGPT)</string>
+    <string name="asetus_ai_palvelu_nykyinen">In use: %1$s (AI translation in the translator). Tap to change the service.</string>
+    <string name="asetus_ai_palvelu_ei_avainta">Not in use: add a %1$s key below to enable the AI features.</string>
+    <string name="asetus_api_avain">Claude API key</string>
+    <string name="asetus_api_avain_kuvaus">Enables AI translation in the translator. Text is sent to Anthropic\'s service only when you use the feature; the key stays encrypted on this device only.</string>
+    <string name="asetus_malli">Claude model for AI translation</string>
+    <string name="asetus_malli_nykyinen">In use: %1$s. The list is fetched from Anthropic with your own key.</string>
+    <string name="asetus_openai_avain">OpenAI API key (ChatGPT)</string>
+    <string name="asetus_openai_avain_kuvaus">Enables AI translation in the translator and OpenAI dictation. Text or speech is sent to OpenAI\'s service only when you use the feature; the key stays encrypted on this device only.</string>
+    <string name="asetus_openai_malli">ChatGPT model for AI translation</string>
+    <string name="asetus_malli_nykyinen_openai">In use: %1$s. The list is fetched from OpenAI with your own key.</string>
+    <string name="malli_aseta_avain">Set an API key first</string>
 
-    <string name="asetus_chatgpt_kirjautuminen">Kirjaudu ChatGPT-tilauksella</string>
-    <string name="asetus_chatgpt_kirjautuminen_kuvaus">AI-käännös käyttää ChatGPT Plus/Pro -tilaustasi API-avaimen sijaan. Kirjautuminen avaa selaimen; sanelu tarvitsee silti OpenAI API -avaimen.</string>
-    <string name="asetus_chatgpt_kirjautunut">Kirjautunut: %1$s. AI-käännös käyttää tilaustasi. Napauta kirjautuaksesi ulos.</string>
-    <string name="ai_palvelu_chatgpt_tilaus">ChatGPT-tilaus</string>
-    <string name="asetus_malli_nykyinen_chatgpt_tilaus">Käytössä: %1$s. Lista haetaan OpenAI:lta tilauksellasi.</string>
-    <string name="asetus_malli_tilaus_oletus">OpenAI:n listan ensimmäinen</string>
-    <string name="chatgpt_kirjautuminen_otsikko">Kirjaudu ChatGPT:llä</string>
-    <string name="chatgpt_kirjautuminen_odottaa">Kirjaudu selaimessa ChatGPT-tiliisi ja hyväksy pyydetyt oikeudet. Palaa sen jälkeen tähän.</string>
-    <string name="chatgpt_kirjautuminen_viimeistely">Viimeistellään kirjautumista…</string>
-    <string name="chatgpt_kirjautuminen_valmis">Kirjautunut: %1$s</string>
-    <string name="chatgpt_kirjautuminen_virhe">Kirjautuminen epäonnistui: %1$s</string>
-    <string name="chatgpt_kirjautuminen_peruttu">kirjautuminen peruttiin</string>
-    <string name="chatgpt_kirjautuminen_ei_oikeutta">tilauksen käyttöoikeutta ei myönnetty – hyväksy kaikki pyydetyt oikeudet</string>
-    <string name="chatgpt_kirjautuminen_ei_selainta">selainta ei löytynyt</string>
-    <string name="chatgpt_kirjautuminen_aikakatkaisu">aikakatkaisu</string>
-    <string name="chatgpt_kirjautuminen_verkkovirhe">verkkovirhe</string>
-    <string name="chatgpt_kirjautuminen_kesken">rekisteröinti jäi kesken</string>
-    <string name="chatgpt_kirjautuminen_vaara_tili">paluu ei vastaa aloitettua kirjautumista</string>
-    <string name="chatgpt_kirjautuminen_ei_salausta">Kirjautumistiedot tallennettiin, mutta laitteen suojattu avainsäilö ei ollut käytettävissä, joten niitä ei voitu salata. Ne ovat silti vain tämän sovelluksen käytössä eivätkä päädy varmuuskopioihin.</string>
-    <string name="chatgpt_paluusivu">Kirjautuminen valmis. Voit sulkea tämän välilehden ja palata ARK-näppäimistöön.</string>
-    <string name="chatgpt_uloskirjautuminen_varmistus">Kirjaudutaanko ulos ChatGPT-tilauksesta? AI-käännös palaa API-avaimeen, jos sellainen on asetettu.</string>
-    <string name="chatgpt_kirjaudu_ulos">Kirjaudu ulos</string>
-    <string name="chatgpt_kirjauduttu_ulos">Kirjauduttu ulos ChatGPT-tilauksesta</string>
-    <string name="chatgpt_kirjauduttu_ulos_paikallisesti">Kirjauduttu ulos tältä laitteelta, mutta lupaa ei voitu kumota OpenAI:n päässä (ei yhteyttä). Voit poistaa sen ChatGPT:n asetuksista.</string>
-    <string name="kaannos_ai_kirjaudu_uudelleen">ChatGPT-kirjautuminen ei ole enää voimassa – kirjaudu uudelleen asetuksista</string>
-    <string name="kaannos_ai_kiintio">ChatGPT-tilauksen käyttöraja on täynnä – katso ChatGPT:n asetuksista kohta Käyttö</string>
-    <string name="kaannos_ai_tilaus_ei_mallia">mallilistaa ei saatu OpenAI:lta</string>
+    <string name="asetus_chatgpt_kirjautuminen">Sign in with a ChatGPT subscription</string>
+    <string name="asetus_chatgpt_kirjautuminen_kuvaus">AI translation uses your ChatGPT Plus/Pro subscription instead of an API key. Signing in opens the browser; dictation still needs an OpenAI API key.</string>
+    <string name="asetus_chatgpt_kirjautunut">Signed in: %1$s. AI translation uses your subscription. Tap to sign out.</string>
+    <string name="ai_palvelu_chatgpt_tilaus">ChatGPT subscription</string>
+    <string name="asetus_malli_nykyinen_chatgpt_tilaus">In use: %1$s. The list is fetched from OpenAI with your subscription.</string>
+    <string name="asetus_malli_tilaus_oletus">First on OpenAI\'s list</string>
+    <string name="chatgpt_kirjautuminen_otsikko">Sign in with ChatGPT</string>
+    <string name="chatgpt_kirjautuminen_odottaa">Sign in to your ChatGPT account in the browser and approve the requested permissions. Then come back here.</string>
+    <string name="chatgpt_kirjautuminen_viimeistely">Finishing sign-in…</string>
+    <string name="chatgpt_kirjautuminen_valmis">Signed in: %1$s</string>
+    <string name="chatgpt_kirjautuminen_virhe">Sign-in failed: %1$s</string>
+    <string name="chatgpt_kirjautuminen_peruttu">sign-in was cancelled</string>
+    <string name="chatgpt_kirjautuminen_ei_oikeutta">subscription access was not granted – approve all requested permissions</string>
+    <string name="chatgpt_kirjautuminen_ei_selainta">no browser found</string>
+    <string name="chatgpt_kirjautuminen_aikakatkaisu">timed out</string>
+    <string name="chatgpt_kirjautuminen_verkkovirhe">network error</string>
+    <string name="chatgpt_kirjautuminen_kesken">registration was not completed</string>
+    <string name="chatgpt_kirjautuminen_vaara_tili">the response does not match the sign-in that was started</string>
+    <string name="chatgpt_kirjautuminen_ei_salausta">Your sign-in details were saved, but the device\'s secure key store was not available, so they could not be encrypted. They are still available only to this app and are not included in backups.</string>
+    <string name="chatgpt_paluusivu">Sign-in complete. You can close this tab and return to ARK Keyboard.</string>
+    <string name="chatgpt_uloskirjautuminen_varmistus">Sign out of your ChatGPT subscription? AI translation goes back to the API key, if one is set.</string>
+    <string name="chatgpt_kirjaudu_ulos">Sign out</string>
+    <string name="chatgpt_kirjauduttu_ulos">Signed out of your ChatGPT subscription</string>
+    <string name="chatgpt_kirjauduttu_ulos_paikallisesti">Signed out on this device, but the permission could not be revoked at OpenAI (no connection). You can remove it in ChatGPT\'s settings.</string>
+    <string name="kaannos_ai_kirjaudu_uudelleen">Your ChatGPT sign-in is no longer valid – sign in again in the settings</string>
+    <string name="kaannos_ai_kiintio">Your ChatGPT subscription\'s usage limit has been reached – see Usage in ChatGPT\'s settings</string>
+    <string name="kaannos_ai_tilaus_ei_mallia">could not get the model list from OpenAI</string>
 
-    <string-array name="ai_palvelu_nimet">
-        <item>Claude (Anthropic)</item>
-        <item>ChatGPT (OpenAI)</item>
-    </string-array>
-    <string-array name="ai_palvelu_arvot">
-        <item>claude</item>
-        <item>chatgpt</item>
-    </string-array>
-    <string name="malli_haku_virhe">Mallilistan haku epäonnistui – tarkista API-avain ja verkkoyhteys</string>
-    <string name="malli_haku_virhe_syy">Mallilistan haku epäonnistui: %1$s</string>
-    <string name="kaannos_ai_liian_pitka">Teksti on liian pitkä AI-käännettäväksi (enintään 5 000 merkkiä)</string>
-    <string name="kaannos_ai_tyhja_vastaus">palvelu palautti tyhjän vastauksen</string>
-    <string name="yhteys_virhe">ei yhteyttä palveluun</string>
+    <string name="malli_haku_virhe">Could not fetch the model list – check the API key and your connection</string>
+    <string name="malli_haku_virhe_syy">Could not fetch the model list: %1$s</string>
+    <string name="kaannos_ai_liian_pitka">The text is too long for AI translation (5,000 characters at most)</string>
+    <string name="kaannos_ai_tyhja_vastaus">the service returned an empty response</string>
+    <string name="yhteys_virhe">cannot connect to the service</string>
 
-    <string name="asetukset_varmuuskopio">Varmuuskopio</string>
-    <string name="varmuuskopio_vie">Vie varmuuskopio</string>
-    <string name="varmuuskopio_vie_kuvaus">Tallentaa opitut sanat, sanaketjut, kiinnitetyt tekstileikkeet ja asetukset tiedostoon</string>
-    <string name="varmuuskopio_tuo">Tuo varmuuskopio</string>
-    <string name="varmuuskopio_tuo_kuvaus">Yhdistää tiedoston sisällön tämän laitteen oppimisdataan ja palauttaa asetukset</string>
-    <string name="varmuuskopio_viety">Varmuuskopio tallennettu: %1$s, %2$s</string>
-    <string name="varmuuskopio_tuotu">Varmuuskopio tuotu: %1$s, %2$s</string>
+    <string name="asetukset_varmuuskopio">Backup</string>
+    <string name="varmuuskopio_vie">Export backup</string>
+    <string name="varmuuskopio_vie_kuvaus">Saves learned words, word sequences, pinned clips and settings to a file</string>
+    <string name="varmuuskopio_tuo">Import backup</string>
+    <string name="varmuuskopio_tuo_kuvaus">Merges the file with this device\'s learned data and restores the settings</string>
+    <string name="varmuuskopio_viety">Backup saved: %1$s, %2$s</string>
+    <string name="varmuuskopio_tuotu">Backup imported: %1$s, %2$s</string>
     <plurals name="varmuuskopio_sanoja">
-        <item quantity="one">%d sana</item>
-        <item quantity="other">%d sanaa</item>
+        <item quantity="one">%d word</item>
+        <item quantity="other">%d words</item>
     </plurals>
     <plurals name="varmuuskopio_leikkeita">
-        <item quantity="one">%d leike</item>
-        <item quantity="other">%d leikettä</item>
+        <item quantity="one">%d clip</item>
+        <item quantity="other">%d clips</item>
     </plurals>
-    <string name="varmuuskopio_virhe">Varmuuskopion käsittely epäonnistui</string>
+    <string name="varmuuskopio_virhe">Could not process the backup</string>
 
-    <string name="sanelu_virhe">Sanelu ei onnistunut</string>
-    <string name="sanelu_ei_saatavilla">Sanelu ei ole käytettävissä tällä laitteella</string>
+    <string name="sanelu_virhe">Dictation failed</string>
+    <string name="sanelu_ei_saatavilla">Dictation is not available on this device</string>
 
     <!-- Saavutettavuuskuvaukset kuvakenapeille -->
-    <string name="cd_poista_merkki">Poista merkki</string>
-    <string name="cd_valilyonti">Välilyönti</string>
-    <string name="cd_liita_kopio">Liitä kopioitu teksti: %1$s</string>
-    <string name="cd_kuvaleike">Kuvaleike</string>
-    <string name="cd_leikkeen_valikko">Leikkeen valikko</string>
-    <string name="cd_vaihda_suunta">Vaihda käännössuunta</string>
+    <string name="cd_poista_merkki">Delete character</string>
+    <string name="cd_valilyonti">Space</string>
+    <string name="cd_liita_kopio">Paste copied text: %1$s</string>
+    <string name="cd_kuvaleike">Image clip</string>
+    <string name="cd_leikkeen_valikko">Clip menu</string>
+    <string name="cd_vaihda_suunta">Swap translation direction</string>
 
-    <string name="kaannos_kirjoita">Kirjoita (%1$s)…</string>
-    <string name="kaannos_kopioi">Kopioi</string>
-    <string name="kaannos_valitse_kaikki">Valitse kaikki</string>
-    <string name="kaannos_kopioitu">Kopioitu</string>
-    <string name="emoji_hae">Hae emojia</string>
-    <string name="emoji_hae_vihje">Hae emojia…</string>
-    <string name="emoji_haku_sulje">Takaisin emojeihin</string>
-    <string name="emoji_haku_tyhjenna">Tyhjennä haku</string>
-    <string name="emoji_ei_tuloksia">Ei emojeja tällä haulla</string>
-    <string name="emoji_ei_viimeisimpia">Viimeksi käyttämäsi emojit näkyvät tässä</string>
-    <string name="emoji_viimeisimmat">Viimeksi käytetyt</string>
-    <string name="emoji_hymiot">Hymiöt ja tunteet</string>
-    <string name="emoji_ihmiset">Ihmiset</string>
-    <string name="emoji_luonto">Eläimet ja luonto</string>
-    <string name="emoji_ruoka">Ruoka ja juoma</string>
-    <string name="emoji_matkailu">Matkailu ja paikat</string>
-    <string name="emoji_toiminta">Toiminta</string>
-    <string name="emoji_esineet">Esineet</string>
-    <string name="emoji_symbolit">Symbolit</string>
-    <string name="emoji_liput">Liput</string>
-    <string name="muokkaus_valitse_ensin">Valitse ensin teksti</string>
-    <string name="muokkaus_kaannos_valinta">Käännösnäkymässä valitaan pitkällä painalluksella</string>
-    <string name="kaannos_ladataan">Valmistellaan käännösmalleja…</string>
-    <string name="kaannos_mallit_puuttuvat">Kääntäjä lataa kieliparin mallit kerran (noin 30 Mt kieltä kohden). Sen jälkeen käännökset tehdään laitteella.</string>
-    <string name="kaannos_lataa_mallit">Lataa mallit</string>
-    <string name="kaannos_lataus_virhe">Käännösmallin lataus epäonnistui – tarkista verkkoyhteys</string>
-    <string name="kaannos_virhe">Käännös epäonnistui – yritä uudelleen</string>
-    <string name="kaannos_vie">Vie käännös</string>
-    <string name="kaannos_sulje">Sulje kääntäjä</string>
-    <string name="kaannos_tyhjenna">Tyhjennä</string>
-    <string name="kaannos_tyhja">Käännös ilmestyy tähän</string>
-    <string name="kaannos_ai_kaannetaan">Käännetään…</string>
-    <string name="kaannos_ai_muistista">Teksti on jo AI-käännetty – käännös haettiin muistista, uutta pyyntöä ei tehty</string>
-    <string name="kaannos_ai_virhe_syy">AI-käännös epäonnistui: %1$s</string>
-    <string name="cd_ai_kaannos">Parempi käännös tekoälyllä</string>
-    <string name="cd_kopioi_kaannos">Kopioi käännös leikepöydälle</string>
+    <string name="kaannos_kirjoita">Type (%1$s)…</string>
+    <string name="kaannos_kopioi">Copy</string>
+    <string name="kaannos_valitse_kaikki">Select all</string>
+    <string name="kaannos_kopioitu">Copied</string>
+    <string name="emoji_hae">Search emoji</string>
+    <string name="emoji_hae_vihje">Search emoji…</string>
+    <string name="emoji_haku_sulje">Back to emoji</string>
+    <string name="emoji_haku_tyhjenna">Clear search</string>
+    <string name="emoji_ei_tuloksia">No emoji found</string>
+    <string name="emoji_ei_viimeisimpia">Your recently used emoji appear here</string>
+    <string name="emoji_viimeisimmat">Recently used</string>
+    <string name="emoji_hymiot">Smileys and emotions</string>
+    <string name="emoji_ihmiset">People</string>
+    <string name="emoji_luonto">Animals and nature</string>
+    <string name="emoji_ruoka">Food and drink</string>
+    <string name="emoji_matkailu">Travel and places</string>
+    <string name="emoji_toiminta">Activities</string>
+    <string name="emoji_esineet">Objects</string>
+    <string name="emoji_symbolit">Symbols</string>
+    <string name="emoji_liput">Flags</string>
+    <string name="muokkaus_valitse_ensin">Select some text first</string>
+    <string name="muokkaus_kaannos_valinta">In the translator, select with a long press</string>
+    <string name="muokkaus_alkuun">Start</string>
+    <string name="muokkaus_loppuun">End</string>
+    <string name="muokkaus_valitse">Select</string>
+    <string name="muokkaus_kopioi">Copy</string>
+    <string name="muokkaus_liita">Paste</string>
+    <string name="muokkaus_valitse_kaikki">Select all</string>
+    <string name="muokkaus_leikkaa">Cut</string>
+    <string name="kaannos_ladataan">Preparing translation models…</string>
+    <string name="kaannos_mallit_puuttuvat">The translator downloads the models for this language pair once (about 30 MB per language). After that, translations are done on the device.</string>
+    <string name="kaannos_lataa_mallit">Download models</string>
+    <string name="kaannos_lataus_virhe">Could not download the translation model – check your connection</string>
+    <string name="kaannos_virhe">Translation failed – please try again</string>
+    <string name="kaannos_vie">Insert translation</string>
+    <string name="kaannos_sulje">Close translator</string>
+    <string name="kaannos_tyhjenna">Clear</string>
+    <string name="kaannos_tyhja">The translation appears here</string>
+    <string name="kaannos_ai_kaannetaan">Translating…</string>
+    <string name="kaannos_ai_muistista">This text has already been AI translated – the translation came from memory, no new request was made</string>
+    <string name="kaannos_ai_virhe_syy">AI translation failed: %1$s</string>
+    <string name="cd_ai_kaannos">Better translation with AI</string>
+    <string name="cd_kopioi_kaannos">Copy translation to clipboard</string>
 
     <!-- Ensiasennuksen esittely -->
-    <string name="esittely">Esittely</string>
-    <string name="esittely_kuvaus">Katso käyttöönoton opastus uudelleen</string>
-    <string name="esittely_ohita">Ohita</string>
-    <string name="esittely_seuraava">Seuraava</string>
-    <string name="esittely_valmis_nappi">Valmis</string>
-    <string name="esittely_tervetuloa_otsikko">Tervetuloa!</string>
-    <string name="esittely_tervetuloa_teksti">ARK-näppäimistö oppii omat sanasi, sanaparisi ja kirjoitustapasi — kokonaan omalla laitteellasi. Tekstiä lähtee laitteelta vain, jos itse käytät AI-käännöstä tai OpenAI-sanelua.</string>
-    <string name="esittely_kayttoonotto_otsikko">Ota käyttöön</string>
-    <string name="esittely_kayttoonotto_teksti">Näppäimistö otetaan käyttöön puhelimen asetuksista kahdessa askeleessa.</string>
-    <string name="esittely_askel_kayttoon">1. Ota näppäimistö käyttöön</string>
-    <string name="esittely_askel_vaihda">2. Vaihda näppäimistöksi</string>
-    <string name="esittely_ehdotukset_otsikko">Ehdotukset oppivat sinulta</string>
-    <string name="esittely_ehdotukset_teksti">Ehdotusrivi täydentää ja ennustaa sanoja, ja omat sanasi nousevat kärkeen heti ensimmäisestä kerrasta. Pitkä painallus ehdotukseen poistaa tai estää sanan, ja kaikkea opittua voi hallita asetuksista.</string>
-    <string name="esittely_tyokalut_otsikko">Työkalurivi</string>
-    <string name="esittely_tyokalut_teksti">Ylärivillä ovat sanelu, leikepöytä, kääntäjä ja emojit. Nappien järjestystä ja näkyvyyttä voi muokata asetuksista.</string>
-    <string name="esittely_valmis_otsikko">Valmis!</string>
-    <string name="esittely_valmis_teksti">Hyviä kirjoitushetkiä! Kaikki asetukset, opittujen sanojen hallinta ja varmuuskopiointi löytyvät tästä sovelluksesta.</string>
+    <string name="esittely">Introduction</string>
+    <string name="esittely_kuvaus">See the setup guide again</string>
+    <string name="esittely_ohita">Skip</string>
+    <string name="esittely_seuraava">Next</string>
+    <string name="esittely_valmis_nappi">Done</string>
+    <string name="esittely_tervetuloa_otsikko">Welcome!</string>
+    <string name="esittely_tervetuloa_teksti">ARK Keyboard learns your own words, word pairs and way of writing — entirely on your device. Text leaves the device only if you use AI translation or OpenAI dictation yourself.</string>
+    <string name="esittely_kayttoonotto_otsikko">Enable</string>
+    <string name="esittely_kayttoonotto_teksti">The keyboard is enabled in two steps in your phone\'s settings.</string>
+    <string name="esittely_askel_kayttoon">1. Enable the keyboard</string>
+    <string name="esittely_askel_vaihda">2. Switch to this keyboard</string>
+    <string name="esittely_ehdotukset_otsikko">Suggestions learn from you</string>
+    <string name="esittely_ehdotukset_teksti">The suggestion row completes and predicts words, and your own words rise to the top from the first time you use them. A long press on a suggestion removes or blocks the word, and you can manage everything learned in the settings.</string>
+    <string name="esittely_tyokalut_otsikko">Toolbar</string>
+    <string name="esittely_tyokalut_teksti">The top row has dictation, the clipboard, the translator and emoji. You can change the order and visibility of the buttons in the settings.</string>
+    <string name="esittely_valmis_otsikko">All set!</string>
+    <string name="esittely_valmis_teksti">Happy typing! All settings, learned word management and backups are in this app.</string>
 
-    <string name="asetukset_kaannos">Käännös</string>
-    <string name="asetukset_sanelu">Sanelu</string>
-    <string name="asetus_sanelu_hiljaisuus">Lopetus hiljaisuuteen (sekuntia)</string>
-    <string name="asetus_sanelu_hiljaisuus_kuvaus">Sanelu päättyy itsestään, kun puheessa on ollut näin pitkä tauko.</string>
-    <string name="asetus_sanelu_moottori">Sanelun tunnistus</string>
-    <string name="asetus_sanelu_moottori_nykyinen">Käytössä: %1$s.\nNapauta valitaksesi laitteen tunnistuksen ja OpenAI-tunnistuksen välillä. OpenAI tunnistaa suomea selvästi tarkemmin eikä lopeta kuuntelua melussa; puhe virtaa tunnistusta varten OpenAI:lle omalla avaimellasi, ja teksti ilmestyy kenttään puheen tahdissa. Mukana lähtevät myös käytetyimmät opitut sanasi, jotta omat nimet ja termit tunnistuvat oikein. Yksi sanelu kestää enintään viisi minuuttia.</string>
+    <string name="asetukset_kaannos">Translation</string>
+    <string name="asetukset_sanelu">Dictation</string>
+    <string name="asetus_sanelu_hiljaisuus">Stop after silence (seconds)</string>
+    <string name="asetus_sanelu_hiljaisuus_kuvaus">Dictation ends by itself after a pause of this length.</string>
+    <string name="asetus_sanelu_moottori">Dictation recognition</string>
+    <string name="asetus_sanelu_moottori_nykyinen">In use: %1$s.\nTap to choose between the device\'s recognition and OpenAI recognition. OpenAI is often more accurate and does not stop listening in noise; speech is streamed to OpenAI with your own key, and the text appears in the field as you speak. Your most used learned words are also sent, so that your own names and terms are recognised correctly. One dictation lasts five minutes at most.</string>
     <string-array name="sanelu_moottori_nimet">
-        <item>Laitteen puheentunnistus (oletus)</item>
-        <item>OpenAI-puheentunnistus – tarkin (vaatii OpenAI-avaimen)</item>
+        <item>Device speech recognition (default)</item>
+        <item>OpenAI speech recognition – most accurate (requires an OpenAI key)</item>
     </string-array>
-    <string-array name="sanelu_moottori_arvot">
-        <item>jarjestelma</item>
-        <item>openai</item>
-    </string-array>
-    <string name="asetus_sanelu_malli">Sanelun malli</string>
-    <string name="sanelu_openai_ei_avainta">OpenAI-avainta ei ole asetettu – sanelu käyttää laitteen tunnistusta</string>
-    <string name="sanelu_verkkovirhe">Sanelun tunnistus epäonnistui: %1$s</string>
-    <string name="sanelu_aikaraja">Sanelu päättyi viiden minuutin ylärajaan</string>
-    <string name="asetus_avain_ei_salausta">Avain tallennettiin, mutta laitteen suojattu avainsäilö ei ollut käytettävissä, joten sitä ei voitu salata. Avain on silti vain tämän sovelluksen käytössä eikä päädy varmuuskopioihin.</string>
-    <string name="kaannoskielet">Käännöskielet</string>
-    <string name="kaannoskielet_kuvaus">Lataa ja poista käännösmalleja (noin 30 Mt kieltä kohden)</string>
-    <string name="asetus_kaannos_muisti">Käännöksen muistiaika (minuuttia)</string>
-    <string name="asetus_kaannos_muisti_kuvaus">Käännösnäkymän teksti ja sen AI- tai käsin korjatut käännökset säilyvät näin kauan viimeisestä käytöstä. Sen jälkeen näkymä avautuu tyhjänä.</string>
-    <string name="kieli_ladattu">Ladattu</string>
-    <string name="kieli_ladataan">Ladataan…</string>
-    <string name="kieli_oletus">Oletus</string>
-    <string name="kieli_oletus_ei_poistoa">Suomi on kääntäjän oletuskieli, eikä sitä voi poistaa.</string>
-    <string name="kieli_lataa_otsikko">Ladataanko käännösmalli?</string>
-    <string name="kieli_lataa_varmistus">Malli on noin 30 Mt ja se ladataan kerran; käännökset tehdään sen jälkeen laitteella.</string>
-    <string name="kieli_poista_varmistus">Poistetaanko kielen käännösmalli laitteelta?</string>
-    <string name="kieli_lataa">Lataa</string>
-    <string name="kieli_poista">Poista</string>
-    <string name="kieli_virhe">Toiminto epäonnistui – tarkista verkkoyhteys</string>
+    <string name="asetus_sanelu_malli">Dictation model</string>
+    <string name="sanelu_openai_ei_avainta">No OpenAI key is set – dictation uses the device\'s recognition</string>
+    <string name="sanelu_verkkovirhe">Dictation recognition failed: %1$s</string>
+    <string name="sanelu_aikaraja">Dictation ended at the five-minute limit</string>
+    <string name="asetus_avain_ei_salausta">The key was saved, but the device\'s secure key store was not available, so it could not be encrypted. The key is still available only to this app and is not included in backups.</string>
+    <string name="kaannoskielet">Translation languages</string>
+    <string name="kaannoskielet_kuvaus">Download and remove translation models (about 30 MB per language)</string>
+    <string name="asetus_kaannos_muisti">Translation memory time (minutes)</string>
+    <string name="asetus_kaannos_muisti_kuvaus">The translator\'s text and its AI or manually corrected translations are kept this long after the last use. After that, the translator opens empty.</string>
+    <string name="kieli_ladattu">Downloaded</string>
+    <string name="kieli_ladataan">Downloading…</string>
+    <string name="kieli_oletus">Default</string>
+    <string name="kieli_oletus_ei_poistoa">Finnish is the translator\'s default language and cannot be removed.</string>
+    <string name="kieli_lataa_otsikko">Download translation model?</string>
+    <string name="kieli_lataa_varmistus">The model is about 30 MB and is downloaded once; after that, translations are done on the device.</string>
+    <string name="kieli_poista_varmistus">Remove this language\'s translation model from the device?</string>
+    <string name="kieli_lataa">Download</string>
+    <string name="kieli_poista">Remove</string>
+    <string name="kieli_virhe">The action failed – check your connection</string>
 
-    <string name="leikepoyta_tyhja">Kopioi tekstiä tai kuva, niin se ilmestyy tähän</string>
-    <string name="leike_liita">Liitä</string>
-    <string name="leike_hae_verkosta">Hae verkosta</string>
-    <string name="leike_poista">Poista</string>
-    <string name="leike_kuva_ei_tuettu">Tämä kenttä ei ota vastaan kuvia</string>
-    <string name="leike_haku_epaonnistui">Hakua ei voitu avata</string>
-    <string name="leike_uusi">Uusi kiinnitetty leike</string>
-    <string name="leike_uusi_vihje">Kirjoita leikkeen teksti</string>
-    <string name="leike_tallenna">Tallenna</string>
+    <string name="leikepoyta_tyhja">Copy text or an image and it appears here</string>
+    <string name="leike_liita">Paste</string>
+    <string name="leike_hae_verkosta">Search the web</string>
+    <string name="leike_poista">Delete</string>
+    <string name="leike_kuva_ei_tuettu">This field does not accept images</string>
+    <string name="leike_haku_epaonnistui">Could not open the search</string>
+    <string name="leike_uusi">New pinned clip</string>
+    <string name="leike_uusi_vihje">Type the clip\'s text</string>
+    <string name="leike_tallenna">Save</string>
 
-    <string name="ehdotus_kiinnita">Kiinnitä</string>
-    <string name="ehdotus_irrota">Poista kiinnitys</string>
-    <string name="ehdotus_poista">Poista opittu sana</string>
-    <string name="ehdotus_esta">Älä ehdota tätä</string>
+    <string name="ehdotus_kiinnita">Pin</string>
+    <string name="ehdotus_irrota">Unpin</string>
+    <string name="ehdotus_poista">Remove learned word</string>
+    <string name="ehdotus_esta">Don\'t suggest this</string>
 
     <!-- Enter-näppäimen toimintotekstit -->
-    <string name="enter_hae">Hae</string>
-    <string name="enter_laheta">Lähetä</string>
-    <string name="enter_siirry">Siirry</string>
-    <string name="enter_seuraava">Seuraava</string>
-    <string name="enter_valmis">Valmis</string>
+    <string name="enter_hae">Search</string>
+    <string name="enter_laheta">Send</string>
+    <string name="enter_siirry">Go</string>
+    <string name="enter_seuraava">Next</string>
+    <string name="enter_valmis">Done</string>
 </resources>

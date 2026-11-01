@@ -31,6 +31,7 @@ import kotlin.math.max
  */
 class OpenAiDictation(
     private val prefs: SharedPreferences,
+    private val language: String,
     private val listener: DictationController.Listener,
 ) {
 
@@ -156,7 +157,7 @@ class OpenAiDictation(
                             ws.close(CLOSE_NORMAL, null)
                             return
                         }
-                        ws.send(RealtimeEvents.sessionUpdate(model, "fi", keywords = keywords))
+                        ws.send(RealtimeEvents.sessionUpdate(model, language, keywords = keywords))
                         socketOpen = true
                         while (backlog.isNotEmpty()) {
                             ws.send(RealtimeEvents.appendAudio(backlog.removeFirst()))

@@ -2,7 +2,7 @@ package org.jarsi.ark.emoji
 
 import java.util.Locale
 
-/** Yksi emoji aineistosta: ihonvärit, suomenkielinen nimi ja avainsanat. */
+/** Yksi emoji aineistosta: ihonvärit, nimi ja avainsanat sovelluksen kielellä. */
 data class EmojiEntry(
     val emoji: String,
     val category: Int,
@@ -12,7 +12,7 @@ data class EmojiEntry(
 )
 
 /**
- * Emojiaineisto valitsimelle, haulle ja ehdotuksille (assets/emoji.tsv, ks.
+ * Emojiaineisto valitsimelle, haulle ja ehdotuksille (assets/emoji*.tsv, ks.
  * docs/emojit.md). Laitteen fontin puuttuvat emojit suodatetaan jo latauksessa,
  * joten haku ja ehdotukset eivät tarjoa neliöitä.
  */
@@ -133,7 +133,9 @@ class EmojiIndex private constructor(entries: List<EmojiEntry>) {
         private const val RANK_PREFIX = 4
 
         // Aineiston järjestys antaisi näille harvinaisemman emojin ensin.
-        private val PREFERRED = mapOf("sydän" to "❤️", "hymy" to "🙂")
+        private val PREFERRED = mapOf(
+            "sydän" to "❤️", "hymy" to "🙂", "heart" to "❤️", "smile" to "🙂",
+        )
 
         // Yleisimmät päätteet: tarkka lista estää arvaukset kuten maja → majava.
         private val INFLECTIONS = listOf(

@@ -1,6 +1,6 @@
 # ARK-näppäimistö – ohjeet
 
-[← Takaisin etusivulle](../README.md)
+[← Takaisin etusivulle](../README.md) · [In English](instructions.md)
 
 ## Asennus
 

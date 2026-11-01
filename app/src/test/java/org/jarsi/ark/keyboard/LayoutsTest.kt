@@ -68,7 +68,9 @@ class LayoutsTest {
 
     @Test
     fun `kursoritilassa on nuolet ja kaikki muokkaustoiminnot`() {
-        val keys = Layouts.arrows.rows.flatten()
+        val labels = EditLabels("alku", "loppu", "valitse", "kopioi", "liitä", "kaikki", "leikkaa")
+        val keys = Layouts.arrows(labels).rows.flatten()
+        assertTrue(keys.any { it.label == "kaikki" })
         val commands = keys.mapNotNull { (it.action as? KeyAction.Edit)?.command }
         assertEquals(EditCommand.entries.toSet(), commands.toSet())
         assertEquals(4, keys.count { it.action is KeyAction.Arrow })

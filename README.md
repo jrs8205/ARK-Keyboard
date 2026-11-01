@@ -1,50 +1,52 @@
-# ARK-näppäimistö
+# ARK Keyboard
 
-[![Lataukset](https://img.shields.io/github/downloads/jrs8205/ARK-nappaimisto/total?label=lataukset)](https://github.com/jrs8205/ARK-nappaimisto/releases)
-[![Uusin versio](https://img.shields.io/github/v/release/jrs8205/ARK-nappaimisto?label=uusin%20versio)](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/jrs8205/ARK-nappaimisto/total?label=downloads)](https://github.com/jrs8205/ARK-nappaimisto/releases)
+[![Latest version](https://img.shields.io/github/v/release/jrs8205/ARK-nappaimisto?label=latest%20version)](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)
 
-Suomalainen Android-näppäimistö, joka oppii sinun sanasi – kokonaan
-laitteella.
+🇫🇮 **[Suomenkielinen sivu](README.fi.md)**
+
+An Android keyboard that learns your words, entirely on your device. Made for Finnish.
 
 <picture>
   <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jrs8205/ARK-nappaimisto/main/docs/kuvat/esittely-kapea.png">
-  <img src="docs/kuvat/esittely-levea.png" width="100%" alt="Neljä kuvakaappausta: sanaehdotukset kirjoitettaessa, pitkän painalluksen merkkivalikko, käännösnäkymä ja leikepöytä">
+  <img src="docs/kuvat/esittely-levea.png" width="100%" alt="Four screenshots: word suggestions while typing, the long-press character menu, the translator and the clipboard">
 </picture>
 
-## Ominaisuudet
+## Features
 
-- **Oppii sinun sanasi** ja ennustaa seuraavan sanan
-- **5–8 ehdotusta** vieritettävällä rivillä
-- **Merkkivalikko** pitkällä painalluksella, valinta napauttamalla
-- **Käännösnäkymä** laitteella sekä valinnainen ✨ AI-käännös (ChatGPT-tilauksella tai API-avaimella)
-- **Sanelu** laitteen tai OpenAI:n puheentunnistuksella
-- **Leikepöytä** kiinnitettävine leikkeineen
-- **Emojit**, kursoritila ja muokattava työkalurivi
-- **Salasanojen täyttö** suoraan ehdotusriviltä
-- **Yksityinen:** ei analytiikkaa eikä mainoksia, oppiminen pysyy laitteella
+- **Learns your words** and predicts the next one
+- **5–8 suggestions** on a scrollable row
+- **Character menu** on long press, tap to choose
+- **Translator** on the device, plus optional ✨ AI translation (with a ChatGPT subscription or an API key)
+- **Dictation** with the device's or OpenAI's speech recognition
+- **Clipboard** with pinnable clips
+- **Emoji**, cursor mode and a customisable toolbar
+- **Password autofill** right on the suggestion row
+- **Private:** no analytics and no ads, learning stays on the device
 
-## Lataus ja ohjeet
+## Languages
 
-Lataa uusin APK [Releases-sivulta](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)
-tai [SourceForgesta](https://sourceforge.net/projects/ark-nappaimisto/).
-Asennus, AI-käännöksen ja sanelun API-avaimet sekä yksityisyys:
-**[Ohjeet](docs/ohjeet.md)**.
+The current version is in Finnish. An English interface and English vocabulary are coming in the
+next release.
 
-**Rekisteröity Googlelle.** Paketin nimi ja allekirjoitusavain on rekisteröity
-Googlen Android Developer Consoleen, joten sovellus asentuu jatkossakin
-normaalisti, kun Googlen uudet
-[sivulataussäännöt](https://developer.android.com/developer-verification)
-tulevat voimaan.
+## Download and instructions
 
-## Tue kehitystä
+Download the latest APK from the [Releases page](https://github.com/jrs8205/ARK-nappaimisto/releases/latest) or
+[SourceForge](https://sourceforge.net/projects/ark-nappaimisto/).
+Installation, API keys for AI translation and dictation, and privacy: **[Instructions](docs/ohjeet.md)** (in Finnish).
 
-Jos sovelluksesta on sinulle hyötyä, voit tukea sen kehitystä:
+**Registered with Google.** The package name and signing key are registered in Google's Android
+Developer Console, so the app will keep installing normally when Google's new
+[sideloading rules](https://developer.android.com/developer-verification) take effect.
 
-- [GitHub Sponsors](https://github.com/sponsors/jrs8205) – kuukausittain tai kertaluontoisesti
-- [Buy Me a Coffee](https://buymeacoffee.com/jrs8205) – ilman rekisteröitymistä
+## Support development
 
-## Lisenssi
+If the app is useful to you, you can support its development:
 
-[GPL-3.0](LICENSE). Sanalista: Kotimaisten kielten keskus
-([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.fi)), ks.
+- [GitHub Sponsors](https://github.com/sponsors/jrs8205) – monthly or one-time
+- [Buy Me a Coffee](https://buymeacoffee.com/jrs8205) – no registration needed
+
+## License
+
+[GPL-3.0](LICENSE). Word list: Institute for the Languages of Finland, see
 [docs/sanalista.md](docs/sanalista.md).

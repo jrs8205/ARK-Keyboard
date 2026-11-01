@@ -216,7 +216,7 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         textSize = 15f
         gravity = Gravity.CENTER
         maxLines = 1
-        setPadding(dp(16), dp(10), dp(16), dp(10))
+        setPadding(dp(8), dp(10), dp(8), dp(10))
         setOnClickListener { showLanguageMenu(it, sourceSide = false) }
     }
 

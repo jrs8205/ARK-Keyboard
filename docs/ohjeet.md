@@ -4,7 +4,7 @@
 
 ## Asennus
 
-1. Lataa `ark-nappaimisto-vX.Y.Z.apk` [Releases-sivulta](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)
+1. Lataa `ark-nappaimisto-vX.Y.Z.apk` [Releases-sivulta](https://github.com/jrs8205/ARK-Keyboard/releases/latest)
    puhelimella ja asenna se.
 2. Avaa ARK-näppäimistö-sovellus. Ensimmäinen avaus opastaa käyttöönoton.
 

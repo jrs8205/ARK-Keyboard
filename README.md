@@ -1,14 +1,14 @@
 # ARK-Keyboard
 
-[![Downloads](https://img.shields.io/github/downloads/jrs8205/ARK-nappaimisto/total?label=downloads)](https://github.com/jrs8205/ARK-nappaimisto/releases)
-[![Latest version](https://img.shields.io/github/v/release/jrs8205/ARK-nappaimisto?label=latest%20version)](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/jrs8205/ARK-Keyboard/total?label=downloads)](https://github.com/jrs8205/ARK-Keyboard/releases)
+[![Latest version](https://img.shields.io/github/v/release/jrs8205/ARK-Keyboard?label=latest%20version)](https://github.com/jrs8205/ARK-Keyboard/releases/latest)
 
 🇫🇮 **[Suomenkielinen sivu](README.fi.md)**
 
 An Android keyboard that learns your words, entirely on your device. Made for Finnish.
 
 <picture>
-  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jrs8205/ARK-nappaimisto/main/docs/kuvat/esittely-kapea.png">
+  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jrs8205/ARK-Keyboard/main/docs/kuvat/esittely-kapea.png">
   <img src="docs/kuvat/esittely-levea.png" width="100%" alt="Four screenshots: word suggestions while typing, the long-press character menu, the translator and the clipboard">
 </picture>
 
@@ -31,7 +31,7 @@ next release.
 
 ## Download and instructions
 
-Download the latest APK from the [Releases page](https://github.com/jrs8205/ARK-nappaimisto/releases/latest) or
+Download the latest APK from the [Releases page](https://github.com/jrs8205/ARK-Keyboard/releases/latest) or
 [SourceForge](https://sourceforge.net/projects/ark-nappaimisto/).
 Installation, API keys for AI translation and dictation, and privacy: **[Instructions](docs/ohjeet.md)** (in Finnish).
 

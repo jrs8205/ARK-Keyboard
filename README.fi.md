@@ -1,7 +1,7 @@
 # ARK-näppäimistö
 
-[![Lataukset](https://img.shields.io/github/downloads/jrs8205/ARK-nappaimisto/total?label=lataukset)](https://github.com/jrs8205/ARK-nappaimisto/releases)
-[![Uusin versio](https://img.shields.io/github/v/release/jrs8205/ARK-nappaimisto?label=uusin%20versio)](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)
+[![Lataukset](https://img.shields.io/github/downloads/jrs8205/ARK-Keyboard/total?label=lataukset)](https://github.com/jrs8205/ARK-Keyboard/releases)
+[![Uusin versio](https://img.shields.io/github/v/release/jrs8205/ARK-Keyboard?label=uusin%20versio)](https://github.com/jrs8205/ARK-Keyboard/releases/latest)
 
 🇬🇧 **[In English](README.md)**
 
@@ -9,7 +9,7 @@ Suomalainen Android-näppäimistö, joka oppii sinun sanasi – kokonaan
 laitteella.
 
 <picture>
-  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jrs8205/ARK-nappaimisto/main/docs/kuvat/esittely-kapea.png">
+  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/jrs8205/ARK-Keyboard/main/docs/kuvat/esittely-kapea.png">
   <img src="docs/kuvat/esittely-levea.png" width="100%" alt="Neljä kuvakaappausta: sanaehdotukset kirjoitettaessa, pitkän painalluksen merkkivalikko, käännösnäkymä ja leikepöytä">
 </picture>
 
@@ -27,7 +27,7 @@ laitteella.
 
 ## Lataus ja ohjeet
 
-Lataa uusin APK [Releases-sivulta](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)
+Lataa uusin APK [Releases-sivulta](https://github.com/jrs8205/ARK-Keyboard/releases/latest)
 tai [SourceForgesta](https://sourceforge.net/projects/ark-nappaimisto/).
 Asennus, AI-käännöksen ja sanelun API-avaimet sekä yksityisyys:
 **[Ohjeet](docs/ohjeet.md)**.

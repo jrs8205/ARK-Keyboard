@@ -33,6 +33,7 @@ import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.Gravity
 import android.view.View
+import android.view.ViewConfiguration
 import android.os.SystemClock
 import android.view.inputmethod.EditorInfo
 import android.webkit.MimeTypeMap
@@ -74,6 +75,7 @@ import org.jarsi.ark.keyboard.KeyAction
 import org.jarsi.ark.keyboard.KeyboardHeight
 import org.jarsi.ark.keyboard.Layouts
 import org.jarsi.ark.keyboard.ShiftState
+import org.jarsi.ark.keyboard.ShiftTracker
 import org.jarsi.ark.keyboard.SmartSpace
 import org.jarsi.ark.keyboard.SymbolOrder
 import org.jarsi.ark.keyboard.TextUndo
@@ -82,7 +84,6 @@ import org.jarsi.ark.keyboard.TranslateBuffer
 import org.jarsi.ark.keyboard.TranslateLines
 import org.jarsi.ark.keyboard.TranslatePrep
 import org.jarsi.ark.keyboard.TranslationMemory
-import org.jarsi.ark.keyboard.nextOnTap
 import org.jarsi.ark.settings.SettingsActivity
 import org.jarsi.ark.theme.KeyboardTheme
 import org.jarsi.ark.view.InlineChipsView
@@ -121,9 +122,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private var toolbar: ToolbarView? = null
     private var page = Page.LETTERS
     private var extraKey: String? = null
-    private var shiftState = ShiftState.OFF
+    private val shift = ShiftTracker()
     private var symbolOrder: List<String> = SymbolOrder.default
-    private var manualShift = false
     private var passwordField = false
     private var soundEnabled = false
     private var vibrationEnabled = true
@@ -2338,8 +2338,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         keyboardView?.enterText = enterLabel(info)
         editorSessionId++
         shownCompletions = emptyList()
-        shiftState = ShiftState.OFF
-        manualShift = false
+        shift.reset()
         // Salasanakentissä ja oppimisen kieltävissä kentissä (esim. incognito)
         // ei opita mitään; kentän vaihto katkaisee sanaketjun.
         learningEnabled = !passwordField &&
@@ -2496,7 +2495,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             currentInputConnection?.getTextBeforeCursor(MAX_WORD_LOOKBACK, 0) ?: ""
         }
         // Lauseen alussa (automaattinen iso kirjain päällä) ehdotukset alkavat isolla.
-        val shiftActive = shiftState != ShiftState.OFF
+        val shiftActive = shift.state != ShiftState.OFF
         val generation = ++suggestGeneration
         executeSuggest {
             val word = WordTools.currentWord(before)
@@ -2555,7 +2554,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             Page.ARROWS -> Layouts.arrows
         }
         keyboardView?.setKeyboardLayout(layout)
-        keyboardView?.shiftState = shiftState
+        keyboardView?.shiftState = shift.state
         // Työkalurivin korostukset seuraavat aina nykyistä sivua.
         toolbar?.arrowsActive = page == Page.ARROWS
         toolbar?.webActive = page == Page.SYMBOLS3
@@ -2569,17 +2568,13 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (translateMode) {
             // Käännöstilassa näppäily kertyy käännösnäkymään; kenttään
             // kirjoittuu vain valmis käännös.
-            val output = if (shiftState != ShiftState.OFF && text.length == 1) {
+            val output = if (shift.state != ShiftState.OFF && text.length == 1) {
                 text.uppercase(fiLocale)
             } else {
                 text
             }
             activeTranslateBuffer().smartType(output)
-            if (shiftState == ShiftState.SHIFT) {
-                shiftState = ShiftState.OFF
-                manualShift = false
-                keyboardView?.shiftState = shiftState
-            }
+            if (shift.onCharacterTyped()) keyboardView?.shiftState = shift.state
             onTranslateBufferChanged()
             feedback()
             return
@@ -2616,7 +2611,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         autoSpaceState = 0
         punctSpaceAdded = false
         // Vain yksittäiset merkit shiftautuvat; esim. verkko-osoitepalat pysyvät ennallaan.
-        val output = if (shiftState != ShiftState.OFF && text.length == 1) {
+        val output = if (shift.state != ShiftState.OFF && text.length == 1) {
             text.uppercase(fiLocale)
         } else {
             text
@@ -2635,11 +2630,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             }
         }
         ic.commitText(output, 1)
-        if (shiftState == ShiftState.SHIFT) {
-            shiftState = ShiftState.OFF
-            manualShift = false
-            keyboardView?.shiftState = shiftState
-        }
+        if (shift.onCharacterTyped()) keyboardView?.shiftState = shift.state
         feedback()
     }
 
@@ -2778,10 +2769,14 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
 
     private fun handleShift() {
-        shiftState = shiftState.nextOnTap()
-        manualShift = shiftState != ShiftState.OFF
-        keyboardView?.shiftState = shiftState
+        val state = shift.tap(
+            SystemClock.uptimeMillis(),
+            ViewConfiguration.getDoubleTapTimeout().toLong(),
+        )
+        keyboardView?.shiftState = state
         feedback()
+        // Tyhjän syötteen ennustukset seuraavat shiftin tilaa.
+        updateSuggestions()
     }
 
     private fun handleEnter() {
@@ -2818,7 +2813,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
      * luetaan kentältä.
      */
     private fun updateAutoCaps(predicted: CharSequence? = null) {
-        if (page != Page.LETTERS || manualShift || shiftState == ShiftState.CAPS) return
+        if (page != Page.LETTERS) return
         val caps = if (translateMode) {
             val buffer = activeTranslateBuffer()
             AutoCaps.wanted(buffer.text.substring(0, buffer.cursor), AutoCaps.SENTENCES)
@@ -2834,11 +2829,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 AutoCaps.wanted(before, info.inputType)
             }
         }
-        val newState = if (caps) ShiftState.SHIFT else ShiftState.OFF
-        if (newState != shiftState) {
-            shiftState = newState
-            keyboardView?.shiftState = newState
-        }
+        if (shift.applyAutoCaps(caps)) keyboardView?.shiftState = shift.state
     }
 
     override fun onUpdateSelection(
@@ -2858,6 +2849,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (newSelStart != newSelEnd ||
             SystemClock.uptimeMillis() - lastEditTime > EXTERNAL_SELECTION_MS
         ) {
+            shift.onTextChanged()
             learning.resetContext()
             // Korjauksen peruutus ja undo tunnistavat kohteensa pelkästä
             // kursoria edeltävästä tekstistä. Kursorihypyn jälkeen sama
@@ -2880,6 +2872,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
      */
     private fun markOwnEdit() {
         lastEditTime = SystemClock.uptimeMillis()
+        shift.onTextChanged()
     }
 
     private fun feedback(soundEffect: Int = AudioManager.FX_KEYPRESS_STANDARD) {

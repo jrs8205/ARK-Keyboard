@@ -43,7 +43,7 @@
     <string name="tyokalurivi_kuvaus">Järjestä napit ja valitse mitkä näkyvät</string>
     <string name="tyokalurivi_ohje">Raahaa nappia pitkällä painalluksella järjestyksen muuttamiseksi. Kytkimestä valitset, näkyykö nappi työkalurivillä. Asetukset näkyy aina viimeisenä.</string>
     <string name="tyokalurivi_palauta">Palauta oletukset</string>
-    <string name="tyokalurivi_palauta_varmistus">Palautetaanko työkalurivin oletusjärjestys ja kaikki napit näkyviin?</string>
+    <string name="tyokalurivi_palauta_varmistus">Palautetaanko työkalurivin oletusjärjestys ja oletusnapit?</string>
     <string name="tyokalu_nuolet">Kursorin siirto</string>
     <string name="tyokalu_www">Verkko-osoitteet (www)</string>
     <string name="tyokalu_mikrofoni">Sanelu</string>
@@ -187,6 +187,7 @@
     <string name="kaannos_lataus_virhe">Käännösmallin lataus epäonnistui – tarkista verkkoyhteys</string>
     <string name="kaannos_virhe">Käännös epäonnistui – yritä uudelleen</string>
     <string name="kaannos_vie">Vie käännös</string>
+    <string name="kaannos_sulje">Sulje kääntäjä</string>
     <string name="kaannos_tyhja">Käännös ilmestyy tähän</string>
     <string name="kaannos_ai_kaannetaan">Käännetään…</string>
     <string name="kaannos_ai_muistista">Teksti on jo AI-käännetty – käännös haettiin muistista, uutta pyyntöä ei tehty</string>

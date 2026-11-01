@@ -19,6 +19,8 @@ import android.view.ViewGroup
 import android.view.inputmethod.InlineSuggestionsRequest
 import android.view.inputmethod.InlineSuggestionsResponse
 import android.widget.inline.InlinePresentationSpec
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 import androidx.annotation.RequiresApi
 import androidx.autofill.inline.UiVersions
 import androidx.autofill.inline.common.TextViewStyle
@@ -595,6 +597,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     override fun onDestroy() {
         editorSessionId++
         cancelDeferredFieldWork()
+        watchTranslateBack(false)
         mainHandler.removeCallbacks(recentClipExpiry)
         dictation.stop()
         openAiDictation?.destroy()
@@ -672,6 +675,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        // Piilossa oleva näppäimistö ei saa siepata sovelluksen takaisin-nappia.
+        watchTranslateBack(false)
         cancelDeferredFieldWork()
         hideMessage()
         keyboardView?.dismissPopups()
@@ -1092,6 +1097,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val bar = translateBar ?: return
         // Salasanakenttiä ei käännetä.
         if (field.password) return
+        forgetSentTranslation()
         // Vanha käännösteksti unohtuu muistiajan kuluttua: tuntien takainen
         // teksti avautuisi muuten yllättäen uuden käännöstyön pohjaksi.
         val memoryMs = prefs.getInt(PREF_TRANSLATE_MEMORY, 30) * 60_000L
@@ -1109,6 +1115,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         hideAllPanels()
         resetSidePage()
         translateMode = true
+        watchTranslateBack(true)
         // Aiempi AI- tai käsin korjattu käännös palaa näkyviin heti, eikä
         // konekäännös korvaa sitä — muuten maksullinen käännös pitäisi
         // pyytää uudelleen joka kerta näkymään palatessa.
@@ -1125,6 +1132,38 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     /**
+     * Vienti sulki näkymän. Jos viety teksti on yhä kursorin edellä, näkymä
+     * jatkaa siitä: lähdeteksti on muokattavana, ja uusi vienti korvaa kentän
+     * tekstin. Jos sitä ei enää ole, viesti lähti tai kenttä vaihtui, ja näkymä
+     * aukeaa tyhjänä seuraavaa käännöstä varten kuten Gboardissa.
+     */
+    private fun forgetSentTranslation() {
+        if (!translationExported) return
+        translationExported = false
+        val previous = lastInsertedTranslation
+        val stillInField = previous.isNotEmpty() &&
+            readBefore(previous.length)?.toString() == previous
+        if (stillInField) return
+        translateBuffer.clear()
+        lastInsertedTranslation = ""
+        translateSourceLocked = false
+    }
+
+    /** Vie käännöksen ja sulkee näkymän, jolloin sovelluksen lähetysnappi on heti esillä. */
+    private fun exportTranslation() {
+        if (translateBuffer.text.isBlank()) return
+        // Maksullinen käännös on tulossa: vienti ei saa ohittaa sitä konekäännöksellä.
+        if (aiTranslateRunning) {
+            showMessage(R.string.kaannos_ai_kaannetaan)
+            return
+        }
+        insertTranslation {
+            translationExported = true
+            hideTranslateBar()
+        }
+    }
+
+    /**
      * Sulkee käännösnäkymän. Kenttään ei kosketa, ja teksti säilyy
      * puskurissa kunnes käyttäjä itse tyhjentää sen (✕ tai poistot) —
      * käännöstyö ei katoa sulkuun, kentän vaihtoon eikä sovelluksen
@@ -1134,6 +1173,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (!translateMode) return
         translateLastUsed = SystemClock.elapsedRealtime()
         translateMode = false
+        watchTranslateBack(false)
         translateRunnable?.let { mainHandler.removeCallbacks(it) }
         translationGeneration++
         aiTranslateGeneration++
@@ -1147,7 +1187,48 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         translateBar?.visibility = View.GONE
         updateSuggestionRow()
         toolbar?.translationActive = false
+        updateAutoCaps()
         updateSuggestions()
+    }
+
+    // Takaisin-nappi sulkee ensin kääntäjän kuten Gboardissa, ja vasta
+    // seuraava painallus piilottaa näppäimistön. Android 13:sta alkaen takaisin
+    // ei välttämättä kulje näppäintapahtumana, vaan järjestelmä piilottaisi
+    // näppäimistön suoraan (mitattu API 36:lla), joten tarvitaan oma kuuntelija.
+    // Vanhemmilla versioilla toimii näppäintapahtuma.
+    private var translateBackCallback: Any? = null
+
+    private fun watchTranslateBack(active: Boolean) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val dispatcher = window?.onBackInvokedDispatcher ?: return
+        val current = translateBackCallback as? OnBackInvokedCallback
+        if (active && current == null) {
+            val callback = OnBackInvokedCallback { hideTranslateBar() }
+            dispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                callback,
+            )
+            translateBackCallback = callback
+        } else if (!active && current != null) {
+            dispatcher.unregisterOnBackInvokedCallback(current)
+            translateBackCallback = null
+        }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && translateMode && isInputViewShown) {
+            event.startTracking()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && translateMode && isInputViewShown) {
+            hideTranslateBar()
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     private fun updateTranslateBar() {
@@ -1461,6 +1542,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     // Viimeisin kenttään viety käännös: uusi vienti korvaa sen, ettei
     // jatkettu teksti kahdennu kenttään. Nollataan kentän vaihtuessa.
     private var lastInsertedTranslation = ""
+
+    // Näkymä suljettiin viennin takia: seuraavalla avauksella katsotaan, onko
+    // viety teksti yhä lähettämättä kentässä.
+    private var translationExported = false
 
     /**
      * Kirjoittaa käännöksen kenttään. Jos edellinen viety käännös on
@@ -2680,8 +2765,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     showMessage(R.string.kaannos_kopioitu)
                 }
 
-                override fun onInsert() {
-                    insertTranslation()
+                override fun onInsert() = exportTranslation()
+
+                override fun onCloseView() {
+                    feedback()
+                    hideTranslateBar()
                 }
 
                 override fun onDownloadModels() {
@@ -3139,6 +3227,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             pendingClipboardPanel = false
             showClipboardPanel()
         }
+        if (translateMode) watchTranslateBack(true)
         spaceAfterSuggestion = prefs.getBoolean("ehdotus_valilyonti", true)
         commonWordsEnabled = prefs.getBoolean("ehdotus_yleiset", true)
         autoCorrectEnabled = prefs.getBoolean("automaattikorjaus", true)

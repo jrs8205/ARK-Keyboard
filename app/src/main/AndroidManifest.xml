@@ -23,6 +23,7 @@
         android:name=".ArkApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/varmistussaannot"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/taysvarmistus"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

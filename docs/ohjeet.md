@@ -28,6 +28,11 @@ API-avaimet eivät kulje varmuuskopiossa.
 - **Tuore kopio:** kopioitu teksti näkyy minuutin ajan ehdotusrivillä, josta sen
   liittää yhdellä napautuksella.
 - **Emojin ihonväri:** pidä emojia pohjassa; valinta muistetaan.
+- **Käännös:** Vie käännös vie tekstin kenttään ja sulkee kääntäjän, jolloin viestin
+  voi lähettää heti. Jos avaat kääntäjän ennen lähettämistä, voit jatkaa samaa
+  tekstiä, ja uusi vienti korvaa kentän käännöksen. Lähetyksen jälkeen kääntäjä
+  aukeaa tyhjänä. Takaisin-nappi sulkee kääntäjän ensin.
+- **Peruutusnappi:** saat sen työkaluriville asetuksista.
 - **Yhden käden tila:** työkalurivin napista. Sivupalkista näppäimistö siirtyy
   toiselle puolelle tai palaa täyteen leveyteen.
 

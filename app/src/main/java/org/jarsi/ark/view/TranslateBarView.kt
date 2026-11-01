@@ -79,6 +79,9 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         /** Käyttäjä vie näkyvän käännöksen kenttään. */
         fun onInsert()
 
+        /** Käyttäjä sulki näkymän: teksti säilyy seuraavaan avaukseen. */
+        fun onCloseView()
+
         /** Käyttäjä antoi luvan kieliparin mallien lataukseen. */
         fun onDownloadModels()
     }
@@ -557,8 +560,16 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         text = context.getString(R.string.kaannos_vie)
         textSize = 15f
         setTypeface(typeface, Typeface.BOLD)
-        setPadding(dp(12), dp(10), dp(14), dp(10))
+        setPadding(dp(16), dp(9), dp(16), dp(9))
         setOnClickListener { listener?.onInsert() }
+    }
+
+    // Sulku samassa paikassa kuin Gboardin kääntäjässä, kielirivin alussa.
+    private val closeLabel = ImageView(context).apply {
+        setImageResource(R.drawable.ic_arrow_back)
+        scaleType = ImageView.ScaleType.CENTER
+        contentDescription = context.getString(R.string.kaannos_sulje)
+        setOnClickListener { listener?.onCloseView() }
     }
 
     private val downloadLabel = TextView(context).apply {
@@ -578,7 +589,13 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         addView(View(context), LayoutParams(0, 1, 1f))
         addView(aiLabel, LayoutParams(dp(44), dp(44)))
         addView(copyIcon, LayoutParams(dp(44), dp(44)))
-        addView(insertLabel)
+        addView(
+            insertLabel,
+            LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = dp(6)
+                marginEnd = dp(12)
+            },
+        )
         addView(downloadLabel)
     }
 
@@ -586,7 +603,11 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
     private val languageRow = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(12), dp(4), dp(12), dp(4))
+        setPadding(dp(4), dp(4), dp(12), dp(4))
+        addView(
+            closeLabel,
+            LayoutParams(dp(44), dp(44)).apply { marginEnd = dp(4) },
+        )
         addView(sourceLabel, LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         addView(
             swapLabel,
@@ -652,7 +673,13 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         swapLabel.setColorFilter(theme.text)
         clearLabel.setColorFilter(theme.hint)
         aiLabel.setColorFilter(theme.text)
-        insertLabel.setTextColor(theme.accent)
+        // Täytetty nappi: vienti on näkymän päätoiminto.
+        insertLabel.setTextColor(theme.accentText)
+        insertLabel.background = GradientDrawable().apply {
+            cornerRadius = dp(24).toFloat()
+            setColor(theme.accent)
+        }
+        closeLabel.setColorFilter(theme.text)
         downloadLabel.setTextColor(theme.accent)
         copyIcon.setColorFilter(theme.text)
         divider.setBackgroundColor(

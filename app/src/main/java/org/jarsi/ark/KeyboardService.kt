@@ -1927,7 +1927,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         val ic = currentInputConnection ?: return
         val swipe = backspaceSwipe ?: startBackspaceSwipe(ic) ?: return
-        val length = WordTools.wordsBackspaceLength(swipe.before, words)
+        val length = WordTools.clampToWholeCharacter(
+            swipe.before,
+            WordTools.wordsBackspaceLength(swipe.before, words),
+            BACKSPACE_SWIPE_LOOKBACK,
+        )
         if (length == swipe.selected) return
         swipe.selected = length
         markOwnEdit()
@@ -2183,7 +2187,15 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
      * poistua kahdesti.
      */
     private fun deleteWordFromField(ic: InputConnection, before: CharSequence) {
-        val length = WordTools.wordBackspaceLength(before)
+        val length = WordTools.clampToWholeCharacter(
+            before,
+            WordTools.wordBackspaceLength(before),
+            WORD_BACKSPACE_LOOKBACK,
+        )
+        if (length == 0) {
+            sendKeyToField(KeyEvent.KEYCODE_DEL)
+            return
+        }
         val word = before.subSequence(before.length - length, before.length).toString()
         val fullBefore = before.toString()
         if (deleteWordsWithKeys) {

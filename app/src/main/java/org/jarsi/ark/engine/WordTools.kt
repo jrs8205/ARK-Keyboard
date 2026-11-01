@@ -155,6 +155,19 @@ object WordTools {
         return length
     }
 
+    /**
+     * Rajaa poiston ehjään merkkiin. Lukuraja voi katketa keskelle merkkiä
+     * (emojin puolikas): jos poisto yltäisi katkaistun luvun alkuun asti,
+     * ensimmäinen merkki jää poistamatta, jottei kenttään jää puolikasta.
+     */
+    fun clampToWholeCharacter(textBefore: CharSequence, length: Int, readLimit: Int): Int {
+        if (length < textBefore.length || textBefore.length < readLimit) return length
+        val iterator = BreakIterator.getCharacterInstance()
+        iterator.setText(textBefore.toString())
+        val firstBoundary = iterator.following(0)
+        return if (firstBoundary == BreakIterator.DONE) 0 else length - firstBoundary
+    }
+
     /** Grafeemien määrä: montako näppäintapahtumana lähetettyä poistoa teksti vaatii. */
     fun graphemeCount(text: CharSequence): Int {
         val iterator = BreakIterator.getCharacterInstance()

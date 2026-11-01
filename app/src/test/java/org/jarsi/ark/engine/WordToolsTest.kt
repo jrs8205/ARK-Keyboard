@@ -1,6 +1,7 @@
 package org.jarsi.ark.engine
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordToolsTest {
@@ -240,6 +241,25 @@ class WordToolsTest {
     fun `wordsBackspaceLength ei ylita tekstin alkua`() {
         assertEquals(4, WordTools.wordsBackspaceLength("yksi", 5))
         assertEquals(0, WordTools.wordsBackspaceLength("", 2))
+    }
+
+    @Test
+    fun `katkaistun luvun alku ohitetaan kun sanarajaa ei loydy`() {
+        // Luku alkoi emojin jälkimmäisestä puolikkaasta.
+        val before = "\uDE00" + "a".repeat(9)
+        val length = WordTools.clampToWholeCharacter(before, before.length, readLimit = 10)
+        assertEquals(9, length)
+        assertTrue(Character.isLetter(before[before.length - length]))
+    }
+
+    @Test
+    fun `sanarajaan paattyva poisto ei muutu`() {
+        assertEquals(5, WordTools.clampToWholeCharacter("yksi kaksi", 5, readLimit = 10))
+    }
+
+    @Test
+    fun `koko kentan teksti saa poistua kun lukua ei katkaistu`() {
+        assertEquals(4, WordTools.clampToWholeCharacter("yksi", 4, readLimit = 10))
     }
 
     @Test

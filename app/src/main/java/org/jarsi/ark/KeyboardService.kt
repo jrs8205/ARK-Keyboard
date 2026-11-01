@@ -99,6 +99,7 @@ import org.jarsi.ark.keyboard.SuggestionItem
 import org.jarsi.ark.keyboard.SymbolOrder
 import org.jarsi.ark.keyboard.TextUndo
 import org.jarsi.ark.keyboard.ToolbarOrder
+import org.jarsi.ark.keyboard.WordDeleteCheck
 import org.jarsi.ark.keyboard.TranslateBuffer
 import org.jarsi.ark.keyboard.TranslateLines
 import org.jarsi.ark.keyboard.TranslatePrep
@@ -2202,6 +2203,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
             return
         }
+        val positionBefore = if (cursor.known) cursor.start else null
         deleteFromField(ic, length)
         wordDeleteCheck?.let { mainHandler.removeCallbacks(it) }
         val session = editorSessionId
@@ -2213,8 +2215,14 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 return@Runnable
             }
             val current = currentInputConnection ?: return@Runnable
-            // Koko alkuperäinen häntä: "ja ja " näyttäisi lyhyellä vertailulla poistamattomalta.
-            if (readBefore(current, fullBefore.length)?.toString() == fullBefore) {
+            val textNow = readBefore(current, fullBefore.length)?.toString()
+            val truncated = fullBefore.length >= WORD_BACKSPACE_LOOKBACK
+            val positionNow = if (truncated && textNow == fullBefore) {
+                fieldPosition(current)
+            } else {
+                null
+            }
+            if (WordDeleteCheck.failed(fullBefore, textNow, truncated, positionBefore, positionNow)) {
                 deleteWordsWithKeys = true
                 repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
             }
@@ -2222,6 +2230,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         wordDeleteCheck = check
         mainHandler.postDelayed(check, WORD_DELETE_CHECK_MS)
     }
+
+    private fun fieldPosition(ic: InputConnection): Int? =
+        ic.getExtractedText(ExtractedTextRequest(), 0)
+            ?.takeIf { it.selectionStart >= 0 }
+            ?.let { it.startOffset + it.selectionStart }
 
     /**
      * Työkalurivin peruutus: viimeisin näppäimistön toimenpide perutaan

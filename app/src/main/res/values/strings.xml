@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ARK Keyboard</string>
+    <string name="app_name">ARK-Keyboard</string>
     <string name="subtype_suomi">Finnish</string>
 
     <!-- Asetukset -->
     <string name="asetukset_kayttoonotto">Setup</string>
     <string name="ota_kayttoon">Enable the keyboard</string>
-    <string name="ota_kayttoon_kuvaus">Open system settings and allow ARK Keyboard</string>
+    <string name="ota_kayttoon_kuvaus">Open system settings and allow ARK-Keyboard</string>
     <string name="vaihda_nappaimistoksi">Switch to this keyboard</string>
-    <string name="vaihda_nappaimistoksi_kuvaus">Choose ARK Keyboard as the active keyboard</string>
+    <string name="vaihda_nappaimistoksi_kuvaus">Choose ARK-Keyboard as the active keyboard</string>
 
     <string name="asetukset_ulkoasu">Appearance</string>
     <string name="asetus_teema">Theme</string>
@@ -112,7 +112,7 @@
     <string name="chatgpt_kirjautuminen_kesken">registration was not completed</string>
     <string name="chatgpt_kirjautuminen_vaara_tili">the response does not match the sign-in that was started</string>
     <string name="chatgpt_kirjautuminen_ei_salausta">Your sign-in details were saved, but the device\'s secure key store was not available, so they could not be encrypted. They are still available only to this app and are not included in backups.</string>
-    <string name="chatgpt_paluusivu">Sign-in complete. You can close this tab and return to ARK Keyboard.</string>
+    <string name="chatgpt_paluusivu">Sign-in complete. You can close this tab and return to ARK-Keyboard.</string>
     <string name="chatgpt_uloskirjautuminen_varmistus">Sign out of your ChatGPT subscription? AI translation goes back to the API key, if one is set.</string>
     <string name="chatgpt_kirjaudu_ulos">Sign out</string>
     <string name="chatgpt_kirjauduttu_ulos">Signed out of your ChatGPT subscription</string>
@@ -207,7 +207,7 @@
     <string name="esittely_seuraava">Next</string>
     <string name="esittely_valmis_nappi">Done</string>
     <string name="esittely_tervetuloa_otsikko">Welcome!</string>
-    <string name="esittely_tervetuloa_teksti">ARK Keyboard learns your own words, word pairs and way of writing — entirely on your device. Text leaves the device only if you use AI translation or OpenAI dictation yourself.</string>
+    <string name="esittely_tervetuloa_teksti">ARK-Keyboard learns your own words, word pairs and way of writing — entirely on your device. Text leaves the device only if you use AI translation or OpenAI dictation yourself.</string>
     <string name="esittely_kayttoonotto_otsikko">Enable</string>
     <string name="esittely_kayttoonotto_teksti">The keyboard is enabled in two steps in your phone\'s settings.</string>
     <string name="esittely_askel_kayttoon">1. Enable the keyboard</string>

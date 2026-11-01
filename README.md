@@ -1,4 +1,4 @@
-# ARK Keyboard
+# ARK-Keyboard
 
 [![Downloads](https://img.shields.io/github/downloads/jrs8205/ARK-nappaimisto/total?label=downloads)](https://github.com/jrs8205/ARK-nappaimisto/releases)
 [![Latest version](https://img.shields.io/github/v/release/jrs8205/ARK-nappaimisto?label=latest%20version)](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)

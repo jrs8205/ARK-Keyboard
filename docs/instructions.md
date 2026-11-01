@@ -1,4 +1,4 @@
-# ARK Keyboard – instructions
+# ARK-Keyboard – instructions
 
 [← Back to the front page](../README.md) · [Suomeksi](ohjeet.md)
 
@@ -6,7 +6,7 @@
 
 1. Download `ark-nappaimisto-vX.Y.Z.apk` from the [Releases page](https://github.com/jrs8205/ARK-nappaimisto/releases/latest)
    on your phone and install it.
-2. Open the ARK Keyboard app. The first launch guides you through the setup.
+2. Open the ARK-Keyboard app. The first launch guides you through the setup.
 
 Updates install over the old version, and learned words are kept. To move your data to another
 device, use a backup (Settings → Backup). API keys are not included in backups.

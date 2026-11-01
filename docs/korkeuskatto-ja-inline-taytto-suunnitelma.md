@@ -50,3 +50,14 @@ ikkunan korkeudesta (Gboardin vaakasuhde).
   antamat LayoutParams-mitat WRAP_CONTENT-leveydellä, joka mittautuu nollaksi
   (`InlineContentView` ei mittaa itseään). Korjattu `InlineChips.chipSize`-säännöllä.
   Todennettu 10 Prolla oikealla tunnuksella: chip näkyy ja täyttö toimii, kun täyttöpalvelu tarjoaa inline-esityksen.
+
+## Tarkennukset 1.11.2026
+
+- Pyyntö ei enää vaadi näkymää. Näppäimistön käynnistyksen jälkeisellä ensimmäisellä
+  avauksella pyyntö tuli ennen näkymän luontia, jolloin ehdotus näkyi pudotusvalikkona.
+- Chip on pillerinmuotoinen, enintään 40 dp korkea ja enintään 80 % rivin leveydestä.
+- Salasanakenttä varaa rivin, kun täyttöpalvelu on käytössä, joten korkeus ei hypi
+  kentän vaihtuessa. Ilman täyttöpalvelua rivi pysyy poissa kuten ennen.
+- Käännösnäkymässä chipit väistyvät sen omien ehdotusten tieltä.
+- Chipin korkeus luetaan vastauksen spesifikaatiosta, koska `inflate` kaatuu, jos
+  koko ei mahdu pyynnössä annettuihin rajoihin.

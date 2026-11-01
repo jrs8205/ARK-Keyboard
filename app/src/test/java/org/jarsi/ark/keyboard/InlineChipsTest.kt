@@ -29,13 +29,46 @@ class InlineChipsTest {
     }
 
     @Test
-    fun `chipin korkeus on rivi ilman reunatayteita ja leveys 48 dp asti nayton leveyteen`() {
+    fun `matalalla rivilla chipin korkeus on rivi ilman reunatayteita`() {
         val density = 2.625f
-        val bounds = InlineChips.specBounds(barHeightPx = 150, screenWidthPx = 1080, density = density)
-        assertEquals(150 - 2 * Math.round(InlineChips.CHIP_PADDING_DP * density), bounds.height)
+        val bounds = InlineChips.specBounds(barHeightPx = 100, rowWidthPx = 1080, density = density)
+        assertEquals(100 - 2 * Math.round(InlineChips.CHIP_PADDING_DP * density), bounds.height)
         assertEquals(Math.round(InlineChips.MIN_WIDTH_DP * density), bounds.minWidth)
-        assertEquals(1080, bounds.maxWidth)
+    }
+
+    @Test
+    fun `korkealla rivilla chip ei kasva katon yli`() {
+        // Korkeusasetus 130 %: rivi kasvaa, mutta chip pysyy siistin kokoisena.
+        val bounds = InlineChips.specBounds(barHeightPx = 150, rowWidthPx = 1080, density = 2.625f)
+        assertEquals(105, bounds.height)
+    }
+
+    @Test
+    fun `pitka chip jattaa tilaa seuraavalle`() {
+        val bounds = InlineChips.specBounds(barHeightPx = 150, rowWidthPx = 1080, density = 2.625f)
+        assertEquals(864, bounds.maxWidth)
         assertTrue(bounds.minWidth <= bounds.maxWidth)
+    }
+
+    @Test
+    fun `rivin korkeus seuraa korkeusasetusta ilman nakymaa`() {
+        // Pyyntö voi tulla ennen näkymän luontia, joten laskenta ei saa vaatia sitä.
+        assertEquals(116, InlineChips.barHeightPx(density = 2.625f, heightScale = 1f))
+        assertEquals(151, InlineChips.barHeightPx(density = 2.625f, heightScale = 1.3f))
+    }
+
+    @Test
+    fun `salasanakentta varaa rivin kun taytto on kaytossa`() {
+        assertTrue(InlineChips.reservesRow(autofillActive = true, textPassword = true, suggestionsEnabled = true))
+    }
+
+    @Test
+    fun `rivia ei varata turhaan`() {
+        // Ilman täyttöpalvelua, muussa kentässä tai ehdotusrivin ollessa pois päältä
+        // näppäimistö pysyy matalana.
+        assertFalse(InlineChips.reservesRow(autofillActive = false, textPassword = true, suggestionsEnabled = true))
+        assertFalse(InlineChips.reservesRow(autofillActive = true, textPassword = false, suggestionsEnabled = true))
+        assertFalse(InlineChips.reservesRow(autofillActive = true, textPassword = true, suggestionsEnabled = false))
     }
 
     @Test
@@ -56,7 +89,7 @@ class InlineChipsTest {
 
     @Test
     fun `kapea naytto ei kaanna minimia ja maksimia`() {
-        val bounds = InlineChips.specBounds(barHeightPx = 10, screenWidthPx = 50, density = 3f)
+        val bounds = InlineChips.specBounds(barHeightPx = 10, rowWidthPx = 50, density = 3f)
         assertTrue(bounds.minWidth <= bounds.maxWidth)
         assertTrue(bounds.height >= 1)
     }

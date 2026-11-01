@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import org.jarsi.ark.keyboard.InlineChips
-import org.jarsi.ark.keyboard.KeyboardHeight
 import org.jarsi.ark.theme.KeyboardTheme
 import kotlin.math.roundToInt
 
@@ -50,7 +49,7 @@ class InlineChipsView(context: Context) : HorizontalScrollView(context) {
     }
 
     /** Rivin korkeus pikseleinä; sama kuin ehdotusrivillä, jotta vaihto ei hypi. */
-    fun barHeightPx(): Int = (dp(KeyboardHeight.SUGGESTION_BAR_DP) * heightScale).roundToInt()
+    fun barHeightPx(): Int = InlineChips.barHeightPx(density, heightScale)
 
     /** Yksittäisen chipin korkeus rivin sisällä. */
     fun chipHeightPx(): Int =

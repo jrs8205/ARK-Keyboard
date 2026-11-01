@@ -411,6 +411,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     // Kasvaa jokaisella inline-vastauksella ja kentän vaihdolla: myöhässä
     // valmistuva chip ei saa päätyä uudemman kentän riville.
     private var inlineGeneration = 0
+    // Kehys pyytää inline-ehdotuksia vain, kun käytössä on niitä tukeva täyttöpalvelu.
+    private var inlineAutofillActive = false
     private var spaceAfterSuggestion = true
     private var commonWordsEnabled = true
 
@@ -1139,6 +1141,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         refreshTranslationLanguages()
         updateTranslateBar()
         checkTranslationModels()
+        updateSuggestionRow()
         updateSuggestions()
     }
 
@@ -2505,15 +2508,17 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     /** Yhden käden tilan asettelu; lukitusnäytöllä aina täysi leveys. */
+    private fun oneHandMode(): OneHandMode = if (lockedMode) {
+        OneHandMode.OFF
+    } else {
+        OneHandMode.from(prefs.getString(OneHand.PREF_MODE, null))
+    }
+
     private fun applyOneHand() {
         val row = keyRow ?: return
         val column = keyColumn ?: return
         val side = oneHandSide ?: return
-        val mode = if (lockedMode) {
-            OneHandMode.OFF
-        } else {
-            OneHandMode.from(prefs.getString(OneHand.PREF_MODE, null))
-        }
+        val mode = oneHandMode()
         val metrics = resources.displayMetrics
         val columnParams = LinearLayout.LayoutParams(
             if (mode == OneHandMode.OFF) {
@@ -3016,9 +3021,15 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             suggestionBar?.visibility = View.GONE
             return
         }
+        val reserved = InlineChips.reservesRow(
+            autofillActive = inlineAutofillActive,
+            textPassword = field.password && !field.numeric,
+            suggestionsEnabled = prefs.getBoolean("ehdotukset", true),
+        )
         val state = InlineChips.rowState(
-            suggestionsVisible || recentClipItem() != null,
-            inlineChips?.count ?: 0,
+            suggestionsVisible || recentClipItem() != null || reserved,
+            // Käännösnäkymän ehdotukset koskevat sen omaa tekstiä; chipit väistyvät.
+            if (translateMode) 0 else inlineChips?.count ?: 0,
         )
         inlineChips?.visibility = if (state.chipsVisible) View.VISIBLE else View.GONE
         suggestionBar?.visibility = if (state.suggestionsVisible) View.VISIBLE else View.GONE
@@ -3078,15 +3089,29 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     /**
      * Täyttöpalvelun (esim. salasanojen hallinnan) ehdotukset pyydetään näppäimistön riville
      * kentän viereisen pudotusvalikon sijaan: chip näkyy silloinkin, kun
-     * kenttä itse on näppäimistön alla piilossa. Chipin korkeus on
-     * ehdotusrivin korkeus ja ulkoasu teeman väreistä.
+     * kenttä itse on näppäimistön alla piilossa. Ulkoasu tulee teeman väreistä.
+     *
+     * Pyyntö tulee ensimmäisellä avauksella ennen näkymän luontia. Jos siihen
+     * vastattaisiin tyhjällä, ehdotus näkyisi pudotusvalikkona kentän vieressä.
      */
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreateInlineSuggestionsRequest(uiExtras: Bundle): InlineSuggestionsRequest? {
         if (lockedMode) return null
-        val chips = inlineChips ?: return null
+        if (!inlineAutofillActive) {
+            inlineAutofillActive = true
+            updateSuggestionRow()
+        }
         val metrics = resources.displayMetrics
-        val bounds = InlineChips.specBounds(chips.barHeightPx(), metrics.widthPixels, metrics.density)
+        val rowWidth = if (oneHandMode() == OneHandMode.OFF) {
+            metrics.widthPixels
+        } else {
+            OneHand.keyboardWidthPx(metrics.widthPixels, metrics.density)
+        }
+        val bounds = InlineChips.specBounds(
+            InlineChips.barHeightPx(metrics.density, effectiveHeightScale()),
+            rowWidth,
+            metrics.density,
+        )
         val spec = InlinePresentationSpec.Builder(
             Size(bounds.minWidth, bounds.height),
             Size(bounds.maxWidth, bounds.height),
@@ -3103,7 +3128,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     @RequiresApi(Build.VERSION_CODES.R)
     private fun inlineChipStyle(): Bundle {
         val theme = KeyboardTheme.load(this)
-        val pad = (10 * resources.displayMetrics.density).toInt()
+        val pad = (12 * resources.displayMetrics.density).toInt()
         val chip = ViewStyle.Builder()
             .setBackground(
                 Icon.createWithResource(this, R.drawable.inline_chip_bg).setTint(theme.specialKey)
@@ -3129,10 +3154,15 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             updateSuggestionRow()
             return true
         }
-        val size = Size(ViewGroup.LayoutParams.WRAP_CONTENT, chips.chipHeightPx())
         val views = arrayOfNulls<View>(suggestions.size)
         var pending = suggestions.size
         suggestions.forEachIndexed { index, suggestion ->
+            // Korkeus pyynnön mukaan: inflate kaatuu, jos koko ei mahdu sen rajoihin, ja
+            // näytön kääntö tai korkeusasetus voi muuttaa riviä pyynnön ja vastauksen välissä.
+            val size = Size(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                suggestion.info.inlinePresentationSpec.maxSize.height,
+            )
             suggestion.inflate(this, size, mainExecutor) { view ->
                 // Vastaus vanheni (kenttä vaihtui tai uusi vastaus tuli)
                 // ennen kuin chip valmistui.

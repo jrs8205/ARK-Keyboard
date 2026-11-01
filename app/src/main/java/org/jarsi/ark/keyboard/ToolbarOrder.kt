@@ -13,6 +13,7 @@ enum class ToolbarTool(val id: String) {
     CLIPBOARD("leikepoyta"),
     TRANSLATE("kaannos"),
     UNDO("peruutus"),
+    ONE_HAND("yksi_kasi"),
     SETTINGS("asetukset");
 
     companion object {
@@ -24,7 +25,8 @@ enum class ToolbarTool(val id: String) {
  * Työkalurivin nappien järjestys ja piilotukset. Käyttäjän valinta
  * sovitetaan aina nykyiseen nappivalikoimaan: tuntemattomat ja
  * kaksoiskappaleet siivotaan, uudet napit palaavat järjestyksen loppuun
- * näkyvinä, eikä asetusnappia voi piilottaa, jotta asetuksiin pääsee aina.
+ * näkyvinä (viimeisenä olevan asetusnapin eteen), eikä asetusnappia voi
+ * piilottaa, jotta asetuksiin pääsee aina.
  */
 object ToolbarOrder {
 
@@ -55,7 +57,12 @@ object ToolbarOrder {
             return Config(default, emptySet())
         }
         val kept = parsed.first.mapNotNull(ToolbarTool::byId).distinct()
-        val order = kept + default.filter { it !in kept }
+        val missing = default.filter { it !in kept }
+        val order = if (kept.lastOrNull() == ToolbarTool.SETTINGS) {
+            kept.dropLast(1) + missing + ToolbarTool.SETTINGS
+        } else {
+            kept + missing
+        }
         val hidden = parsed.second.mapNotNull(ToolbarTool::byId).toSet() - ToolbarTool.SETTINGS
         return Config(order, hidden)
     }

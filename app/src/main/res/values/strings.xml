@@ -51,6 +51,9 @@
     <string name="tyokalu_leikepoyta">Leikepöytä</string>
     <string name="tyokalu_kaannos">Käännös</string>
     <string name="tyokalu_peruutus">Peruutus</string>
+    <string name="tyokalu_yksi_kasi">Yhden käden tila</string>
+    <string name="yksi_kasi_vaihda_puoli">Siirrä näppäimistö toiselle puolelle</string>
+    <string name="yksi_kasi_sulje">Näppäimistö täyteen leveyteen</string>
     <string name="tyokalu_asetukset">Asetukset</string>
     <string name="erikoismerkit_kuvaus">Järjestä symbolisivujen merkit raahaamalla</string>
     <string name="erikoismerkit_ohje">Siirrä merkkiä pitämällä sitä pohjassa ja raahaamalla uuteen kohtaan, myös sivujen välillä.</string>
@@ -76,7 +79,7 @@
     <string name="opitut_kiinnitetty">Kiinnitetty</string>
     <string name="opitut_estetty">Estetty</string>
     <string name="opitut_tyhjenna">Tyhjennä kaikki</string>
-    <string name="opitut_tyhjenna_varmistus">Poistetaanko kaikki opitut sanat ja sanaketjut? Tätä ei voi perua.</string>
+    <string name="opitut_tyhjenna_varmistus">Poistetaanko kaikki opitut sanat, sanaketjut ja emojihistoria? Tätä ei voi perua.</string>
 
     <string name="asetukset_tekoaly">Tekoäly</string>
     <string name="asetus_ai_avain_ohje">API-avain ei ole sama asia kuin Claude- tai ChatGPT-tilaus</string>
@@ -150,6 +153,9 @@
     <!-- Saavutettavuuskuvaukset kuvakenapeille -->
     <string name="cd_poista_merkki">Poista merkki</string>
     <string name="cd_valilyonti">Välilyönti</string>
+    <string name="cd_liita_kopio">Liitä kopioitu teksti: %1$s</string>
+    <string name="cd_kuvaleike">Kuvaleike</string>
+    <string name="cd_leikkeen_valikko">Leikkeen valikko</string>
     <string name="cd_vaihda_suunta">Vaihda käännössuunta</string>
     <string name="cd_tyhjenna_rivi">Tyhjennä käännösrivi</string>
 

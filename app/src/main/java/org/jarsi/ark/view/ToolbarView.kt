@@ -3,14 +3,46 @@ package org.jarsi.ark.view
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
+import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
+import android.view.accessibility.AccessibilityManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.customview.widget.ExploreByTouchHelper
 import org.jarsi.ark.R
+import org.jarsi.ark.keyboard.KeyboardHeight
 import org.jarsi.ark.keyboard.ToolbarOrder
 import org.jarsi.ark.keyboard.ToolbarTool
 import org.jarsi.ark.theme.KeyboardTheme
 import kotlin.math.roundToInt
+
+/** Työkalun nimi asetuksissa ja ruudunlukijalle. */
+fun ToolbarTool.labelRes(): Int = when (this) {
+    ToolbarTool.ARROWS -> R.string.tyokalu_nuolet
+    ToolbarTool.WEB -> R.string.tyokalu_www
+    ToolbarTool.MIC -> R.string.tyokalu_mikrofoni
+    ToolbarTool.EMOJI -> R.string.tyokalu_emojit
+    ToolbarTool.CLIPBOARD -> R.string.tyokalu_leikepoyta
+    ToolbarTool.TRANSLATE -> R.string.tyokalu_kaannos
+    ToolbarTool.UNDO -> R.string.tyokalu_peruutus
+    ToolbarTool.ONE_HAND -> R.string.tyokalu_yksi_kasi
+    ToolbarTool.SETTINGS -> R.string.tyokalu_asetukset
+}
+
+fun ToolbarTool.iconRes(): Int = when (this) {
+    ToolbarTool.ARROWS -> R.drawable.ic_cursor_move
+    ToolbarTool.WEB -> R.drawable.ic_link
+    ToolbarTool.MIC -> R.drawable.ic_mic
+    ToolbarTool.EMOJI -> R.drawable.ic_emoji
+    ToolbarTool.CLIPBOARD -> R.drawable.ic_clipboard
+    ToolbarTool.TRANSLATE -> R.drawable.ic_translate
+    ToolbarTool.UNDO -> R.drawable.ic_undo
+    ToolbarTool.ONE_HAND -> R.drawable.ic_dock_right
+    ToolbarTool.SETTINGS -> R.drawable.ic_settings
+}
 
 /** Työkalurivi ehdotusrivin yläpuolella: kursorinsiirtotila, verkko-osoitteet ja asetukset. */
 class ToolbarView(context: Context) : View(context) {
@@ -23,6 +55,7 @@ class ToolbarView(context: Context) : View(context) {
         fun onToggleClipboard()
         fun onToggleTranslation()
         fun onUndo()
+        fun onToggleOneHand()
         fun onOpenSettings()
     }
 
@@ -86,6 +119,13 @@ class ToolbarView(context: Context) : View(context) {
             invalidate()
         }
 
+    /** Korostaa yhden käden napin, kun tila on päällä. */
+    var oneHandActive = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     private var theme = KeyboardTheme.load(context)
     private var pressedIndex = -1
 
@@ -93,24 +133,102 @@ class ToolbarView(context: Context) : View(context) {
     private fun dp(value: Float) = value * density
 
     private val buttonPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textAlign = Paint.Align.CENTER
-    }
-
     /** Näkyvät napit järjestyksessä; asetuksista muokattavissa. */
     var tools: List<ToolbarTool> = ToolbarOrder.default
         set(value) {
             field = value
             invalidate()
+            accessHelper.invalidateRoot()
         }
 
-    private val cursorIcon = context.getDrawable(R.drawable.ic_cursor_move)?.mutate()
-    private val micIcon = context.getDrawable(R.drawable.ic_mic)?.mutate()
-    private val emojiIcon = context.getDrawable(R.drawable.ic_emoji)?.mutate()
-    private val clipboardIcon = context.getDrawable(R.drawable.ic_clipboard)?.mutate()
-    private val translateIcon = context.getDrawable(R.drawable.ic_translate)?.mutate()
-    private val undoIcon = context.getDrawable(R.drawable.ic_undo)?.mutate()
-    private val settingsIcon = context.getDrawable(R.drawable.ic_settings)?.mutate()
+    private val icons = ToolbarTool.entries.associateWith {
+        context.getDrawable(it.iconRes())?.mutate()
+    }
+
+    private val accessHelper = ToolAccessHelper()
+    private val accessibility = context.getSystemService(AccessibilityManager::class.java)
+
+    init {
+        ViewCompat.setAccessibilityDelegate(this, accessHelper)
+    }
+
+    override fun dispatchHoverEvent(event: MotionEvent): Boolean =
+        accessHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
+
+    private fun isActive(tool: ToolbarTool): Boolean = when (tool) {
+        ToolbarTool.ARROWS -> arrowsActive
+        ToolbarTool.WEB -> webActive
+        ToolbarTool.MIC -> micActive
+        ToolbarTool.EMOJI -> emojiActive
+        ToolbarTool.CLIPBOARD -> clipboardActive
+        ToolbarTool.TRANSLATE -> translationActive
+        ToolbarTool.ONE_HAND -> oneHandActive
+        else -> false
+    }
+
+    private fun perform(tool: ToolbarTool) {
+        when (tool) {
+            ToolbarTool.ARROWS -> listener?.onToggleArrows()
+            ToolbarTool.WEB -> listener?.onToggleWeb()
+            ToolbarTool.MIC -> listener?.onToggleDictation()
+            ToolbarTool.EMOJI -> listener?.onToggleEmoji()
+            ToolbarTool.CLIPBOARD -> listener?.onToggleClipboard()
+            ToolbarTool.TRANSLATE -> listener?.onToggleTranslation()
+            ToolbarTool.UNDO -> listener?.onUndo()
+            ToolbarTool.ONE_HAND -> listener?.onToggleOneHand()
+            ToolbarTool.SETTINGS -> listener?.onOpenSettings()
+        }
+    }
+
+    /** Napit ruudunlukijalle; rivi piirretään yhdeksi näkymäksi. */
+    private inner class ToolAccessHelper : ExploreByTouchHelper(this) {
+        override fun getVirtualViewAt(x: Float, y: Float): Int {
+            val index = indexAt(x, y)
+            return if (index >= 0) index else INVALID_ID
+        }
+
+        override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
+            virtualViewIds.addAll(tools.indices)
+        }
+
+        override fun onPopulateNodeForVirtualView(
+            virtualViewId: Int,
+            node: AccessibilityNodeInfoCompat,
+        ) {
+            val tool = tools.getOrNull(virtualViewId)
+            if (tool == null) {
+                node.contentDescription = ""
+                node.setBoundsInParent(Rect(0, 0, 1, 1))
+                return
+            }
+            node.contentDescription = context.getString(tool.labelRes())
+            val rect = buttonRect(virtualViewId)
+            node.setBoundsInParent(
+                Rect(rect.left.toInt(), 0, rect.right.toInt(), height.coerceAtLeast(1))
+            )
+            node.className = "android.widget.Button"
+            node.isClickable = true
+            node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK)
+            node.isCheckable = tool != ToolbarTool.UNDO && tool != ToolbarTool.SETTINGS
+            node.isChecked = isActive(tool)
+        }
+
+        override fun onPerformActionForVirtualView(
+            virtualViewId: Int,
+            action: Int,
+            arguments: Bundle?,
+        ): Boolean {
+            if (action != AccessibilityNodeInfoCompat.ACTION_CLICK) return false
+            val tool = tools.getOrNull(virtualViewId) ?: return false
+            perform(tool)
+            sendEventForVirtualView(
+                virtualViewId,
+                android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED,
+            )
+            invalidateRoot()
+            return true
+        }
+    }
 
     fun applySettings(newTheme: KeyboardTheme) {
         theme = newTheme
@@ -118,19 +236,21 @@ class ToolbarView(context: Context) : View(context) {
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), dp(40f).roundToInt())
+        // Ruudunlukijan kanssa rivi on Androidin suosittamaa 48 dp:n korkeutta.
+        val rowDp = if (accessibility?.isTouchExplorationEnabled == true) {
+            ACCESSIBLE_ROW_DP
+        } else {
+            KeyboardHeight.TOOLBAR_DP
+        }
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), dp(rowDp).roundToInt())
     }
-
-    // www-nappi on tekstin vuoksi leveämpi kuin kuvakenapit.
-    private fun buttonWidth(tool: ToolbarTool, size: Float): Float =
-        if (tool == ToolbarTool.WEB) size * 1.6f else size
 
     // Kapealla näytöllä nappien leveydet kutistuvat suhteessa, jotta koko
     // rivi mahtuu aina näkyviin.
     private fun widthScale(): Float {
         val size = height - dp(8f)
         var natural = dp(6f)
-        for (tool in tools) natural += buttonWidth(tool, size) + dp(6f)
+        repeat(tools.size) { natural += size + dp(6f) }
         return if (natural > width && natural > 0f) width / natural else 1f
     }
 
@@ -138,27 +258,15 @@ class ToolbarView(context: Context) : View(context) {
         val size = height - dp(8f)
         val scale = widthScale()
         var left = dp(6f) * scale
-        for (i in 0 until index) {
-            left += (buttonWidth(tools[i], size) + dp(6f)) * scale
-        }
-        return RectF(
-            left,
-            dp(4f),
-            left + buttonWidth(tools[index], size) * scale,
-            dp(4f) + size,
-        )
+        left += index * (size + dp(6f)) * scale
+        return RectF(left, dp(4f), left + size * scale, dp(4f) + size)
     }
 
     override fun onDraw(canvas: Canvas) {
         canvas.drawColor(theme.background)
         tools.forEachIndexed { i, tool ->
             val rect = buttonRect(i)
-            val active = (tool == ToolbarTool.ARROWS && arrowsActive) ||
-                (tool == ToolbarTool.WEB && webActive) ||
-                (tool == ToolbarTool.MIC && micActive) ||
-                (tool == ToolbarTool.EMOJI && emojiActive) ||
-                (tool == ToolbarTool.CLIPBOARD && clipboardActive) ||
-                (tool == ToolbarTool.TRANSLATE && translationActive)
+            val active = isActive(tool)
             if (tool == ToolbarTool.MIC && micActive) {
                 // Kehä sykkii puheen tahdissa ja laskee itsestään hiljaisuudessa.
                 micShownLevel += (micLevel - micShownLevel) * 0.3f
@@ -176,26 +284,7 @@ class ToolbarView(context: Context) : View(context) {
             }
             canvas.drawRoundRect(rect, dp(8f), dp(8f), buttonPaint)
             val contentColor = if (active) theme.accentText else theme.text
-            if (tool == ToolbarTool.WEB) {
-                labelPaint.color = contentColor
-                labelPaint.textSize = rect.height() * 0.42f
-                canvas.drawText(
-                    "www",
-                    rect.centerX(),
-                    rect.centerY() + labelPaint.textSize * 0.35f,
-                    labelPaint,
-                )
-                return@forEachIndexed
-            }
-            val icon = when (tool) {
-                ToolbarTool.ARROWS -> cursorIcon
-                ToolbarTool.MIC -> micIcon
-                ToolbarTool.EMOJI -> emojiIcon
-                ToolbarTool.CLIPBOARD -> clipboardIcon
-                ToolbarTool.TRANSLATE -> translateIcon
-                ToolbarTool.UNDO -> undoIcon
-                else -> settingsIcon
-            } ?: return@forEachIndexed
+            val icon = icons[tool] ?: return@forEachIndexed
             icon.setTint(contentColor)
             val iconSize = (minOf(rect.height(), rect.width()) * 0.62f).roundToInt()
             val cx = rect.centerX().roundToInt()
@@ -213,18 +302,7 @@ class ToolbarView(context: Context) : View(context) {
             }
             MotionEvent.ACTION_UP -> {
                 val index = indexAt(event.x, event.y)
-                if (index >= 0 && index == pressedIndex) {
-                    when (tools[index]) {
-                        ToolbarTool.ARROWS -> listener?.onToggleArrows()
-                        ToolbarTool.WEB -> listener?.onToggleWeb()
-                        ToolbarTool.MIC -> listener?.onToggleDictation()
-                        ToolbarTool.EMOJI -> listener?.onToggleEmoji()
-                        ToolbarTool.CLIPBOARD -> listener?.onToggleClipboard()
-                        ToolbarTool.TRANSLATE -> listener?.onToggleTranslation()
-                        ToolbarTool.UNDO -> listener?.onUndo()
-                        ToolbarTool.SETTINGS -> listener?.onOpenSettings()
-                    }
-                }
+                if (index >= 0 && index == pressedIndex) perform(tools[index])
                 pressedIndex = -1
                 invalidate()
                 performClick()
@@ -251,5 +329,9 @@ class ToolbarView(context: Context) : View(context) {
             val rect = buttonRect(it)
             x >= rect.left - halfGap && x < rect.right + halfGap
         } ?: -1
+    }
+
+    private companion object {
+        const val ACCESSIBLE_ROW_DP = 48f
     }
 }

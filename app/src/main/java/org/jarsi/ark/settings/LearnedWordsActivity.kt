@@ -237,6 +237,11 @@ class LearnedWordsActivity : AppCompatActivity() {
     }
 
     private fun clearAll() {
+        // Emojihistoria on sekin opittua tietoa käytöstä.
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).edit()
+            .remove("emoji_viimeisimmat")
+            .remove("emoji_ihonvarit")
+            .apply()
         val db = database ?: return
         ioExecutor.execute {
             try {

@@ -16,6 +16,15 @@ class ToolbarOrderTest {
     }
 
     @Test
+    fun `uusi nappi tulee viimeisen asetusnapin eteen`() {
+        val saved = ToolbarOrder.serialize(listOf(ToolbarTool.MIC, ToolbarTool.SETTINGS), emptySet())
+        val order = ToolbarOrder.load(saved).order
+        assertEquals(ToolbarTool.SETTINGS, order.last())
+        assertEquals(ToolbarTool.MIC, order.first())
+        assertTrue(ToolbarTool.ONE_HAND in order)
+    }
+
+    @Test
     fun `tallennus ja luku sailyttavat jarjestyksen ja piilotukset`() {
         val order = ToolbarOrder.default.reversed()
         val hidden = setOf(ToolbarTool.MIC, ToolbarTool.EMOJI)
@@ -33,7 +42,7 @@ class ToolbarOrderTest {
 
     @Test
     fun `tuntematon tunniste poistuu ja puuttuva palaa loppuun`() {
-        val partial = listOf(ToolbarTool.SETTINGS, ToolbarTool.MIC)
+        val partial = listOf(ToolbarTool.SETTINGS, ToolbarTool.MIC, ToolbarTool.UNDO)
         val saved = ToolbarOrder.serialize(partial, emptySet())
             .replace("mikrofoni", "tuntematon")
         val config = ToolbarOrder.load(saved)

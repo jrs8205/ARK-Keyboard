@@ -254,6 +254,7 @@ class ClipboardPanelView(context: Context) : FrameLayout(context) {
                 // Palsta kuluttaa omat kosketuksensa: väliin osuva sormi ei
                 // liitä leikettä.
                 isClickable = true
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                 addView(more, LinearLayout.LayoutParams(dp(44), dp(40)))
                 addView(Space(parent.context), LinearLayout.LayoutParams(0, 0, 1f))
                 addView(pin, LinearLayout.LayoutParams(dp(44), dp(40)))
@@ -310,6 +311,7 @@ class ClipboardPanelView(context: Context) : FrameLayout(context) {
                 text.visibility = GONE
                 image.visibility = VISIBLE
                 image.setImageBitmap(clip.imagePath?.let(::decodeThumbnail))
+                image.contentDescription = context.getString(R.string.cd_kuvaleike)
             }
 
             tintedIcon(more, R.drawable.ic_more_vert, theme.hint)
@@ -319,6 +321,10 @@ class ClipboardPanelView(context: Context) : FrameLayout(context) {
                 if (clip.pinned) theme.accent else theme.hint,
             )
 
+            more.contentDescription = context.getString(R.string.cd_leikkeen_valikko)
+            pin.contentDescription = context.getString(
+                if (clip.pinned) R.string.ehdotus_irrota else R.string.ehdotus_kiinnita
+            )
             row.setOnClickListener { listener?.onPaste(clip) }
             pin.setOnClickListener { listener?.onTogglePin(clip) }
             more.setOnClickListener { showClipMenu(more, clip) }

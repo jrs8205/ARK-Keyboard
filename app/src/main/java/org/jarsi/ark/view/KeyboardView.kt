@@ -6,12 +6,14 @@ import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.os.Build
+import android.os.Bundle
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
@@ -24,10 +26,14 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.customview.widget.ExploreByTouchHelper
 import org.jarsi.ark.R
 import org.jarsi.ark.keyboard.EditCommand
 import org.jarsi.ark.keyboard.Key
 import org.jarsi.ark.keyboard.KeyAction
+import org.jarsi.ark.keyboard.KeySpeech
 import org.jarsi.ark.keyboard.KeyboardHeight
 import org.jarsi.ark.keyboard.KeyboardLayout
 import org.jarsi.ark.keyboard.Layouts
@@ -70,6 +76,14 @@ class KeyboardView(context: Context) : View(context) {
         set(value) {
             field = value
             invalidate()
+            accessHelper.invalidateRoot()
+        }
+
+    /** Salasanakentässä ruudunlukija ei sano merkkejä ääneen. */
+    var obscureKeyLabels = false
+        set(value) {
+            field = value
+            accessHelper.invalidateRoot()
         }
 
     /** Korostaa Valitse-näppäimen, kun nuolet laajentavat valintaa. */
@@ -78,12 +92,14 @@ class KeyboardView(context: Context) : View(context) {
             if (field == value) return
             field = value
             invalidate()
+            accessHelper.invalidateRoot()
         }
 
     var enterText: String = "⏎"
         set(value) {
             field = value
             invalidate()
+            accessHelper.invalidateRoot()
         }
 
     private var layout: KeyboardLayout = Layouts.letters()
@@ -125,6 +141,82 @@ class KeyboardView(context: Context) : View(context) {
 
     private var boundedKeys: List<BoundedKey> = emptyList()
     private var rowHeight = 0f
+
+    private val accessHelper = KeyAccessHelper()
+
+    init {
+        ViewCompat.setAccessibilityDelegate(this, accessHelper)
+    }
+
+    override fun dispatchHoverEvent(event: MotionEvent): Boolean =
+        accessHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
+
+    /**
+     * Näppäimet ruudunlukijalle: yksi piirretty näkymä esitetään yksittäisinä
+     * näppäiminä. Tekstinsyöttönäppäimen merkintä antaa ruudunlukijan toimia
+     * käyttäjän asetuksen mukaan (nosto kirjoittaa tai kaksoisnapautus).
+     */
+    private inner class KeyAccessHelper : ExploreByTouchHelper(this) {
+
+        override fun getVirtualViewAt(x: Float, y: Float): Int {
+            val key = keyAt(x, y) ?: return INVALID_ID
+            return boundedKeys.indexOf(key)
+        }
+
+        override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
+            boundedKeys.forEachIndexed { index, bounded ->
+                if (bounded.key.action != KeyAction.None) virtualViewIds.add(index)
+            }
+        }
+
+        override fun onPopulateNodeForVirtualView(
+            virtualViewId: Int,
+            node: AccessibilityNodeInfoCompat,
+        ) {
+            val bounded = boundedKeys.getOrNull(virtualViewId)
+            if (bounded == null) {
+                node.contentDescription = ""
+                node.setBoundsInParent(Rect(0, 0, 1, 1))
+                return
+            }
+            val key = bounded.key
+            node.contentDescription = KeySpeech.describe(
+                key, shiftState, enterText, selectionActive, obscureKeyLabels,
+            )
+            val rect = Rect()
+            bounded.rect.roundOut(rect)
+            node.setBoundsInParent(rect)
+            node.isTextEntryKey = true
+            node.isClickable = true
+            node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK)
+            if (key.longPress.isNotEmpty() || key.action == KeyAction.Space) {
+                node.addAction(AccessibilityNodeInfoCompat.ACTION_LONG_CLICK)
+            }
+        }
+
+        override fun onPerformActionForVirtualView(
+            virtualViewId: Int,
+            action: Int,
+            arguments: Bundle?,
+        ): Boolean {
+            val bounded = boundedKeys.getOrNull(virtualViewId) ?: return false
+            when (action) {
+                AccessibilityNodeInfoCompat.ACTION_CLICK -> commit(bounded.key)
+                AccessibilityNodeInfoCompat.ACTION_LONG_CLICK -> when {
+                    bounded.key.action == KeyAction.Space -> listener?.onSpaceLongPress()
+                    bounded.key.longPress.isNotEmpty() && alternatesPopup == null ->
+                        showAlternates(bounded)
+                    else -> return false
+                }
+                else -> return false
+            }
+            sendEventForVirtualView(
+                virtualViewId,
+                android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED,
+            )
+            return true
+        }
+    }
 
     /** Navigointipalkin varaus näkymän alareunassa pikseleinä. */
     var bottomInset = 0
@@ -176,6 +268,7 @@ class KeyboardView(context: Context) : View(context) {
         requestLayout()
         computeBounds()
         invalidate()
+        accessHelper.invalidateRoot()
     }
 
     fun applySettings(newTheme: KeyboardTheme, scale: Float, preview: Boolean, haptics: Boolean) {
@@ -255,6 +348,7 @@ class KeyboardView(context: Context) : View(context) {
             }
         }
         boundedKeys = result
+        accessHelper.invalidateRoot()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -543,6 +637,7 @@ class KeyboardView(context: Context) : View(context) {
             row.addView(
                 TextView(context).apply {
                     text = value
+                    contentDescription = KeySpeech.symbol(value)
                     gravity = Gravity.CENTER
                     textSize = 20f
                     // Painettu solu korostuu kuten painettu näppäin.

@@ -26,10 +26,11 @@ import androidx.autofill.inline.common.ViewStyle
 import androidx.autofill.inline.v1.InlineSuggestionUi
 import android.inputmethodservice.InputMethodService
 import android.net.Uri
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
-import android.text.InputType
+import android.provider.Settings
 import android.view.HapticFeedbackConstants
 import android.view.InputDevice
 import android.view.KeyCharacterMap
@@ -59,6 +60,7 @@ import org.jarsi.ark.clipboard.NewClipActivity
 import org.jarsi.ark.clipboard.RecentClipOffer
 import org.jarsi.ark.data.ApiKeyStore
 import org.jarsi.ark.data.ChatGptPlan
+import org.jarsi.ark.data.DeviceLock
 import org.jarsi.ark.data.ClipEntity
 import org.jarsi.ark.dictation.DictationController
 import org.jarsi.ark.dictation.DictationText
@@ -87,6 +89,8 @@ import org.jarsi.ark.keyboard.InlineChips
 import org.jarsi.ark.keyboard.KeyAction
 import org.jarsi.ark.keyboard.KeyboardHeight
 import org.jarsi.ark.keyboard.Layouts
+import org.jarsi.ark.keyboard.OneHand
+import org.jarsi.ark.keyboard.OneHandMode
 import org.jarsi.ark.keyboard.ShiftState
 import org.jarsi.ark.keyboard.ShiftTracker
 import org.jarsi.ark.keyboard.SlowConnectionGuard
@@ -117,6 +121,7 @@ import org.jarsi.ark.view.ClipboardPanelView
 import org.jarsi.ark.view.EmojiPanelView
 import org.jarsi.ark.view.EmojiSearchBarView
 import org.jarsi.ark.view.KeyboardView
+import org.jarsi.ark.view.OneHandSideView
 import org.jarsi.ark.view.TranslateBarView
 import org.jarsi.ark.view.SuggestionBarView
 import org.jarsi.ark.view.ToolbarView
@@ -134,6 +139,15 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private enum class Page { LETTERS, SYMBOLS1, SYMBOLS2, SYMBOLS3, NUMERIC, ARROWS }
 
     private var keyboardView: KeyboardView? = null
+
+    // Puhelimen käynnistyksen jälkeen ennen ensimmäistä avausta käytössä on
+    // vain tyhjä laitesuojattu asetustiedosto: ei oppimista, leikkeitä eikä
+    // työkaluja, ainoastaan näppäimet lukitusnäytön salasanaa varten.
+    private var lockedMode = false
+
+    private var keyRow: LinearLayout? = null
+    private var keyColumn: LinearLayout? = null
+    private var oneHandSide: OneHandSideView? = null
     private var suggestionBar: SuggestionBarView? = null
     private var toolbar: ToolbarView? = null
     private var page = Page.LETTERS
@@ -458,10 +472,37 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         ) {
             applyVisualSettings()
         }
+        // Tyhjennys tai varmuuskopion tuonti muutti muistettuja emojeja muualta.
+        if (key == PREF_EMOJI_RECENTS &&
+            prefs.getString(PREF_EMOJI_RECENTS, null) != emojiRecents?.savedRecents()
+        ) {
+            emojiRecents = loadEmojiRecents()
+        }
     }
 
     override fun onCreate() {
         super.onCreate()
+        lockedMode = !DeviceLock.isUnlocked(this)
+        if (lockedMode) {
+            prefs = PreferenceManager.getDefaultSharedPreferences(
+                createDeviceProtectedStorageContext()
+            )
+            prefs.registerOnSharedPreferenceChangeListener(prefListener)
+        } else {
+            startUserServices()
+        }
+    }
+
+    /** Ensimmäinen avaus: oikeat asetukset ja oppimisdata tulevat käyttöön. */
+    private fun completeUnlock() {
+        lockedMode = false
+        prefs.unregisterOnSharedPreferenceChangeListener(prefListener)
+        startUserServices()
+        toolbar?.visibility = View.VISIBLE
+        applyVisualSettings()
+    }
+
+    private fun startUserServices() {
         prefs = PreferenceManager.getDefaultSharedPreferences(this)
         prefs.registerOnSharedPreferenceChangeListener(prefListener)
         clipboardManager = getSystemService(ClipboardManager::class.java)
@@ -529,10 +570,17 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (saved != null) return EmojiRecents(saved, prefs.getString(PREF_EMOJI_VARIANTS, null))
         val legacy = getSharedPreferences(LEGACY_EMOJI_PREFS, MODE_PRIVATE)
             .getString(LEGACY_EMOJI_KEY, null)
-        return if (legacy != null) EmojiRecents.fromLegacy(legacy) else EmojiRecents()
+            ?: return EmojiRecents()
+        // Siirto tehdään kerran: muuten tyhjennetty historia palaisi vanhasta tiedostosta.
+        val migrated = EmojiRecents.fromLegacy(legacy)
+        prefs.edit().putString(PREF_EMOJI_RECENTS, migrated.savedRecents()).apply()
+        deleteSharedPreferences(LEGACY_EMOJI_PREFS)
+        return migrated
     }
 
     private fun rememberEmojiUse(emoji: String) {
+        // Salasana- ja incognito-kentissä ei muisteta mitään, ei emojejakaan.
+        if (!learningEnabled) return
         val recents = emojiRecents ?: return
         recents.use(emoji)
         prefs.edit()
@@ -882,6 +930,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         hideAllPanels()
         stopDictation()
         resetSidePage()
+        panel.rememberChoices = learningEnabled
         panel.setData(emojiIndex, emojiRecents)
         panel.refresh()
         if (kb.height > 0) {
@@ -2310,6 +2359,64 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         )
     }
 
+    /**
+     * Salasanakentässä ruudunlukija ei sano merkkejä kaiuttimesta. Kuulokkeilla
+     * tai järjestelmän asetuksen salliessa ne saa kuulla.
+     */
+    private fun shouldObscureKeyLabels(): Boolean {
+        if (!field.password) return false
+        @Suppress("DEPRECATION")
+        val speakPasswords = Settings.Secure.getInt(
+            contentResolver, Settings.Secure.ACCESSIBILITY_SPEAK_PASSWORD, 0
+        ) != 0
+        if (speakPasswords) return false
+        val outputs = getSystemService(AudioManager::class.java)
+            ?.getDevices(AudioManager.GET_DEVICES_OUTPUTS).orEmpty()
+        return outputs.none { it.type in PRIVATE_AUDIO_OUTPUTS }
+    }
+
+    /** Yhden käden tilan asettelu; lukitusnäytöllä aina täysi leveys. */
+    private fun applyOneHand() {
+        val row = keyRow ?: return
+        val column = keyColumn ?: return
+        val side = oneHandSide ?: return
+        val mode = if (lockedMode) {
+            OneHandMode.OFF
+        } else {
+            OneHandMode.from(prefs.getString(OneHand.PREF_MODE, null))
+        }
+        val metrics = resources.displayMetrics
+        val columnParams = LinearLayout.LayoutParams(
+            if (mode == OneHandMode.OFF) {
+                LinearLayout.LayoutParams.MATCH_PARENT
+            } else {
+                OneHand.keyboardWidthPx(metrics.widthPixels, metrics.density)
+            },
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        )
+        val sideParams = LinearLayout.LayoutParams(
+            0,
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            1f,
+        )
+        row.removeAllViews()
+        if (mode == OneHandMode.RIGHT) row.addView(side, sideParams)
+        row.addView(column, columnParams)
+        if (mode == OneHandMode.LEFT) row.addView(side, sideParams)
+        toolbar?.oneHandActive = mode != OneHandMode.OFF
+    }
+
+    private fun setOneHandMode(mode: OneHandMode) {
+        prefs.edit().apply {
+            putString(OneHand.PREF_MODE, mode.id)
+            if (mode != OneHandMode.OFF) putString(OneHand.PREF_LAST_SIDE, mode.id)
+        }.apply()
+        // Avoinna oleva valikko kuuluu vanhaan asetteluun.
+        keyboardView?.dismissPopups()
+        emojiPanel?.dismissVariants()
+        applyOneHand()
+    }
+
     private fun applyVisualSettings() {
         val theme = KeyboardTheme.load(this)
         val heightScale = effectiveHeightScale()
@@ -2325,6 +2432,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         emojiSearchBar?.applySettings(theme, heightScale)
         inlineChips?.applySettings(theme, heightScale)
         toolbar?.applySettings(theme)
+        oneHandSide?.applySettings(theme)
+        applyOneHand()
         clipboardPanel?.applySettings(theme)
         emojiPanel?.applySettings(theme)
         translateBar?.applySettings(theme)
@@ -2351,6 +2460,24 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT,
         )
+        // Yhden käden tilassa palsta kapenee ja sivupalkki täyttää loput.
+        val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        keyColumn = column
+        keyRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        oneHandSide = OneHandSideView(this).also {
+            it.listener = object : OneHandSideView.Listener {
+                override fun onSwapSide() {
+                    feedback()
+                    val current = OneHandMode.from(prefs.getString(OneHand.PREF_MODE, null))
+                    setOneHandMode(OneHand.otherSide(current))
+                }
+
+                override fun onExitOneHand() {
+                    feedback()
+                    setOneHandMode(OneHandMode.OFF)
+                }
+            }
+        }
         toolbar = ToolbarView(this).also {
             it.listener = object : ToolbarView.Listener {
                 override fun onToggleArrows() {
@@ -2430,6 +2557,16 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
                 override fun onUndo() = performUndo()
 
+                override fun onToggleOneHand() {
+                    feedback()
+                    setOneHandMode(
+                        OneHand.toggled(
+                            OneHandMode.from(prefs.getString(OneHand.PREF_MODE, null)),
+                            OneHandMode.from(prefs.getString(OneHand.PREF_LAST_SIDE, null)),
+                        )
+                    )
+                }
+
                 override fun onOpenSettings() {
                     // Näppäimistö suljetaan ensin, ettei se jää sovelluksen
                     // ruutukaappaukseen ja välähdä vanhalla teemalla palattaessa.
@@ -2440,7 +2577,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     )
                 }
             }
-            container.addView(it, LinearLayout.LayoutParams(params))
+            column.addView(it, LinearLayout.LayoutParams(params))
         }
         translateBar = TranslateBarView(this).also {
             it.listener = object : TranslateBarView.Listener {
@@ -2593,7 +2730,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         inlineChips = InlineChipsView(this).also {
             it.visibility = View.GONE
-            container.addView(it, LinearLayout.LayoutParams(params))
+            column.addView(it, LinearLayout.LayoutParams(params))
         }
         suggestionBar = SuggestionBarView(this).also {
             it.listener = ::onSuggestionItemPicked
@@ -2623,7 +2760,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     feedback()
                 }
             }
-            container.addView(it, LinearLayout.LayoutParams(params))
+            column.addView(it, LinearLayout.LayoutParams(params))
         }
         emojiSearchBar = EmojiSearchBarView(this).also {
             it.listener = object : EmojiSearchBarView.Listener {
@@ -2641,14 +2778,14 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 }
             }
             it.visibility = View.GONE
-            container.addView(it, LinearLayout.LayoutParams(params))
+            column.addView(it, LinearLayout.LayoutParams(params))
         }
         keyboardView = KeyboardView(this).also {
             it.listener = this
             // Navigointipalkin varaus selviää vasta ikkunassa; korkeuskatto
             // lasketaan silloin uudelleen.
             it.onBottomInsetChanged = { applyVisualSettings() }
-            container.addView(it, LinearLayout.LayoutParams(params))
+            column.addView(it, LinearLayout.LayoutParams(params))
         }
         clipboardPanel = ClipboardPanelView(this).also {
             it.listener = object : ClipboardPanelView.Listener {
@@ -2700,7 +2837,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 }
             }
             it.visibility = View.GONE
-            container.addView(it, LinearLayout.LayoutParams(params))
+            column.addView(it, LinearLayout.LayoutParams(params))
         }
         emojiPanel = EmojiPanelView(this).also {
             it.listener = object : EmojiPanelView.Listener {
@@ -2732,8 +2869,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 }
             }
             it.visibility = View.GONE
-            container.addView(it, LinearLayout.LayoutParams(params))
+            column.addView(it, LinearLayout.LayoutParams(params))
         }
+        container.addView(keyRow, LinearLayout.LayoutParams(params))
+        applyOneHand()
         return container
     }
 
@@ -2811,6 +2950,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
      */
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreateInlineSuggestionsRequest(uiExtras: Bundle): InlineSuggestionsRequest? {
+        if (lockedMode) return null
         val chips = inlineChips ?: return null
         val metrics = resources.displayMetrics
         val bounds = InlineChips.specBounds(chips.barHeightPx(), metrics.widthPixels, metrics.density)
@@ -2898,12 +3038,15 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        if (lockedMode && DeviceLock.isUnlocked(this)) completeUnlock()
         soundEnabled = prefs.getBoolean("aanet", false)
         vibrationEnabled = prefs.getBoolean("varina", true)
 
         field = FieldProfile.from(info.inputType, info.imeOptions, info.packageName)
 
         applyVisualSettings()
+        keyboardView?.obscureKeyLabels = shouldObscureKeyLabels()
+        if (lockedMode) toolbar?.visibility = View.GONE
 
         page = if (field.numeric) Page.NUMERIC else Page.LETTERS
 
@@ -2925,7 +3068,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         shift.reset()
         // Salasanakentissä ja oppimisen kieltävissä kentissä (esim. incognito)
         // ei opita mitään; kentän vaihto katkaisee sanaketjun.
-        learningEnabled = field.learningAllowed
+        learningEnabled = field.learningAllowed && !lockedMode
         learning.resetContext()
         reloadLearnedIfChanged()
         if (!restarting) {
@@ -2968,7 +3111,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         pendingRevert = null
         pendingPeriodRevert = false
         textUndo.clear()
-        suggestionsVisible = prefs.getBoolean("ehdotukset", true) && field.suggestionsAllowed
+        suggestionsVisible = prefs.getBoolean("ehdotukset", true) && field.suggestionsAllowed &&
+            !lockedMode
         updateSuggestionRow()
         updateLayout()
         updateAutoCaps()
@@ -3480,6 +3624,13 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         const val PREF_EMOJI_RECENTS = "emoji_viimeisimmat"
         const val PREF_EMOJI_VARIANTS = "emoji_ihonvarit"
         const val EMOJI_ASSET = "emoji.tsv"
+        val PRIVATE_AUDIO_OUTPUTS = setOf(
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+        )
 
         // Aiemman kirjastovalitsimen historian sijainti siirtoa varten.
         const val LEGACY_EMOJI_PREFS = "androidx.emoji2.emojipicker.preferences"

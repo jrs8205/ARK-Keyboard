@@ -48,6 +48,9 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
 
     var listener: Listener? = null
 
+    /** Kentissä, jotka kieltävät oppimisen, ihonvärivalintaa ei muisteta. */
+    var rememberChoices = true
+
     private var theme = KeyboardTheme.load(context)
     private val density = resources.displayMetrics.density
     private fun dp(value: Int) = (value * density).roundToInt()
@@ -272,7 +275,7 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
                     gravity = Gravity.CENTER
                     background = cellBackground()
                     setOnClickListener {
-                        recents?.rememberVariant(entry.emoji, value)
+                        if (rememberChoices) recents?.rememberVariant(entry.emoji, value)
                         dismissVariants()
                         pick(value)
                     }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ehdotusrivin sanavalikon toiminnot ruudunlukijalle. -->
+    <item name="toiminto_kiinnita" type="id" />
+    <item name="toiminto_poista" type="id" />
+    <item name="toiminto_esta" type="id" />
+</resources>

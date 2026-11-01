@@ -31,7 +31,7 @@ ICONS = {
     'ic_emoji': ('mood', False),
     'ic_enter': ('keyboard_return', False),
     'ic_fullscreen': ('fullscreen', False),
-    'ic_globe': ('language', False),
+    'ic_link': ('link', False),
     'ic_history': ('history', False),
     'ic_info': ('info', False),
     'ic_keyboard': ('keyboard', False),

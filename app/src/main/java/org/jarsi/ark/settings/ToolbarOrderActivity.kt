@@ -18,6 +18,8 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import org.jarsi.ark.R
 import org.jarsi.ark.keyboard.ToolbarOrder
 import org.jarsi.ark.keyboard.ToolbarTool
+import org.jarsi.ark.view.iconRes
+import org.jarsi.ark.view.labelRes
 
 /**
  * Työkalurivin muokkaus: nappia raahataan pitkällä painalluksella uuteen
@@ -103,29 +105,9 @@ class ToolbarOrderActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun toolName(tool: ToolbarTool): String = getString(
-        when (tool) {
-            ToolbarTool.ARROWS -> R.string.tyokalu_nuolet
-            ToolbarTool.WEB -> R.string.tyokalu_www
-            ToolbarTool.MIC -> R.string.tyokalu_mikrofoni
-            ToolbarTool.EMOJI -> R.string.tyokalu_emojit
-            ToolbarTool.CLIPBOARD -> R.string.tyokalu_leikepoyta
-            ToolbarTool.TRANSLATE -> R.string.tyokalu_kaannos
-            ToolbarTool.UNDO -> R.string.tyokalu_peruutus
-            ToolbarTool.SETTINGS -> R.string.tyokalu_asetukset
-        }
-    )
+    private fun toolName(tool: ToolbarTool): String = getString(tool.labelRes())
 
-    private fun toolIcon(tool: ToolbarTool): Int = when (tool) {
-        ToolbarTool.ARROWS -> R.drawable.ic_cursor_move
-        ToolbarTool.WEB -> R.drawable.ic_globe
-        ToolbarTool.MIC -> R.drawable.ic_mic
-        ToolbarTool.EMOJI -> R.drawable.ic_emoji
-        ToolbarTool.CLIPBOARD -> R.drawable.ic_clipboard
-        ToolbarTool.TRANSLATE -> R.drawable.ic_translate
-        ToolbarTool.UNDO -> R.drawable.ic_undo
-        ToolbarTool.SETTINGS -> R.drawable.ic_settings
-    }
+    private fun toolIcon(tool: ToolbarTool): Int = tool.iconRes()
 
     private val touchCallback = object : ItemTouchHelper.Callback() {
         override fun getMovementFlags(rv: RecyclerView, vh: RecyclerView.ViewHolder) =

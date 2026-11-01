@@ -21,6 +21,7 @@
         <item name="switchPreferenceCompatStyle">@style/ArkSwitchPreference</item>
         <item name="seekBarPreferenceStyle">@style/ArkSeekBarPreference</item>
         <item name="editTextPreferenceStyle">@style/ArkEditTextPreference</item>
+        <item name="dialogPreferenceStyle">@style/ArkDialogPreference</item>
     </style>
 
     <style name="ArkPreference" parent="@style/Preference.Material">
@@ -41,6 +42,12 @@
 
     <style name="ArkSeekBarPreference" parent="@style/Preference.SeekBarPreference.Material">
         <item name="android:layout">@layout/asetus_liukurivi</item>
+        <item name="iconSpaceReserved">false</item>
+    </style>
+
+    <!-- Valintalistat (teema, sanelun tunnistus, AI-palvelu) samoina kortteina. -->
+    <style name="ArkDialogPreference" parent="@style/Preference.DialogPreference.Material">
+        <item name="android:layout">@layout/asetus_rivi</item>
         <item name="iconSpaceReserved">false</item>
     </style>
 

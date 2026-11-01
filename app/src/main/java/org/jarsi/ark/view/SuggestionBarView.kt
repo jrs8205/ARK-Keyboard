@@ -3,7 +3,9 @@ package org.jarsi.ark.view
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
+import android.os.Bundle
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
@@ -12,6 +14,9 @@ import android.view.ViewConfiguration
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.customview.widget.ExploreByTouchHelper
 import org.jarsi.ark.R
 import org.jarsi.ark.keyboard.KeyboardHeight
 import org.jarsi.ark.keyboard.SuggestionItem
@@ -98,6 +103,121 @@ class SuggestionBarView(context: Context) : View(context) {
         pressedIndex = -1
         computeSlots()
         invalidate()
+        accessHelper.invalidateRoot()
+    }
+
+    private val accessHelper = SuggestionAccessHelper()
+
+    init {
+        ViewCompat.setAccessibilityDelegate(this, accessHelper)
+    }
+
+    override fun dispatchHoverEvent(event: MotionEvent): Boolean =
+        accessHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
+
+    private fun slotLeft(index: Int): Float {
+        var left = -scrollOffset
+        for (i in 0 until index) left += slotWidths[i]
+        return left
+    }
+
+    private fun maxScroll() = max(0f, contentWidth - width)
+
+    /**
+     * Ehdotukset ruudunlukijalle: kiinnitys, poisto ja esto ovat sanan
+     * toimintoja, ja rivi vieritetään ruudunlukijan vieritystoiminnolla.
+     */
+    private inner class SuggestionAccessHelper : ExploreByTouchHelper(this) {
+
+        override fun getVirtualViewAt(x: Float, y: Float): Int {
+            val index = indexAt(x)
+            return if (index >= 0) index else INVALID_ID
+        }
+
+        override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
+            virtualViewIds.addAll(suggestions.indices)
+        }
+
+        override fun onPopulateNodeForVirtualView(
+            virtualViewId: Int,
+            node: AccessibilityNodeInfoCompat,
+        ) {
+            val item = suggestions.getOrNull(virtualViewId)
+            if (item == null || virtualViewId >= slotWidths.size) {
+                node.contentDescription = ""
+                node.setBoundsInParent(Rect(0, 0, 1, 1))
+                return
+            }
+            node.contentDescription = when (item) {
+                is SuggestionItem.RecentClip ->
+                    context.getString(R.string.cd_liita_kopio, item.text)
+                else -> item.text
+            }
+            val left = slotLeft(virtualViewId)
+            val right = (left + slotWidths[virtualViewId]).toInt()
+            node.setBoundsInParent(Rect(left.toInt(), 0, right, height.coerceAtLeast(1)))
+            node.isClickable = true
+            node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK)
+            val menu = menuListener
+            if (item is SuggestionItem.Word && menu != null) {
+                val pinLabel = if (menu.isPinned(item.text)) {
+                    R.string.ehdotus_irrota
+                } else {
+                    R.string.ehdotus_kiinnita
+                }
+                node.addAction(action(R.id.toiminto_kiinnita, pinLabel))
+                if (menu.isOwnWord(item.text)) {
+                    node.addAction(action(R.id.toiminto_poista, R.string.ehdotus_poista))
+                }
+                node.addAction(action(R.id.toiminto_esta, R.string.ehdotus_esta))
+            }
+        }
+
+        private fun action(id: Int, labelRes: Int) =
+            AccessibilityNodeInfoCompat.AccessibilityActionCompat(id, context.getString(labelRes))
+
+        override fun onPerformActionForVirtualView(
+            virtualViewId: Int,
+            action: Int,
+            arguments: Bundle?,
+        ): Boolean {
+            val item = suggestions.getOrNull(virtualViewId) ?: return false
+            val word = (item as? SuggestionItem.Word)?.text
+            when {
+                action == AccessibilityNodeInfoCompat.ACTION_CLICK -> listener?.invoke(item)
+                word == null -> return false
+                action == R.id.toiminto_kiinnita -> menuListener?.onTogglePin(word)
+                action == R.id.toiminto_poista -> menuListener?.onDeleteLearned(word)
+                action == R.id.toiminto_esta -> menuListener?.onBlockWord(word)
+                else -> return false
+            }
+            return true
+        }
+
+        override fun onPopulateNodeForHost(node: AccessibilityNodeInfoCompat) {
+            if (maxScroll() <= 0f) return
+            node.isScrollable = true
+            if (scrollOffset > 0f) {
+                node.addAction(AccessibilityNodeInfoCompat.ACTION_SCROLL_BACKWARD)
+            }
+            if (scrollOffset < maxScroll()) {
+                node.addAction(AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD)
+            }
+        }
+
+    }
+
+    // Ruudunlukijan vieritys kohdistuu itse näkymään, ei yksittäiseen ehdotukseen.
+    override fun performAccessibilityAction(action: Int, arguments: Bundle?): Boolean {
+        val step = width * 0.8f
+        scrollOffset = when (action) {
+            AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD -> scrollOffset + step
+            AccessibilityNodeInfoCompat.ACTION_SCROLL_BACKWARD -> scrollOffset - step
+            else -> return super.performAccessibilityAction(action, arguments)
+        }.coerceIn(0f, maxScroll())
+        invalidate()
+        accessHelper.invalidateRoot()
+        return true
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

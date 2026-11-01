@@ -480,15 +480,6 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         )
     }
 
-    private val clearLabel = ImageView(context).apply {
-        setImageResource(R.drawable.ic_close)
-        setPadding(dp(12), dp(12), dp(12), dp(12))
-        visibility = GONE
-        contentDescription = context.getString(R.string.cd_tyhjenna_rivi)
-        setOnClickListener { listener?.onClear() }
-    }
-
-    // Tyhjennys kelluu lähdetekstin oikeassa yläkulmassa kuten Googlessa.
     private val sourceFrame = FrameLayout(context)
 
     // Ohut viiva erottaa lähdetekstin ja käännöksen ilman taustalaatikkoa.
@@ -556,6 +547,15 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         setOnClickListener { listener?.onCopyTranslation() }
     }
 
+    // Näkyy vain, kun tyhjennettävää on, joten se poistuu painettaessa.
+    private val clearButton = TextView(context).apply {
+        text = context.getString(R.string.kaannos_tyhjenna)
+        textSize = 15f
+        setPadding(dp(14), dp(9), dp(14), dp(9))
+        visibility = GONE
+        setOnClickListener { listener?.onClear() }
+    }
+
     private val insertLabel = TextView(context).apply {
         text = context.getString(R.string.kaannos_vie)
         textSize = 15f
@@ -589,6 +589,12 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         addView(View(context), LayoutParams(0, 1, 1f))
         addView(aiLabel, LayoutParams(dp(44), dp(44)))
         addView(copyIcon, LayoutParams(dp(44), dp(44)))
+        addView(
+            clearButton,
+            LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = dp(6)
+            },
+        )
         addView(
             insertLabel,
             LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
@@ -640,10 +646,6 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ),
         )
-        sourceFrame.addView(
-            clearLabel,
-            FrameLayout.LayoutParams(dp(44), dp(44), Gravity.TOP or Gravity.END),
-        )
         addView(sourceFrame, areaParams())
         addView(
             divider,
@@ -671,7 +673,8 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         sourceLabel.setTextColor(theme.text)
         targetLabel.setTextColor(theme.text)
         swapLabel.setColorFilter(theme.text)
-        clearLabel.setColorFilter(theme.hint)
+        clearButton.setTextColor(theme.text)
+        clearButton.background = pill()
         aiLabel.setColorFilter(theme.text)
         // Täytetty nappi: vienti on näkymän päätoiminto.
         insertLabel.setTextColor(theme.accentText)
@@ -810,7 +813,7 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
                 SpannableStringBuilder(shownHint)
             }
             bufferView.setTextColor(theme.hint)
-            clearLabel.visibility = GONE
+            clearButton.visibility = GONE
             if (focused) restartBlink()
         } else {
             val position = if (focused) shownCursorTarget.coerceIn(0, shownText.length) else -1
@@ -836,7 +839,7 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
                 }
             }
             bufferView.setTextColor(theme.text)
-            clearLabel.visibility = VISIBLE
+            clearButton.visibility = VISIBLE
             if (position >= 0) {
                 restartBlink()
                 // Kahvaa raahatessa näkymä ei saa hyppiä kursorin perässä.

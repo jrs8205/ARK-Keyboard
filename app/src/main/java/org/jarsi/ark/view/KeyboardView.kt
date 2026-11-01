@@ -109,6 +109,7 @@ class KeyboardView(context: Context) : View(context) {
     private var hapticsEnabled = true
 
     private val fiLocale = Locale.forLanguageTag("fi")
+    private val spaceLabel = context.getString(R.string.app_name)
     private val density = resources.displayMetrics.density
     private fun dp(value: Float) = value * density
 
@@ -412,10 +413,16 @@ class KeyboardView(context: Context) : View(context) {
         }
         labelPaint.color = contentColor
         labelPaint.textSize = when {
-            key.action == KeyAction.Space -> rowHeight * 0.26f
+            key.action == KeyAction.Space -> rowHeight * SPACE_LABEL_SCALE
             label.length > 2 -> rowHeight * 0.28f
             key.action is KeyAction.Text -> rowHeight * 0.42f
             else -> rowHeight * 0.38f
+        }
+        if (key.action == KeyAction.Space) {
+            // Nimi mahtuu myös kapeaan välilyöntiin (yhden käden tila, lisämerkki).
+            val available = rect.width() - dp(12f)
+            val needed = labelPaint.measureText(label)
+            if (needed > available) labelPaint.textSize *= available / needed
         }
         if (label.isNotEmpty()) {
             canvas.drawText(label, rect.centerX(), rect.centerY() + labelPaint.textSize * 0.35f, labelPaint)
@@ -431,7 +438,7 @@ class KeyboardView(context: Context) : View(context) {
     private fun labelFor(key: Key): String = when (key.action) {
         KeyAction.Enter -> enterText
         KeyAction.Shift -> if (shiftState == ShiftState.CAPS) "⇪" else "⇧"
-        KeyAction.Space -> "suomi"
+        KeyAction.Space -> spaceLabel
         is KeyAction.Text ->
             if (shiftState != ShiftState.OFF && key.label.length == 1) {
                 key.label.uppercase(fiLocale)
@@ -754,6 +761,7 @@ class KeyboardView(context: Context) : View(context) {
         // painalluksen voi lopettaa halutun sanan kohdalle.
         const val REPEAT_WORD_INTERVAL_MS = 250L
 
+        const val SPACE_LABEL_SCALE = 0.22f
         const val BACKSPACE_SWIPE_START_DP = 20f
         const val BACKSPACE_SWIPE_STEP_DP = 28f
     }

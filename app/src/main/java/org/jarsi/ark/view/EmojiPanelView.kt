@@ -136,7 +136,9 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
         setOnClickListener { listener?.onOpenSearch() }
     }
 
-    private val spaceButton = bottomLabel("").apply {
+    private val spaceButton = bottomLabel(context.getString(R.string.app_name)).apply {
+        textSize = 12f
+        maxLines = 1
         contentDescription = context.getString(R.string.cd_valilyonti)
         setOnClickListener { listener?.onSpace() }
     }
@@ -428,7 +430,10 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
         abcButton.background = bottomKey(theme.specialKey)
         searchButton.setColorFilter(theme.text)
         searchButton.background = bottomKey(theme.specialKey)
-        spaceButton.background = bottomKey(theme.key)
+        // Samaa pintaa kuin rivin muut napit: vaaleassa teemassa valkoinen
+        // pelkkä näppäin näytti irralliselta.
+        spaceButton.setTextColor(theme.text)
+        spaceButton.background = bottomKey(theme.specialKey)
         backspaceButton.setColorFilter(theme.text)
         backspaceButton.background = bottomKey(theme.specialKey)
         updateTabs()

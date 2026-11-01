@@ -281,7 +281,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     // ja OpenAI-suoratoistomoottorille.
     private val dictationListener = object : DictationController.Listener {
                 override fun onPartialText(text: String) {
-                    lastEditTime = SystemClock.uptimeMillis()
+                    markOwnEdit()
                     val shown = if (dictationCapNext) DictationText.capitalize(text) else text
                     if (translateMode) {
                         dictateIntoTranslation(shown, final = false)
@@ -292,7 +292,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 }
 
                 override fun onFinalText(text: String) {
-                    lastEditTime = SystemClock.uptimeMillis()
+                    markOwnEdit()
                     val committed =
                         if (dictationCapNext) DictationText.capitalize(text) else text
                     if (translateMode) {

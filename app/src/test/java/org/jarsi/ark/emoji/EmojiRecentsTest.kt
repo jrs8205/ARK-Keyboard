@@ -49,6 +49,17 @@ class EmojiRecentsTest {
     }
 
     @Test
+    fun `muutokset nakyvat versionumerossa`() {
+        val recents = EmojiRecents()
+        val start = recents.revision
+        recents.use("😀")
+        val afterUse = recents.revision
+        assertTrue(afterUse != start)
+        recents.rememberVariant("👋", "👋🏻")
+        assertTrue(recents.revision != afterUse)
+    }
+
+    @Test
     fun `vanhan valitsimen historia siirtyy`() {
         val recents = EmojiRecents.fromLegacy("😀,🐈,,😀")
         assertEquals(listOf("😀", "🐈"), recents.recent)

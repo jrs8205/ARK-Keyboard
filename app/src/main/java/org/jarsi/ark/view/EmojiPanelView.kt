@@ -59,6 +59,7 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
     private var recents: EmojiRecents? = null
     private var pages: List<List<Cell>> = List(PAGE_COUNT) { emptyList() }
     private var pagesDirty = true
+    private var builtRevision = -1
     private var initialPageChosen = false
     private var variantPopup: PopupWindow? = null
 
@@ -201,8 +202,10 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
     /** Päivittää sivut avauksen yhteydessä: käytetyt ja ihonvärit muuttuvat käytössä. */
     fun refresh() {
         val data = index ?: return
-        if (pagesDirty) {
-            val memory = recents
+        val memory = recents
+        // Historia muuttuu myös haussa ja ehdotusriviltä, paneelin ohi.
+        val revision = memory?.revision ?: 0
+        if (pagesDirty || revision != builtRevision) {
             pages = List(PAGE_COUNT) { page ->
                 if (page == RECENT_PAGE) {
                     memory?.recent.orEmpty().map { Cell(it, data.entryFor(it)) }
@@ -213,6 +216,7 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
                 }
             }
             pagesDirty = false
+            builtRevision = revision
             pageAdapter.notifyDataSetChanged()
         }
         if (!initialPageChosen) {
@@ -224,7 +228,6 @@ class EmojiPanelView(context: Context) : LinearLayout(context) {
     }
 
     private fun pick(emoji: String) {
-        pagesDirty = true
         listener?.onEmojiPicked(emoji)
     }
 

@@ -6,6 +6,11 @@ package org.jarsi.ark.emoji
  */
 class EmojiRecents(savedRecents: String? = null, savedVariants: String? = null) {
 
+    /** Kasvaa jokaisesta muutoksesta; näkymä tietää siitä, onko sen sivut rakennettava uudelleen. */
+    @Volatile
+    var revision = 0
+        private set
+
     @Volatile
     var recent: List<String> = savedRecents.orEmpty().lines()
         .filter { it.isNotEmpty() }
@@ -23,6 +28,7 @@ class EmojiRecents(savedRecents: String? = null, savedVariants: String? = null) 
 
     fun use(emoji: String) {
         recent = (listOf(emoji) + recent.filter { it != emoji }).take(MAX_RECENT)
+        revision++
     }
 
     /** Näytettävä muoto: muistettu ihonväri tai perusemoji. */
@@ -30,6 +36,7 @@ class EmojiRecents(savedRecents: String? = null, savedVariants: String? = null) 
 
     fun rememberVariant(base: String, variant: String) {
         variants = if (variant == base) variants - base else variants + (base to variant)
+        revision++
     }
 
     fun savedRecents(): String = recent.joinToString("\n")

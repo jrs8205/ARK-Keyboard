@@ -3,9 +3,16 @@
     android:settingsActivity="org.jarsi.ark.settings.SettingsActivity"
     android:supportsSwitchingToNextInputMethod="true"
     android:supportsInlineSuggestions="true">
+    <!-- TrySuppressingImeSwitcher: järjestelmä jättää navigointipalkin
+         näppäimistönvaihtonapin pois, kun ARKin rinnalla on vain
+         puhekirjoituksen kaltainen apusyötetapa (sama merkintä kuin AOSP:n
+         näppäimistössä). subtypeId pitää tunnisteen ennallaan, vaikka
+         lisäarvot muuttuisivat. -->
     <subtype
         android:label="@string/subtype_suomi"
+        android:subtypeId="137205492"
         android:imeSubtypeLocale="fi"
         android:imeSubtypeMode="keyboard"
+        android:imeSubtypeExtraValue="TrySuppressingImeSwitcher"
         android:isAsciiCapable="true" />
 </input-method>

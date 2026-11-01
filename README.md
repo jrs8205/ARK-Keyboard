@@ -49,8 +49,7 @@ Jos sovelluksesta on sinulle hyötyä, voit tukea sen kehitystä:
 
 ## Lisenssi
 
-[GPL-3.0](LICENSE). Sanalista: Kotimaisten kielten keskus
-([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.fi)), ks.
+[GPL-3.0](LICENSE). Sanalista: Kotimaisten kielten keskus, lähteet ja lisenssit:
 [docs/sanalista.md](docs/sanalista.md). Emojiaineisto: Unicode, ks.
 [docs/emojit.md](docs/emojit.md). Kuvakkeet:
 [Material Symbols](https://fonts.google.com/icons) (Apache 2.0).

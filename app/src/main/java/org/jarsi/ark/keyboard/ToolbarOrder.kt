@@ -34,6 +34,9 @@ object ToolbarOrder {
 
     val default: List<ToolbarTool> = ToolbarTool.entries.toList()
 
+    // Peruutus saa näkyviin asetuksista; Gboardissakin se on valinnainen.
+    private val defaultHidden = setOf(ToolbarTool.UNDO)
+
     data class Config(val order: List<ToolbarTool>, val hidden: Set<ToolbarTool>) {
         val visible: List<ToolbarTool> get() = order.filter { it !in hidden }
     }
@@ -45,7 +48,7 @@ object ToolbarOrder {
             .toString()
 
     fun load(saved: String?): Config {
-        if (saved == null) return Config(default, emptySet())
+        if (saved == null) return Config(default, defaultHidden)
         val parsed = try {
             val json = JSONObject(saved)
             fun ids(name: String): List<String> {
@@ -54,7 +57,7 @@ object ToolbarOrder {
             }
             ids("jarjestys") to ids("piilotetut")
         } catch (e: JSONException) {
-            return Config(default, emptySet())
+            return Config(default, defaultHidden)
         }
         val kept = parsed.first.mapNotNull(ToolbarTool::byId).distinct()
         val missing = default.filter { it !in kept }
@@ -63,7 +66,10 @@ object ToolbarOrder {
         } else {
             kept + missing
         }
-        val hidden = parsed.second.mapNotNull(ToolbarTool::byId).toSet() - ToolbarTool.SETTINGS
+        val saved = parsed.second.mapNotNull(ToolbarTool::byId).toSet() - ToolbarTool.SETTINGS
+        // Yhden käden napin puuttuminen kertoo vanhasta tallennuksesta: oletus koskee
+        // sitäkin kerran. Sen jälkeen käyttäjän oma valinta pysyy.
+        val hidden = if (ToolbarTool.ONE_HAND in kept) saved else saved + defaultHidden
         return Config(order, hidden)
     }
 }

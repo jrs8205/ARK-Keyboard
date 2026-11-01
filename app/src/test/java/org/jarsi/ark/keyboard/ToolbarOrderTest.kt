@@ -8,11 +8,26 @@ import org.junit.Test
 class ToolbarOrderTest {
 
     @Test
-    fun `oletuksessa kaikki napit nakyvissa ja asetukset viimeisena`() {
+    fun `oletuksessa peruutus on piilossa ja asetukset viimeisena`() {
         val config = ToolbarOrder.load(null)
         assertEquals(ToolbarTool.entries.toList(), config.order)
-        assertTrue(config.hidden.isEmpty())
+        assertEquals(setOf(ToolbarTool.UNDO), config.hidden)
         assertEquals(ToolbarTool.SETTINGS, config.visible.last())
+    }
+
+    @Test
+    fun `aiempi tallennus siirtaa peruutuksen kerran piiloon`() {
+        val saved = ToolbarOrder.serialize(
+            listOf(ToolbarTool.MIC, ToolbarTool.UNDO, ToolbarTool.SETTINGS),
+            setOf(ToolbarTool.MIC),
+        )
+        assertEquals(setOf(ToolbarTool.MIC, ToolbarTool.UNDO), ToolbarOrder.load(saved).hidden)
+    }
+
+    @Test
+    fun `kayttajan kaytossa pitama peruutus sailyy`() {
+        val saved = ToolbarOrder.serialize(ToolbarOrder.default, emptySet())
+        assertTrue(ToolbarTool.UNDO in ToolbarOrder.load(saved).visible)
     }
 
     @Test
@@ -37,7 +52,7 @@ class ToolbarOrderTest {
     fun `rikkinainen tallennus antaa oletuksen`() {
         val config = ToolbarOrder.load("rikki")
         assertEquals(ToolbarOrder.default, config.order)
-        assertTrue(config.hidden.isEmpty())
+        assertEquals(setOf(ToolbarTool.UNDO), config.hidden)
     }
 
     @Test

@@ -26,12 +26,14 @@ import org.jarsi.ark.engine.AiRequests
 import org.jarsi.ark.data.BackupCodec
 import org.jarsi.ark.data.LearnedDataStamp
 import org.jarsi.ark.data.LearnedDatabase
+import org.jarsi.ark.theme.KeyboardTheme
+import org.jarsi.ark.theme.ThemeChoice
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
 
-/** Näppäimistön asetukset ja käyttöönotto. Teema seuraa järjestelmää. */
+/** Näppäimistön asetukset ja käyttöönotto. Asetusten oma ulkoasu seuraa järjestelmää. */
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,6 +94,7 @@ class SettingsActivity : AppCompatActivity() {
             setupAiServiceVisibility()
             setupChatGptLogin()
             setupDictationEngine()
+            setupThemeChoices()
             findPreference<Preference>("avaa_ime_asetukset")?.setOnPreferenceClickListener {
                 startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
                 true
@@ -299,6 +302,18 @@ class SettingsActivity : AppCompatActivity() {
          * ja valinnan yhteydessä muistutetaan jos se puuttuu — sanelu
          * pudonnee muuten laitteen tunnistukseen.
          */
+        // Taustakuvan värit vaativat Android 12:n järjestelmäpaletin.
+        private fun setupThemeChoices() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
+            val pref = findPreference<ListPreference>(KeyboardTheme.PREF_KEY) ?: return
+            val dynamicIndex = pref.entryValues.indexOf(ThemeChoice.DYNAMIC.id)
+            if (dynamicIndex < 0) return
+            pref.entries = pref.entries.filterIndexed { i, _ -> i != dynamicIndex }.toTypedArray()
+            pref.entryValues =
+                pref.entryValues.filterIndexed { i, _ -> i != dynamicIndex }.toTypedArray()
+            if (pref.value == ThemeChoice.DYNAMIC.id) pref.value = ThemeChoice.SYSTEM.id
+        }
+
         private fun setupDictationEngine() {
             val pref = findPreference<ListPreference>("sanelu_moottori") ?: return
             // Poistetun paikallisen tunnistuksen vanha valinta palautetaan

@@ -12,11 +12,4 @@
         <item name="colorSurfaceContainer">@color/tumma_nappain</item>
         <item name="colorSurfaceContainerHighest">@color/tumma_kortti</item>
     </style>
-
-    <!-- Emojivalitsin: valitun kategorian merkkiviiva näppäimistön korostusvärillä. -->
-    <style name="Theme.Ark.EmojiValitsin">
-        <item name="colorAccent">@color/tumma_korostus</item>
-        <item name="colorControlActivated">@color/tumma_korostus</item>
-        <item name="colorSecondary">@color/tumma_korostus</item>
-    </style>
 </resources>

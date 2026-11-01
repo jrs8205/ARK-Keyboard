@@ -11,6 +11,21 @@
     <string name="vaihda_nappaimistoksi_kuvaus">Valitse ARK-näppäimistö käytössä olevaksi näppäimistöksi</string>
 
     <string name="asetukset_ulkoasu">Ulkoasu</string>
+    <string name="asetus_teema">Teema</string>
+    <string-array name="teema_nimet">
+        <item>Järjestelmän mukaan</item>
+        <item>Vaalea</item>
+        <item>Tumma</item>
+        <item>Musta</item>
+        <item>Taustakuvan värit</item>
+    </string-array>
+    <string-array name="teema_arvot">
+        <item>jarjestelma</item>
+        <item>vaalea</item>
+        <item>tumma</item>
+        <item>musta</item>
+        <item>taustakuva</item>
+    </string-array>
     <string name="asetus_korkeus">Näppäimistön korkeus</string>
     <string name="asetus_korkeus_kuvaus">Korkeus prosentteina perusarvosta</string>
 
@@ -134,6 +149,7 @@
 
     <!-- Saavutettavuuskuvaukset kuvakenapeille -->
     <string name="cd_poista_merkki">Poista merkki</string>
+    <string name="cd_valilyonti">Välilyönti</string>
     <string name="cd_vaihda_suunta">Vaihda käännössuunta</string>
     <string name="cd_tyhjenna_rivi">Tyhjennä käännösrivi</string>
 
@@ -141,6 +157,22 @@
     <string name="kaannos_kopioi">Kopioi</string>
     <string name="kaannos_valitse_kaikki">Valitse kaikki</string>
     <string name="kaannos_kopioitu">Kopioitu</string>
+    <string name="emoji_hae">Hae emojia</string>
+    <string name="emoji_hae_vihje">Hae emojia…</string>
+    <string name="emoji_haku_sulje">Takaisin emojeihin</string>
+    <string name="emoji_haku_tyhjenna">Tyhjennä haku</string>
+    <string name="emoji_ei_tuloksia">Ei emojeja tällä haulla</string>
+    <string name="emoji_ei_viimeisimpia">Viimeksi käyttämäsi emojit näkyvät tässä</string>
+    <string name="emoji_viimeisimmat">Viimeksi käytetyt</string>
+    <string name="emoji_hymiot">Hymiöt ja tunteet</string>
+    <string name="emoji_ihmiset">Ihmiset</string>
+    <string name="emoji_luonto">Eläimet ja luonto</string>
+    <string name="emoji_ruoka">Ruoka ja juoma</string>
+    <string name="emoji_matkailu">Matkailu ja paikat</string>
+    <string name="emoji_toiminta">Toiminta</string>
+    <string name="emoji_esineet">Esineet</string>
+    <string name="emoji_symbolit">Symbolit</string>
+    <string name="emoji_liput">Liput</string>
     <string name="muokkaus_valitse_ensin">Valitse ensin teksti</string>
     <string name="muokkaus_kaannos_valinta">Käännösnäkymässä valitaan pitkällä painalluksella</string>
     <string name="kaannos_ladataan">Valmistellaan käännösmalleja…</string>

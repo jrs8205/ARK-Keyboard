@@ -10,7 +10,6 @@ json = "20240303"
 room = "2.8.4"
 ksp = "2.2.20-2.0.4"
 recyclerview = "1.4.0"
-emojipicker = "1.5.0"
 viewpager2 = "1.1.0"
 autofill = "1.1.0"
 # 17.0.3 tuo 16 kt -sivukokoyhteensopivan natiivikirjaston (Play-vaatimus).
@@ -28,7 +27,6 @@ json = { group = "org.json", name = "json", version.ref = "json" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
-androidx-emojipicker = { group = "androidx.emoji2", name = "emoji2-emojipicker", version.ref = "emojipicker" }
 androidx-viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
 androidx-autofill = { group = "androidx.autofill", name = "autofill", version.ref = "autofill" }
 mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "mlkitTranslate" }

@@ -26,4 +26,14 @@
     <color name="tumma_korostus">#A9C7FF</color>
     <color name="tumma_korostusteksti">#122E52</color>
     <color name="tumma_kortti">#333944</color>
+
+    <!-- Musta teema: OLED-näytöllä tausta ei kuluta virtaa -->
+    <color name="musta_tausta">#000000</color>
+    <color name="musta_nappain">#1C1E24</color>
+    <color name="musta_erikoisnappain">#101216</color>
+    <color name="musta_painettu">#333842</color>
+    <color name="musta_teksti">#ECEEF4</color>
+    <color name="musta_vihje">#BAC0CC</color>
+    <color name="musta_korostus">#A9C7FF</color>
+    <color name="musta_korostusteksti">#122E52</color>
 </resources>

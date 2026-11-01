@@ -14,6 +14,7 @@ import android.graphics.drawable.StateListDrawable
 import android.os.Build
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.KeyEvent
 import android.view.WindowInsets
 import android.view.MotionEvent
 import android.view.View
@@ -110,7 +111,14 @@ class KeyboardView(context: Context) : View(context) {
     // Erikoisnäppäinten vektorikuvakkeet; mutate erottaa sävytykset toisistaan.
     private val enterIcon = context.getDrawable(R.drawable.ic_enter)?.mutate()
     private val shiftIcon = context.getDrawable(R.drawable.ic_shift)?.mutate()
+    private val shiftOnIcon = context.getDrawable(R.drawable.ic_shift_on)?.mutate()
     private val shiftCapsIcon = context.getDrawable(R.drawable.ic_shift_caps)?.mutate()
+    private val arrowIcons = mapOf(
+        KeyEvent.KEYCODE_DPAD_UP to R.drawable.ic_arrow_up,
+        KeyEvent.KEYCODE_DPAD_DOWN to R.drawable.ic_arrow_down,
+        KeyEvent.KEYCODE_DPAD_LEFT to R.drawable.ic_arrow_left,
+        KeyEvent.KEYCODE_DPAD_RIGHT to R.drawable.ic_arrow_right,
+    ).mapValues { context.getDrawable(it.value)?.mutate() }
     private val backspaceIcon = context.getDrawable(R.drawable.ic_backspace)?.mutate()
 
     private class BoundedKey(val key: Key, val rect: RectF, val row: Int)
@@ -277,11 +285,17 @@ class KeyboardView(context: Context) : View(context) {
         else -> theme.specialKey
     }
 
-    private fun iconFor(key: Key): Drawable? = when (key.action) {
+    private fun iconFor(key: Key): Drawable? = when (val action = key.action) {
         // Enter-kuvake vain kun näppäimellä ei ole toimintatekstiä (Hae, Lähetä…).
         KeyAction.Enter -> if (enterText == "⏎") enterIcon else null
-        KeyAction.Shift -> if (shiftState == ShiftState.CAPS) shiftCapsIcon else shiftIcon
+        // Tila näkyy kuvakkeesta kuten Gboardissa: ääriviiva, täytetty, lukko.
+        KeyAction.Shift -> when (shiftState) {
+            ShiftState.OFF -> shiftIcon
+            ShiftState.SHIFT -> shiftOnIcon
+            ShiftState.CAPS -> shiftCapsIcon
+        }
         KeyAction.Backspace -> backspaceIcon
+        is KeyAction.Arrow -> arrowIcons[action.keyCode]
         else -> null
     }
 

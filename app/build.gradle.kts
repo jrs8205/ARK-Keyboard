@@ -86,8 +86,7 @@ dependencies {
     implementation(libs.androidx.preference)
     implementation(libs.material)
     implementation(libs.androidx.recyclerview)
-    implementation(libs.androidx.emojipicker)
-    // Ensiasennuksen esittelysivut pyyhkäistävinä.
+    // Emojisivut ja ensiasennuksen esittely pyyhkäistävinä.
     implementation(libs.androidx.viewpager2)
     // Täyttöpalvelun inline-ehdotusten chipityyli (Android 11+).
     implementation(libs.androidx.autofill)

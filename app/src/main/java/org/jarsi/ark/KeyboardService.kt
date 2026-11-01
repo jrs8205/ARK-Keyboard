@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.util.Size
@@ -47,6 +48,7 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import androidx.core.view.WindowCompat
 import androidx.core.view.inputmethod.EditorInfoCompat
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.view.inputmethod.InputContentInfoCompat
@@ -62,6 +64,8 @@ import org.jarsi.ark.dictation.DictationController
 import org.jarsi.ark.dictation.DictationText
 import org.jarsi.ark.dictation.OpenAiDictation
 import org.jarsi.ark.dictation.RecordAudioPermissionActivity
+import org.jarsi.ark.emoji.EmojiIndex
+import org.jarsi.ark.emoji.EmojiRecents
 import org.jarsi.ark.data.BigramEntity
 import org.jarsi.ark.data.LearnedDataStamp
 import org.jarsi.ark.data.LearnedDatabase
@@ -111,6 +115,7 @@ import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import org.jarsi.ark.view.ClipboardPanelView
 import org.jarsi.ark.view.EmojiPanelView
+import org.jarsi.ark.view.EmojiSearchBarView
 import org.jarsi.ark.view.KeyboardView
 import org.jarsi.ark.view.TranslateBarView
 import org.jarsi.ark.view.SuggestionBarView
@@ -166,6 +171,15 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private val pendingClips = mutableListOf<Clip>()
     private var clipboardPanel: ClipboardPanelView? = null
     private var emojiPanel: EmojiPanelView? = null
+    private var emojiSearchBar: EmojiSearchBarView? = null
+
+    // Emojiaineisto latautuu taustalla; null, kunnes se on valmis.
+    private var emojiIndex: EmojiIndex? = null
+    private var emojiRecents: EmojiRecents? = null
+
+    // Emojihaku: näppäily kertyy hakusanaksi eikä mene kenttään.
+    private var emojiSearchActive = false
+    private val emojiQuery = TranslateBuffer()
     private var translateBar: TranslateBarView? = null
     private var translateMode = false
     private val translateBuffer = TranslateBuffer()
@@ -439,7 +453,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     // Ulkoasuasetukset otetaan käyttöön heti asetuksissa vaihdettaessa, jotta
     // näppäimistö on jo oikeassa teemassa kun asetuksista palataan.
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == "korkeus" || key == "esikatselu" || key == "varina") {
+        if (key == "korkeus" || key == "esikatselu" || key == "varina" ||
+            key == KeyboardTheme.PREF_KEY
+        ) {
             applyVisualSettings()
         }
     }
@@ -450,6 +466,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         prefs.registerOnSharedPreferenceChangeListener(prefListener)
         clipboardManager = getSystemService(ClipboardManager::class.java)
         clipboardManager?.addPrimaryClipChangedListener(clipChangedListener)
+        emojiRecents = loadEmojiRecents()
         // Sanalista ja oppimisdata ladataan taustalla; ehdotusrivi on tyhjä
         // kunnes lataus valmistuu.
         Thread {
@@ -462,6 +479,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             } catch (e: IOException) {
                 // Sanalista puuttuu tai ei aukea: ehdotusrivi jää tyhjäksi.
             }
+            loadEmojiIndex()
             try {
                 val db = LearnedDatabase.create(this)
                 val stamp = LearnedDataStamp.stamp
@@ -485,6 +503,42 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             }
             mainHandler.post { updateSuggestions() }
         }.start()
+    }
+
+    private fun loadEmojiIndex() {
+        try {
+            // Laitteen fontista puuttuvat emojit eivät kelpaa: ne näkyisivät neliöinä.
+            val paint = Paint()
+            val index = assets.open(EMOJI_ASSET).bufferedReader().useLines { lines ->
+                EmojiIndex.parse(lines) { paint.hasGlyph(it) }
+            }
+            mainHandler.post {
+                if (destroyed) return@post
+                emojiIndex = index
+                emojiPanel?.setData(index, emojiRecents)
+                if (emojiPanel?.visibility == View.VISIBLE) emojiPanel?.refresh()
+            }
+        } catch (e: IOException) {
+            // Aineisto ei aukea: emojipaneeli jää tyhjäksi, kirjoitus toimii silti.
+        }
+    }
+
+    /** Lukee muistetut emojit; ensimmäisellä kerralla mukaan tulee vanhan valitsimen historia. */
+    private fun loadEmojiRecents(): EmojiRecents {
+        val saved = prefs.getString(PREF_EMOJI_RECENTS, null)
+        if (saved != null) return EmojiRecents(saved, prefs.getString(PREF_EMOJI_VARIANTS, null))
+        val legacy = getSharedPreferences(LEGACY_EMOJI_PREFS, MODE_PRIVATE)
+            .getString(LEGACY_EMOJI_KEY, null)
+        return if (legacy != null) EmojiRecents.fromLegacy(legacy) else EmojiRecents()
+    }
+
+    private fun rememberEmojiUse(emoji: String) {
+        val recents = emojiRecents ?: return
+        recents.use(emoji)
+        prefs.edit()
+            .putString(PREF_EMOJI_RECENTS, recents.savedRecents())
+            .putString(PREF_EMOJI_VARIANTS, recents.savedVariants())
+            .apply()
     }
 
     override fun onDestroy() {
@@ -807,6 +861,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun hideAllPanels() {
         hideClipboardPanel()
         hideEmojiPanel()
+        closeEmojiSearch(returnToPanel = false)
     }
 
     /**
@@ -827,7 +882,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         hideAllPanels()
         stopDictation()
         resetSidePage()
-        panel.refreshRecentsIfNeeded()
+        panel.setData(emojiIndex, emojiRecents)
+        panel.refresh()
         if (kb.height > 0) {
             panel.layoutParams = panel.layoutParams.apply { height = kb.height }
         }
@@ -839,9 +895,120 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun hideEmojiPanel() {
         val panel = emojiPanel ?: return
         if (panel.visibility != View.VISIBLE) return
+        panel.dismissVariants()
         panel.visibility = View.GONE
         keyboardView?.visibility = View.VISIBLE
         toolbar?.emojiActive = false
+    }
+
+    /**
+     * Emojihaku: paneelin tilalle tulee näppäimistö, ja hakurivi korvaa
+     * työkalu- ja ehdotusrivin saman korkuisena.
+     */
+    private fun openEmojiSearch() {
+        hideEmojiPanel()
+        emojiSearchActive = true
+        emojiQuery.clear()
+        page = Page.LETTERS
+        shift.reset()
+        updateLayout()
+        toolbar?.visibility = View.GONE
+        emojiSearchBar?.visibility = View.VISIBLE
+        updateSuggestionRow()
+        updateEmojiSearch()
+    }
+
+    private fun closeEmojiSearch(returnToPanel: Boolean) {
+        if (!emojiSearchActive) return
+        emojiSearchActive = false
+        emojiQuery.clear()
+        emojiSearchBar?.visibility = View.GONE
+        toolbar?.visibility = View.VISIBLE
+        updateSuggestionRow()
+        if (returnToPanel) {
+            showEmojiPanel()
+        } else {
+            updateAutoCaps()
+            updateSuggestions()
+        }
+    }
+
+    private fun updateEmojiSearch() {
+        val bar = emojiSearchBar ?: return
+        val index = emojiIndex
+        val query = emojiQuery.text
+        bar.setQuery(query)
+        val recents = emojiRecents
+        val results = when {
+            index == null -> emptyList()
+            query.isBlank() -> recents?.recent.orEmpty().map {
+                EmojiSearchBarView.Result(it, index.entryFor(it)?.name)
+            }
+            else -> index.search(query).map {
+                EmojiSearchBarView.Result(recents?.variantFor(it.emoji) ?: it.emoji, it.name)
+            }
+        }
+        bar.setResults(results, noMatch = query.isNotBlank() && results.isEmpty())
+    }
+
+    /** Näppäinten kohtalo haun aikana; true, jos näppäin käsiteltiin. */
+    private fun handleEmojiSearchKey(action: KeyAction): Boolean {
+        when (action) {
+            KeyAction.Backspace -> emojiQuery.backspace()
+            KeyAction.Space -> emojiQuery.insert(" ")
+            KeyAction.Enter -> {
+                feedback(AudioManager.FX_KEYPRESS_RETURN)
+                closeEmojiSearch(returnToPanel = true)
+                return true
+            }
+            // Haku on kirjainkoosta riippumaton.
+            KeyAction.Shift -> return true
+            KeyAction.Symbols, KeyAction.SymbolsMore, KeyAction.Letters -> return false
+            else -> return true
+        }
+        updateEmojiSearch()
+        feedback()
+        return true
+    }
+
+    /** Emoji kenttään tai käännösnäkymään; valitsin ja haku käyttävät samaa reittiä. */
+    private fun insertEmoji(emoji: String) {
+        markOwnEdit()
+        if (translateMode) {
+            // Emojit kulkevat käännösnäkymän kautta muun tekstin mukana.
+            activeTranslateBuffer().insert(emoji)
+            onTranslateBufferChanged()
+        } else {
+            currentInputConnection?.let { ic -> commitToField(ic, emoji) }
+            textUndo.record(emoji)
+        }
+        rememberEmojiUse(emoji)
+        feedback()
+    }
+
+    /** Ehdotusriviltä valittu emoji: kirjoitettu sana säilyy ja emoji tulee perään. */
+    private fun pickEmojiSuggestion(emoji: String) {
+        markOwnEdit()
+        pendingRevert = null
+        pendingPeriodRevert = false
+        rememberEmojiUse(emoji)
+        if (translateMode) {
+            val buffer = activeTranslateBuffer()
+            buffer.insert(EmojiIndex.insertion(buffer.text.substring(0, buffer.cursor), emoji))
+            feedback()
+            onTranslateBufferChanged()
+            return
+        }
+        val ic = currentInputConnection ?: return
+        learnCurrentWord()
+        val text = EmojiIndex.insertion(readBefore(ic, 1) ?: "", emoji)
+        commitToField(ic, text)
+        textUndo.record(text)
+        // Heti perään kirjoitettu välimerkki siirtää välin taakseen kuten sanoilla.
+        autoSpaceState = 2
+        feedback()
+        updateAutoCaps()
+        updateSuggestions()
     }
 
     private fun translationSource(): String =
@@ -1696,6 +1863,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onBackspaceSwipe(words: Int) {
+        if (emojiSearchActive) return
         if (translateMode) {
             // Käännösnäkymässä ei ole valintaa näytettäväksi: poisto tehdään lopuksi.
             translateSwipeWords = words
@@ -1742,6 +1910,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onBackspaceSwipeEnd() {
+        if (emojiSearchActive) {
+            emojiQuery.clear()
+            updateEmojiSearch()
+            return
+        }
         autoSpaceState = 0
         punctSpaceAdded = false
         pendingRevert = null
@@ -1919,6 +2092,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     override fun onKeyRepeat(action: KeyAction) {
         if (action != KeyAction.Backspace) {
             onKey(action)
+            return
+        }
+        if (emojiSearchActive) {
+            handleEmojiSearchKey(action)
             return
         }
         autoSpaceState = 0
@@ -2145,11 +2322,25 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             vibrationEnabled,
         )
         suggestionBar?.applySettings(theme, heightScale)
+        emojiSearchBar?.applySettings(theme, heightScale)
         inlineChips?.applySettings(theme, heightScale)
         toolbar?.applySettings(theme)
         clipboardPanel?.applySettings(theme)
         emojiPanel?.applySettings(theme)
         translateBar?.applySettings(theme)
+        applyNavigationBarStyle(theme)
+    }
+
+    // Valittu teema voi poiketa järjestelmän tummasta tilasta: palkin kuvakkeiden
+    // pitää erottua näppäimistön taustasta.
+    private fun applyNavigationBarStyle(theme: KeyboardTheme) {
+        val imeWindow = window?.window ?: return
+        WindowCompat.getInsetsController(imeWindow, imeWindow.decorView)
+            .isAppearanceLightNavigationBars = theme.light
+        // Järjestelmän oma kontrastisuoja piirtäisi palkin alueelle eri värisen raidan.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            imeWindow.isNavigationBarContrastEnforced = false
+        }
     }
 
     override fun onCreateInputView(): View {
@@ -2434,6 +2625,24 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             }
             container.addView(it, LinearLayout.LayoutParams(params))
         }
+        emojiSearchBar = EmojiSearchBarView(this).also {
+            it.listener = object : EmojiSearchBarView.Listener {
+                override fun onResultPicked(emoji: String) = insertEmoji(emoji)
+
+                override fun onClearQuery() {
+                    feedback()
+                    emojiQuery.clear()
+                    updateEmojiSearch()
+                }
+
+                override fun onCloseSearch() {
+                    feedback()
+                    closeEmojiSearch(returnToPanel = true)
+                }
+            }
+            it.visibility = View.GONE
+            container.addView(it, LinearLayout.LayoutParams(params))
+        }
         keyboardView = KeyboardView(this).also {
             it.listener = this
             // Navigointipalkin varaus selviää vasta ikkunassa; korkeuskatto
@@ -2495,24 +2704,31 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         emojiPanel = EmojiPanelView(this).also {
             it.listener = object : EmojiPanelView.Listener {
-                override fun onEmojiPicked(emoji: String) {
-                    markOwnEdit()
-                    if (translateMode) {
-                        // Emojit kulkevat käännösnäkymän kautta muun tekstin mukana.
-                        activeTranslateBuffer().insert(emoji)
-                        onTranslateBufferChanged()
-                    } else {
-                        currentInputConnection?.let { ic -> commitToField(ic, emoji) }
-                        textUndo.record(emoji)
-                    }
-                    feedback()
-                }
+                override fun onEmojiPicked(emoji: String) = insertEmoji(emoji)
 
                 override fun onBackspace() = handleBackspaceKey()
+
+                override fun onSpace() {
+                    markOwnEdit()
+                    if (translateMode) {
+                        activeTranslateBuffer().insert(" ")
+                        onTranslateBufferChanged()
+                    } else {
+                        currentInputConnection?.let { ic -> commitToField(ic, " ") }
+                    }
+                    feedback(AudioManager.FX_KEYPRESS_SPACEBAR)
+                }
 
                 override fun onClose() {
                     feedback()
                     hideEmojiPanel()
+                    updateAutoCaps()
+                    updateSuggestions()
+                }
+
+                override fun onOpenSearch() {
+                    feedback()
+                    openEmojiSearch()
                 }
             }
             it.visibility = View.GONE
@@ -2523,6 +2739,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     /** Ehdotusrivin paikka: täyttöchipit, kun niitä on, muuten sanaehdotukset. */
     private fun updateSuggestionRow() {
+        if (emojiSearchActive) {
+            inlineChips?.visibility = View.GONE
+            suggestionBar?.visibility = View.GONE
+            return
+        }
         val state = InlineChips.rowState(
             suggestionsVisible || recentClipItem() != null,
             inlineChips?.count ?: 0,
@@ -2550,7 +2771,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun onSuggestionItemPicked(item: SuggestionItem) {
         when (item) {
             is SuggestionItem.Word -> onSuggestionPicked(item.text)
-            is SuggestionItem.Emoji -> Unit
+            is SuggestionItem.Emoji -> pickEmojiSuggestion(item.text)
             is SuggestionItem.RecentClip -> pasteRecentClip()
         }
     }
@@ -2808,6 +3029,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     private fun updateSuggestions(immediate: Boolean = false) {
         val bar = suggestionBar ?: return
+        if (emojiSearchActive) return
         // Hitaassa kentässä tekstikysely odottaa kirjoitustaukoa, ettei
         // jokainen näppäily jää odottamaan sovelluksen vastausta.
         if (!immediate && !translateMode && slowConnection.isSlow(SystemClock.uptimeMillis())) {
@@ -2831,9 +3053,16 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         // Lauseen alussa (automaattinen iso kirjain päällä) ehdotukset alkavat isolla.
         val shiftActive = shift.state != ShiftState.OFF
         val generation = ++suggestGeneration
+        val index = emojiIndex
+        val recents = emojiRecents
         executeSuggest {
             val word = WordTools.currentWord(before)
             val context = WordTools.previousWords(before)
+            // Emoji kirjoitettavalle tai juuri valmistuneelle sanalle.
+            val emoji = index
+                ?.suggest(word.ifEmpty { context.lastOrNull().orEmpty() }, recents?.recent.orEmpty().toSet())
+                .orEmpty()
+                .map { SuggestionItem.Emoji(recents?.variantFor(it.emoji) ?: it.emoji) }
             var result = if (word.isNotEmpty()) {
                 suggestionEngine.suggest(word, context)
             } else {
@@ -2848,9 +3077,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     if (generation == suggestGeneration) {
                         // Kopio väistyy, kun käyttäjä kirjoittaa sanaa.
                         val clip = if (word.isEmpty()) clipItem else null
+                        val words = WordTools.withTypedWord(word, result).map(SuggestionItem::Word)
+                        // Kirjoitettu sana pysyy kärjessä ja emoji heti sen perässä.
+                        val head = if (word.isEmpty()) 0 else 1
                         bar.setSuggestions(
-                            listOfNotNull(clip) +
-                                WordTools.withTypedWord(word, result).map(SuggestionItem::Word)
+                            listOfNotNull(clip) + words.take(head) + emoji + words.drop(head)
                         )
                         shownCompletions =
                             if (word.isNotEmpty()) result.take(SHOWN_TOP_COUNT) else emptyList()
@@ -2887,6 +3118,12 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onText(text: String) {
+        if (emojiSearchActive) {
+            emojiQuery.insert(text.lowercase(fiLocale))
+            updateEmojiSearch()
+            feedback()
+            return
+        }
         val ic = currentInputConnection ?: return
         markOwnEdit()
         pendingRevert = null
@@ -2962,6 +3199,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onKey(action: KeyAction) {
+        if (emojiSearchActive && handleEmojiSearchKey(action)) return
         // Tekstiä muuttava näppäin katkaisee automaattivälin seurannan.
         when (action) {
             KeyAction.Backspace, KeyAction.Enter, is KeyAction.Arrow, is KeyAction.Edit -> {
@@ -3074,6 +3312,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onSpaceSwipe(steps: Int) {
+        if (emojiSearchActive) return
         if (translateMode) {
             // Liu'utus liikuttaa käännösnäkymän kursoria kentän sijaan.
             activeTranslateBuffer().move(steps)
@@ -3137,7 +3376,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
      * luetaan kentältä.
      */
     private fun updateAutoCaps(predicted: CharSequence? = null) {
-        if (page != Page.LETTERS) return
+        if (page != Page.LETTERS || emojiSearchActive) return
         val caps = if (translateMode) {
             val buffer = activeTranslateBuffer()
             AutoCaps.wanted(buffer.text.substring(0, buffer.cursor), AutoCaps.SENTENCES)
@@ -3238,6 +3477,13 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         private const val AUTODETECT_CONFIDENCE = 0.7f
         const val PREF_DICTATION_ENGINE = "sanelu_moottori"
         const val PREF_DOUBLE_SPACE = "kaksoisvali_piste"
+        const val PREF_EMOJI_RECENTS = "emoji_viimeisimmat"
+        const val PREF_EMOJI_VARIANTS = "emoji_ihonvarit"
+        const val EMOJI_ASSET = "emoji.tsv"
+
+        // Aiemman kirjastovalitsimen historian sijainti siirtoa varten.
+        const val LEGACY_EMOJI_PREFS = "androidx.emoji2.emojipicker.preferences"
+        const val LEGACY_EMOJI_KEY = "pref_key_recent_emoji"
         const val DOUBLE_SPACE_PERIOD_MS = 1100L
         const val LIVE_TRANSLATE_DELAY_MS = 300L
         const val EXTERNAL_SELECTION_MS = 1000L

@@ -1,5 +1,6 @@
 package org.jarsi.ark.engine
 
+import java.text.BreakIterator
 import kotlin.math.abs
 
 /** Tekstityökalut: keskeneräisen sanan poiminta kursorin edeltä. */
@@ -141,6 +142,15 @@ object WordTools {
             end -= word.length
         }
         return words.toList()
+    }
+
+    /** Grafeemien määrä: montako näppäintapahtumana lähetettyä poistoa teksti vaatii. */
+    fun graphemeCount(text: CharSequence): Int {
+        val iterator = BreakIterator.getCharacterInstance()
+        iterator.setText(text.toString())
+        var count = 0
+        while (iterator.next() != BreakIterator.DONE) count++
+        return count
     }
 
     /**

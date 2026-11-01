@@ -36,6 +36,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.os.SystemClock
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import android.webkit.MimeTypeMap
 import android.widget.LinearLayout
 import android.widget.PopupWindow
@@ -70,12 +71,15 @@ import org.jarsi.ark.engine.LearningEngine
 import org.jarsi.ark.engine.SuggestionEngine
 import org.jarsi.ark.engine.WordTools
 import org.jarsi.ark.keyboard.AutoCaps
+import org.jarsi.ark.keyboard.CursorExpectation
+import org.jarsi.ark.keyboard.FieldProfile
 import org.jarsi.ark.keyboard.InlineChips
 import org.jarsi.ark.keyboard.KeyAction
 import org.jarsi.ark.keyboard.KeyboardHeight
 import org.jarsi.ark.keyboard.Layouts
 import org.jarsi.ark.keyboard.ShiftState
 import org.jarsi.ark.keyboard.ShiftTracker
+import org.jarsi.ark.keyboard.SlowConnectionGuard
 import org.jarsi.ark.keyboard.SmartSpace
 import org.jarsi.ark.keyboard.SymbolOrder
 import org.jarsi.ark.keyboard.TextUndo
@@ -121,10 +125,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private var suggestionBar: SuggestionBarView? = null
     private var toolbar: ToolbarView? = null
     private var page = Page.LETTERS
-    private var extraKey: String? = null
+    private var field = FieldProfile.from(0, 0, null)
     private val shift = ShiftTracker()
     private var symbolOrder: List<String> = SymbolOrder.default
-    private var passwordField = false
     private var soundEnabled = false
     private var vibrationEnabled = true
 
@@ -232,6 +235,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                         dictateIntoTranslation(shown, final = false)
                         return
                     }
+                    cursor.onUnknownEdit()
                     currentInputConnection?.setComposingText(shown, 1)
                 }
 
@@ -249,6 +253,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                         ic.setComposingText("$committed ", 1)
                         ic.finishComposingText()
                         ic.endBatchEdit()
+                        cursor.onUnknownEdit()
                         textUndo.record("$committed ")
                     }
                     // Lauseen loppu nostaa seuraavankin jakson isolle alkukirjaimelle.
@@ -264,6 +269,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     toolbar?.micActive = active
                     if (!active) {
                         dictationPending = 0
+                        cursor.onUnknownEdit()
                         currentInputConnection?.finishComposingText()
                     }
                 }
@@ -350,10 +356,6 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     // ohitettu, 0 = ei voimassa. Välimerkki imaisee välin vain tilassa > 0.
     private var autoSpaceState = 0
 
-    // 2 = välimerkki juuri kirjoitettu, 1 = commitin oma kursoripäivitys
-    // ohitettu, 0 = ei voimassa. Kirjain saa välin eteensä vain tilassa > 0.
-    private var smartSpaceState = 0
-
     // Välimerkin perään lisättiin juuri automaattiväli; heti perään
     // painettu välilyönti ohitetaan tuplavälin estämiseksi.
     private var punctSpaceAdded = false
@@ -362,21 +364,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private var lastSpaceTime = 0L
     private var doubleSpacePeriodEnabled = true
 
-    // Kenttäkohtaiset ehdot: älykäs jälkiväli ei sovi osoite-, sähköposti-
-    // eikä koodikenttiin, ja iso alkukirjain seuraa kentän omaa pyyntöä.
-    private var smartSpaceField = false
-    private var capSentencesField = false
-
-    // Viimeisin älykäs jälkiväli (kirjoitettu kirjain, kenttään mennyt häntä):
-    // askelpalautin heti perään palauttaa kirjaimen ilman väliä, jotta
-    // esim. jarsi.org jatkuu pisteen jälkeen ehjänä.
-    private var pendingSpaceRevert: Pair<String, String>? = null
-
     // Työkalurivin peruutusnapin kertaperuutus näppäimistön toimenpiteille.
     private val textUndo = TextUndo()
 
     private var autoCorrectEnabled = true
-    private var noSuggestionsField = false
     private var numberRowEnabled = true
 
     // Editori-istunnon tunniste: viivästynyt callback (automaattikorjaus,
@@ -386,9 +377,30 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     // Tuhotulle palvelulle palaavat callbackit eivät saa jonottaa uutta työtä.
     private var destroyed = false
 
-    // Viimeisin oma muokkaushetki: sen jälkeiset valintamuutokset ovat
-    // käyttäjän kursorihyppyjä, jotka katkaisevat sanaketjun.
+    // Viimeisin oma muokkaushetki: varareitti valintamuutosten erotteluun,
+    // kun kursorin sijaintia ei tiedetä (näppäintapahtumat, sanelu).
     private var lastEditTime = 0L
+
+    // Odotettu kursorin sijainti erottaa omat muokkaukset käyttäjän
+    // kursorihypyistä, jotka katkaisevat sanaketjun.
+    private val cursor = CursorExpectation()
+
+    // Hitaan kentän valinnaiset kyselyt niputetaan kirjoitustauolle.
+    private val slowConnection = SlowConnectionGuard()
+    private var lastPackage: String? = null
+    private val deferredRefresh = Runnable {
+        updateAutoCaps()
+        updateSuggestions(immediate = true)
+    }
+
+    // Sanapoisto ei tehonnut tähän kenttään (eräät selainkentät): loppuistunto
+    // poistetaan näppäintapahtumin.
+    private var deleteWordsWithKeys = false
+    private var selectionUpdates = 0
+    private var wordDeleteCheck: Runnable? = null
+
+    // Kaksoisvälilyönnin piste: askelpalautin heti perään palauttaa välit.
+    private var pendingPeriodRevert = false
 
     // Viimeisin automaattikorjaus (kirjoitettu, korjattu): askelpalautin
     // heti perään palauttaa kirjoitetun; mikä tahansa muu näppäin mitätöi.
@@ -455,6 +467,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     override fun onDestroy() {
         editorSessionId++
+        cancelDeferredFieldWork()
         dictation.stop()
         openAiDictation?.destroy()
         translator?.close()
@@ -531,6 +544,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        cancelDeferredFieldWork()
         hideMessage()
         keyboardView?.dismissPopups()
         // Lupa-aktiviteetin avaus piilottaa näppäimistön hetkeksi; silloin
@@ -543,6 +557,42 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         clearInlineChips()
         super.onFinishInputView(finishingInput)
     }
+
+    private fun cancelDeferredFieldWork() {
+        mainHandler.removeCallbacks(deferredRefresh)
+        wordDeleteCheck?.let { mainHandler.removeCallbacks(it) }
+        wordDeleteCheck = null
+    }
+
+    /** Kirjoittaa kenttään ja pitää kursorin odotuksen ajan tasalla. */
+    private fun commitToField(ic: InputConnection, text: CharSequence) {
+        ic.commitText(text, 1)
+        cursor.onCommit(text.length)
+    }
+
+    /** Poistaa kursorin edeltä ja pitää kursorin odotuksen ajan tasalla. */
+    private fun deleteFromField(ic: InputConnection, count: Int) {
+        ic.deleteSurroundingText(count, 0)
+        cursor.onDeleteBefore(count)
+    }
+
+    /** Näppäintapahtuma: sen vaikutus kursoriin selviää vasta päivityksestä. */
+    private fun sendKeyToField(keyCode: Int) {
+        sendDownUpKeyEvents(keyCode)
+        cursor.onUnknownEdit()
+    }
+
+    /** Kentän tekstikysely ajanotolla: hidas vastaus merkitsee kentän hitaaksi. */
+    private fun readBefore(ic: InputConnection, count: Int): CharSequence? {
+        val started = SystemClock.uptimeMillis()
+        val text = ic.getTextBeforeCursor(count, 0)
+        val now = SystemClock.uptimeMillis()
+        slowConnection.record(now - started, now)
+        return text
+    }
+
+    private fun readBefore(count: Int): CharSequence? =
+        currentInputConnection?.let { readBefore(it, count) }
 
     private fun readLearnedData(
         db: LearnedDatabase,
@@ -790,7 +840,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun showTranslateBar() {
         val bar = translateBar ?: return
         // Salasanakenttiä ei käännetä.
-        if (passwordField) return
+        if (field.password) return
         // Vanha käännösteksti unohtuu muistiajan kuluttua: tuntien takainen
         // teksti avautuisi muuten yllättäen uuden käännöstyön pohjaksi.
         val memoryMs = prefs.getInt(PREF_TRANSLATE_MEMORY, 30) * 60_000L
@@ -1172,12 +1222,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         markOwnEdit()
         ic.beginBatchEdit()
         val previous = lastInsertedTranslation
-        if (previous.isNotEmpty() &&
-            ic.getTextBeforeCursor(previous.length, 0)?.toString() == previous
-        ) {
-            ic.deleteSurroundingText(previous.length, 0)
+        if (previous.isNotEmpty() && readBefore(ic, previous.length)?.toString() == previous) {
+            deleteFromField(ic, previous.length)
         }
-        ic.commitText(translation, 1)
+        commitToField(ic, translation)
         ic.endBatchEdit()
         textUndo.record(translation)
         lastInsertedTranslation = translation
@@ -1455,7 +1503,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 activeTranslateBuffer().insert(clip.text)
                 onTranslateBufferChanged()
             } else {
-                ic.commitText(clip.text, 1)
+                commitToField(ic, clip.text)
                 textUndo.record(clip.text)
             }
             hideClipboardPanel()
@@ -1489,6 +1537,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 ic, info, content,
                 InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null,
             )
+            cursor.onUnknownEdit()
             // Kenttä voi hylätä sisällön, vaikka se ilmoitti tukevansa tyyppiä.
             if (committed) {
                 hideClipboardPanel()
@@ -1580,10 +1629,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             if (activeTranslateBuffer().backspace()) {
                 onTranslateBufferChanged()
             }
-        } else if (!revertSmartSpace() && !revertAutoCorrect()) {
+        } else if (!revertDoubleSpacePeriod() && !revertAutoCorrect()) {
             // Näppäintapahtumana, jotta valitun tekstin poisto toimii
             // sovelluksissa oikein.
-            sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+            sendKeyToField(KeyEvent.KEYCODE_DEL)
         }
         // Poiston jälkeen kenttä ei enää vastaa kirjattua toimenpidettä.
         textUndo.clear()
@@ -1600,16 +1649,34 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val ic = currentInputConnection ?: return false
         // Ison alkukirjaimen ennuste tarvitsee koko sanan (lyhennesääntö),
         // ei vain viimeisiä merkkejä.
-        val before = ic.getTextBeforeCursor(MAX_WORD_LOOKBACK, 0)?.toString().orEmpty()
+        val before = readBefore(ic, MAX_WORD_LOOKBACK)?.toString().orEmpty()
         if (before.length < 2 || !before.endsWith(" ")) return false
         if (!SmartSpace.canEndSentence(before[before.length - 2])) return false
         ic.beginBatchEdit()
-        ic.deleteSurroundingText(1, 0)
-        ic.commitText(". ", 1)
+        deleteFromField(ic, 1)
+        commitToField(ic, ". ")
         ic.endBatchEdit()
         // Heti perään painettu kolmas väli ohitetaan kuten automaattivälin.
         punctSpaceAdded = true
+        pendingPeriodRevert = true
         updateAutoCaps(before.dropLast(1) + ". ")
+        return true
+    }
+
+    /**
+     * Askelpalautin heti kaksoisvälilyönnin pisteen jälkeen palauttaa välit,
+     * jos kentän teksti on yhä se, mikä pisteestä jäi.
+     */
+    private fun revertDoubleSpacePeriod(): Boolean {
+        if (!pendingPeriodRevert) return false
+        pendingPeriodRevert = false
+        val ic = currentInputConnection ?: return false
+        if (readBefore(ic, 2)?.toString() != ". ") return false
+        markOwnEdit()
+        ic.beginBatchEdit()
+        deleteFromField(ic, 2)
+        commitToField(ic, "  ")
+        ic.endBatchEdit()
         return true
     }
 
@@ -1620,10 +1687,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             return
         }
         autoSpaceState = 0
-        smartSpaceState = 0
         punctSpaceAdded = false
         pendingRevert = null
-        pendingSpaceRevert = null
+        pendingPeriodRevert = false
         if (translateMode && activeTranslateBuffer().isNotEmpty()) {
             if (activeTranslateBuffer().backspaceWord()) {
                 onTranslateBufferChanged()
@@ -1631,15 +1697,49 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         } else {
             val ic = currentInputConnection ?: return
             markOwnEdit()
-            val before = ic.getTextBeforeCursor(WORD_BACKSPACE_LOOKBACK, 0)
+            val before = readBefore(ic, WORD_BACKSPACE_LOOKBACK)
             if (before.isNullOrEmpty()) {
-                sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+                sendKeyToField(KeyEvent.KEYCODE_DEL)
             } else {
-                ic.deleteSurroundingText(WordTools.wordBackspaceLength(before), 0)
+                deleteWordFromField(ic, before)
             }
         }
         textUndo.clear()
         feedback(AudioManager.FX_KEYPRESS_DELETE)
+    }
+
+    /**
+     * Poistaa sanan kursorin edeltä. Jos kenttä ei reagoi tekstipoistoon
+     * (eräät selainkentät), sana poistetaan näppäintapahtumin ja kentässä
+     * jatketaan niillä. Tarkistus odottaa hetken, koska osa kentistä vastaa
+     * vanhentuneesta tekstistä heti poiston perään; ilman tätä sana voisi
+     * poistua kahdesti.
+     */
+    private fun deleteWordFromField(ic: InputConnection, before: CharSequence) {
+        val length = WordTools.wordBackspaceLength(before)
+        val word = before.subSequence(before.length - length, before.length).toString()
+        if (deleteWordsWithKeys) {
+            repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
+            return
+        }
+        deleteFromField(ic, length)
+        wordDeleteCheck?.let { mainHandler.removeCallbacks(it) }
+        val session = editorSessionId
+        val updatesAtDelete = selectionUpdates
+        val check = Runnable {
+            wordDeleteCheck = null
+            // Valintapäivitys kertoo, että poisto meni perille.
+            if (session != editorSessionId || updatesAtDelete != selectionUpdates) {
+                return@Runnable
+            }
+            val current = currentInputConnection ?: return@Runnable
+            if (readBefore(current, length)?.toString() == word) {
+                deleteWordsWithKeys = true
+                repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
+            }
+        }
+        wordDeleteCheck = check
+        mainHandler.postDelayed(check, WORD_DELETE_CHECK_MS)
     }
 
     /**
@@ -1653,11 +1753,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (translateMode) return
         val ic = currentInputConnection ?: return
         markOwnEdit()
-        val undo = textUndo.consume { length -> ic.getTextBeforeCursor(length, 0) }
+        val undo = textUndo.consume { length -> readBefore(ic, length) }
         if (undo != null) {
             ic.beginBatchEdit()
-            ic.deleteSurroundingText(undo.deleteLength, 0)
-            if (undo.restore.isNotEmpty()) ic.commitText(undo.restore, 1)
+            deleteFromField(ic, undo.deleteLength)
+            if (undo.restore.isNotEmpty()) commitToField(ic, undo.restore)
             ic.endBatchEdit()
             // Peruttu teksti ei saa jäädä sanaketjuun.
             learning.resetContext()
@@ -1674,23 +1774,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val meta = KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON
         ic.sendKeyEvent(KeyEvent(time, time, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_Z, 0, meta))
         ic.sendKeyEvent(KeyEvent(time, time, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_Z, 0, meta))
-    }
-
-    /**
-     * Askelpalautin heti älykkään jälkivälin jälkeen palauttaa kirjaimen
-     * ilman väliä ja isontamista, jolloin esim. jarsi.org jatkuu ehjänä.
-     */
-    private fun revertSmartSpace(): Boolean {
-        val (typed, committed) = pendingSpaceRevert ?: return false
-        pendingSpaceRevert = null
-        val ic = currentInputConnection ?: return false
-        if (ic.getTextBeforeCursor(committed.length, 0)?.toString() != committed) return false
-        markOwnEdit()
-        ic.beginBatchEdit()
-        ic.deleteSurroundingText(committed.length, 0)
-        ic.commitText(typed, 1)
-        ic.endBatchEdit()
-        return true
+        cursor.onUnknownEdit()
     }
 
     /**
@@ -1699,16 +1783,16 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
      */
     private fun commitSpaceWithAutoCorrect() {
         val ic = currentInputConnection ?: return
-        val known = ic.getTextBeforeCursor(MAX_WORD_LOOKBACK, 0)?.toString()
+        val known = readBefore(ic, MAX_WORD_LOOKBACK)?.toString()
         val before = known.orEmpty()
         val typed = WordTools.currentWord(before)
         val context = WordTools.previousWords(before)
         val shown = shownCompletions
         shownCompletions = emptyList()
-        ic.commitText(" ", 1)
+        commitToField(ic, " ")
         updateAutoCaps(known?.let { "$it " })
         if (typed.isEmpty() || !learningEnabled) return
-        if (!autoCorrectEnabled || noSuggestionsField) {
+        if (!autoCorrectEnabled || !field.autoCorrectAllowed) {
             learning.onSuggestionsIgnored(shown, typed)
             learning.onWordCommitted(typed)
             maybeFlush()
@@ -1742,11 +1826,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             val tail = "$typed "
             // Korjataan vain jos teksti on yhä ennallaan — nopea kirjoittaja
             // on voinut jo jatkaa, eikä tekstiä saa muuttaa selän takana.
-            if (ic.getTextBeforeCursor(tail.length, 0)?.toString() == tail) {
+            if (readBefore(ic, tail.length)?.toString() == tail) {
                 markOwnEdit()
                 ic.beginBatchEdit()
-                ic.deleteSurroundingText(tail.length, 0)
-                ic.commitText("$display ", 1)
+                deleteFromField(ic, tail.length)
+                commitToField(ic, "$display ")
                 ic.endBatchEdit()
                 pendingRevert = typed to display
                 textUndo.record("$display ", "$typed ")
@@ -1765,11 +1849,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         pendingRevert = null
         val ic = currentInputConnection ?: return false
         val tail = "$corrected "
-        if (ic.getTextBeforeCursor(tail.length, 0)?.toString() != tail) return false
+        if (readBefore(ic, tail.length)?.toString() != tail) return false
         markOwnEdit()
         ic.beginBatchEdit()
-        ic.deleteSurroundingText(tail.length, 0)
-        ic.commitText(typed, 1)
+        deleteFromField(ic, tail.length)
+        commitToField(ic, typed)
         ic.endBatchEdit()
         if (learningEnabled) {
             // Peruttu sana opitaan omaksi, jottei sitä korjata enää uudestaan;
@@ -1784,7 +1868,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     /** Oppii kursorin edellä olevan keskeneräisen sanan, jos oppiminen on sallittu. */
     private fun learnCurrentWord() {
         if (!learningEnabled) return
-        val before = currentInputConnection?.getTextBeforeCursor(MAX_WORD_LOOKBACK, 0) ?: return
+        val before = readBefore(MAX_WORD_LOOKBACK) ?: return
         val word = WordTools.currentWord(before)
         if (word.isNotEmpty()) {
             learning.onSuggestionsIgnored(shownCompletions, word)
@@ -1822,7 +1906,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             theme,
             heightScale,
             // Salasanakentässä esikatselukupla jää pois, ettei syöte näy sivullisille.
-            prefs.getBoolean("esikatselu", true) && !passwordField,
+            prefs.getBoolean("esikatselu", true) && !field.password,
             vibrationEnabled,
         )
         suggestionBar?.applySettings(theme, heightScale)
@@ -1872,7 +1956,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     // alueelle, jota parhaillaan kirjoitetaan — kenttään ei
                     // mene mitään ennen vientiä.
                     when {
-                        passwordField -> Unit
+                        field.password -> Unit
                         dictationActive() -> {
                             dictation.stop()
                             openAiDictation?.stop()
@@ -2181,7 +2265,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                         activeTranslateBuffer().insert(emoji)
                         onTranslateBufferChanged()
                     } else {
-                        currentInputConnection?.commitText(emoji, 1)
+                        currentInputConnection?.let { ic -> commitToField(ic, emoji) }
                         textUndo.record(emoji)
                     }
                     feedback()
@@ -2312,41 +2396,31 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         soundEnabled = prefs.getBoolean("aanet", false)
         vibrationEnabled = prefs.getBoolean("varina", true)
 
-        val inputClass = info.inputType and InputType.TYPE_MASK_CLASS
-        val variation = info.inputType and InputType.TYPE_MASK_VARIATION
-        passwordField = isPasswordField(inputClass, variation)
+        field = FieldProfile.from(info.inputType, info.imeOptions, info.packageName)
 
         applyVisualSettings()
 
-        page = when (inputClass) {
-            InputType.TYPE_CLASS_NUMBER,
-            InputType.TYPE_CLASS_PHONE,
-            InputType.TYPE_CLASS_DATETIME -> Page.NUMERIC
-            else -> Page.LETTERS
-        }
-        extraKey = if (inputClass == InputType.TYPE_CLASS_TEXT) {
-            when (variation) {
-                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
-                InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS -> "@"
-                InputType.TYPE_TEXT_VARIATION_URI -> "/"
-                else -> null
-            }
-        } else {
-            null
-        }
+        page = if (field.numeric) Page.NUMERIC else Page.LETTERS
 
-        keyboardView?.enterText = enterLabel(info)
+        keyboardView?.enterText = enterLabel()
         editorSessionId++
+        cancelDeferredFieldWork()
+        if (info.packageName != lastPackage) {
+            lastPackage = info.packageName
+            slowConnection.reset()
+        }
+        if (!restarting) deleteWordsWithKeys = false
+        cursor.begin(
+            info.initialSelStart,
+            info.initialSelEnd,
+            readBefore(CURSOR_CHECK_LOOKBACK)?.length,
+            CURSOR_CHECK_LOOKBACK,
+        )
         shownCompletions = emptyList()
         shift.reset()
         // Salasanakentissä ja oppimisen kieltävissä kentissä (esim. incognito)
         // ei opita mitään; kentän vaihto katkaisee sanaketjun.
-        learningEnabled = !passwordField &&
-            info.imeOptions and EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING == 0
-        // NO_SUGGESTIONS-kentässä (esim. käyttäjätunnus tai koodi) tekstiä
-        // ei automaattikorjata; ehdotusrivi näkyy silti.
-        noSuggestionsField = inputClass == InputType.TYPE_CLASS_TEXT &&
-            info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0
+        learningEnabled = field.learningAllowed
         learning.resetContext()
         reloadLearnedIfChanged()
         if (!restarting) {
@@ -2367,7 +2441,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         if (pendingDictation) {
             pendingDictation = false
-            if (!passwordField &&
+            if (!field.password &&
                 checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
                 PackageManager.PERMISSION_GRANTED
             ) {
@@ -2387,27 +2461,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         symbolOrder = SymbolOrder.load(prefs.getString(SymbolOrder.PREF_KEY, null))
         toolbar?.tools = ToolbarOrder.load(prefs.getString(ToolbarOrder.PREF_KEY, null)).visible
         pendingRevert = null
-        // Osoitteissa, sähköposteissa ja koodikentissä pisteet kuuluvat
-        // tekstiin, eikä väliä saa lisätä niiden perään automaattisesti.
-        // NO_SUGGESTIONS ei estä väliä: esim. Google Keep merkitsee sillä
-        // tavalliset kirjoituskentät, joissa jälkiväli nimenomaan halutaan.
-        smartSpaceField = inputClass == InputType.TYPE_CLASS_TEXT &&
-            !passwordField &&
-            variation != InputType.TYPE_TEXT_VARIATION_URI &&
-            variation != InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS &&
-            variation != InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
-        capSentencesField = inputClass == InputType.TYPE_CLASS_TEXT &&
-            info.inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0
-        smartSpaceState = 0
-        pendingSpaceRevert = null
+        pendingPeriodRevert = false
         textUndo.clear()
-        // Salasana- ja numerokentissä ehdotusrivi on piilossa. NO_SUGGESTIONS
-        // EI piilota riviä: moni sovellus (esim. Google Keep) merkitsee sillä
-        // tavallisia kirjoituskenttiä, ja oma oppiminen on tämän näppäimistön
-        // ydin — lippu poistaa vain automaattikorjauksen.
-        suggestionsVisible = prefs.getBoolean("ehdotukset", true) &&
-            !passwordField &&
-            page != Page.NUMERIC
+        suggestionsVisible = prefs.getBoolean("ehdotukset", true) && field.suggestionsAllowed
         updateSuggestionRow()
         updateLayout()
         updateAutoCaps()
@@ -2439,30 +2495,16 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             return
         }
         val ic = currentInputConnection ?: return
-        val known = ic.getTextBeforeCursor(MAX_WORD_LOOKBACK, 0)?.toString()
+        val known = readBefore(ic, MAX_WORD_LOOKBACK)?.toString()
         val before = known.orEmpty()
         val current = WordTools.currentWord(before)
-        // Välimerkin perään valittu ennustus saa välin eteensä samoin kuin
-        // kirjoitettu kirjain, ja lauseen alku isonnetaan.
-        val beforeChar = before.lastOrNull()
-        val smartPrefix = smartSpaceField && smartSpaceState > 0 && current.isEmpty() &&
-            beforeChar != null && SmartSpace.isPunctuation(beforeChar)
-        val display = if (smartPrefix && beforeChar != null && capSentencesField &&
-            SmartSpace.isSentenceEnder(beforeChar)
-        ) {
-            word.replaceFirstChar { it.titlecase(fiLocale) }
-        } else {
-            word
-        }
-        val committed = (if (smartPrefix) " " else "") +
-            if (spaceAfterSuggestion) "$display " else display
+        val committed = if (spaceAfterSuggestion) "$word " else word
         ic.beginBatchEdit()
-        if (current.isNotEmpty()) ic.deleteSurroundingText(current.length, 0)
-        ic.commitText(committed, 1)
+        if (current.isNotEmpty()) deleteFromField(ic, current.length)
+        commitToField(ic, committed)
         ic.endBatchEdit()
         textUndo.record(committed, current)
         autoSpaceState = if (spaceAfterSuggestion) 2 else 0
-        smartSpaceState = 0
         if (learningEnabled) {
             // Muut näkyneet täydennykset ohitettiin; valittu sana saa hyväksynnän.
             learning.onSuggestionsIgnored(shownCompletions, word)
@@ -2480,8 +2522,15 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         updateSuggestions()
     }
 
-    private fun updateSuggestions() {
+    private fun updateSuggestions(immediate: Boolean = false) {
         val bar = suggestionBar ?: return
+        // Hitaassa kentässä tekstikysely odottaa kirjoitustaukoa, ettei
+        // jokainen näppäily jää odottamaan sovelluksen vastausta.
+        if (!immediate && !translateMode && slowConnection.isSlow(SystemClock.uptimeMillis())) {
+            mainHandler.removeCallbacks(deferredRefresh)
+            mainHandler.postDelayed(deferredRefresh, SLOW_REFRESH_MS)
+            return
+        }
         // Nuolitilassa kursoria liikutellaan tekstin yli; ehdotukset olisivat vain häiriöksi.
         if (!suggestionsVisible || page == Page.ARROWS) {
             bar.setSuggestions(emptyList())
@@ -2492,7 +2541,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             val buffer = activeTranslateBuffer()
             buffer.text.substring(0, buffer.cursor)
         } else {
-            currentInputConnection?.getTextBeforeCursor(MAX_WORD_LOOKBACK, 0) ?: ""
+            readBefore(MAX_WORD_LOOKBACK) ?: ""
         }
         // Lauseen alussa (automaattinen iso kirjain päällä) ehdotukset alkavat isolla.
         val shiftActive = shift.state != ShiftState.OFF
@@ -2521,32 +2570,18 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
     }
 
-    private fun isPasswordField(inputClass: Int, variation: Int): Boolean = when {
-        inputClass == InputType.TYPE_CLASS_TEXT && (
-            variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
-                variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
-                variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
-            ) -> true
-        inputClass == InputType.TYPE_CLASS_NUMBER &&
-            variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD -> true
-        else -> false
-    }
-
-    private fun enterLabel(info: EditorInfo): String {
-        if (info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0) return "⏎"
-        return when (info.imeOptions and EditorInfo.IME_MASK_ACTION) {
-            EditorInfo.IME_ACTION_SEARCH -> getString(R.string.enter_hae)
-            EditorInfo.IME_ACTION_SEND -> getString(R.string.enter_laheta)
-            EditorInfo.IME_ACTION_GO -> getString(R.string.enter_siirry)
-            EditorInfo.IME_ACTION_NEXT -> getString(R.string.enter_seuraava)
-            EditorInfo.IME_ACTION_DONE -> getString(R.string.enter_valmis)
-            else -> "⏎"
-        }
+    private fun enterLabel(): String = when (field.enterAction) {
+        EditorInfo.IME_ACTION_SEARCH -> getString(R.string.enter_hae)
+        EditorInfo.IME_ACTION_SEND -> getString(R.string.enter_laheta)
+        EditorInfo.IME_ACTION_GO -> getString(R.string.enter_siirry)
+        EditorInfo.IME_ACTION_NEXT -> getString(R.string.enter_seuraava)
+        EditorInfo.IME_ACTION_DONE -> getString(R.string.enter_valmis)
+        else -> "⏎"
     }
 
     private fun updateLayout() {
         val layout = when (page) {
-            Page.LETTERS -> Layouts.letters(extraKey, numberRowEnabled)
+            Page.LETTERS -> Layouts.letters(field.extraKey, numberRowEnabled)
             Page.SYMBOLS1 -> Layouts.symbols1(symbolOrder)
             Page.SYMBOLS2 -> Layouts.symbols2(symbolOrder)
             Page.SYMBOLS3 -> Layouts.symbols3
@@ -2564,6 +2599,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val ic = currentInputConnection ?: return
         markOwnEdit()
         pendingRevert = null
+        pendingPeriodRevert = false
         textUndo.clear()
         if (translateMode) {
             // Käännöstilassa näppäily kertyy käännösnäkymään; kenttään
@@ -2583,26 +2619,26 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (text.length == 1 && !text[0].isLetterOrDigit() && text[0] != '-') {
             learnCurrentWord()
         }
+        val punctuation = text.length == 1 && SmartSpace.isPunctuation(text[0])
+        // Tekstikyselyt tehdään vain välimerkille: tavallinen kirjain ei
+        // tarvitse niitä, ja jokainen kysely odottaa sovelluksen vastausta.
         // Rivin loppu kelpaa kuten kentän loppu: monirivisissä kentissä
         // (esim. Keepin muistiinpanot) kursorin jäljessä on rivinvaihto,
         // eikä se saa estää välimerkkisääntöjä.
-        val afterCursor = ic.getTextAfterCursor(1, 0)?.toString()
+        val afterCursor = if (punctuation) ic.getTextAfterCursor(1, 0)?.toString() else null
         val atLineEnd = afterCursor.isNullOrEmpty() || afterCursor == "\n"
         // Edeltävä teksti luetaan ennen muokkausta: välimerkkisäännöt
         // katsovat viimeistä merkkiä, ja ison alkukirjaimen ennusteeseen
         // muokkaus sovelletaan siihen kerran.
-        val before = ic.getTextBeforeCursor(MAX_WORD_LOOKBACK, 0)?.toString()
+        val before = if (punctuation) readBefore(ic, MAX_WORD_LOOKBACK)?.toString() else null
         val prev = before?.lastOrNull()
-        if ((autoSpaceState > 0 || smartSpaceField) && text.length == 1 &&
-            SmartSpace.isPunctuation(text[0]) && prev == ' ' && atLineEnd
-        ) {
+        if ((autoSpaceState > 0 || field.smartSpace) && punctuation && prev == ' ' && atLineEnd) {
             // Välilyönti siirtyy välimerkin taakse: "sana ." -> "sana. "
             ic.beginBatchEdit()
-            ic.deleteSurroundingText(1, 0)
-            ic.commitText(text + " ", 1)
+            deleteFromField(ic, 1)
+            commitToField(ic, text + " ")
             ic.endBatchEdit()
             if (autoSpaceState > 0) autoSpaceState = 2
-            smartSpaceState = 0
             punctSpaceAdded = true
             updateAutoCaps(before.orEmpty().dropLast(1) + text + " ")
             feedback()
@@ -2620,16 +2656,16 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         // sanan perässä saa välin heti peräänsä. Numeron perässä sääntö
         // ei laukea (3,14) eikä keskellä tekstiä; osoitteen (jarsi.org)
         // välin saa pois yhdellä askelpalauttimella.
-        if (smartSpaceField && text.length == 1 && SmartSpace.isPunctuation(text[0])) {
+        if (field.smartSpace && punctuation) {
             if (prev != null && prev != ' ' && !prev.isDigit() && atLineEnd) {
-                ic.commitText(text + " ", 1)
+                commitToField(ic, text + " ")
                 punctSpaceAdded = true
                 updateAutoCaps(before.orEmpty() + text + " ")
                 feedback()
                 return
             }
         }
-        ic.commitText(output, 1)
+        commitToField(ic, output)
         if (shift.onCharacterTyped()) keyboardView?.shiftState = shift.state
         feedback()
     }
@@ -2639,13 +2675,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         when (action) {
             KeyAction.Backspace, KeyAction.Enter, is KeyAction.Arrow -> {
                 autoSpaceState = 0
-                smartSpaceState = 0
                 punctSpaceAdded = false
                 markOwnEdit()
             }
             KeyAction.Space -> {
                 autoSpaceState = 0
-                smartSpaceState = 0
                 markOwnEdit()
             }
             else -> Unit
@@ -2653,7 +2687,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         // Korjauksen voi perua vain heti perään; muut näppäimet mitätöivät.
         if (action != KeyAction.Backspace && action != KeyAction.Shift) {
             pendingRevert = null
-            pendingSpaceRevert = null
+            pendingPeriodRevert = false
             textUndo.clear()
         }
         when (action) {
@@ -2695,11 +2729,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                         buffer.smartSpace()
                     }
                     onTranslateBufferChanged()
-                } else if (doubleTap && smartSpaceField && performDoubleSpacePeriod()) {
+                } else if (doubleTap && field.smartSpace && performDoubleSpacePeriod()) {
                     lastSpaceTime = 0
-                } else if (swallowPunctSpace &&
-                    currentInputConnection?.getTextBeforeCursor(1, 0)?.toString() == " "
-                ) {
+                } else if (swallowPunctSpace && readBefore(1)?.toString() == " ") {
                     // Automaattivälin perään painettu väli ohitetaan,
                     // ettei "sana, " saa tuplaväliä totutusta näppäilystä.
                 } else {
@@ -2738,7 +2770,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                     }
                     updateTranslateBar()
                 } else {
-                    sendDownUpKeyEvents(action.keyCode)
+                    sendKeyToField(action.keyCode)
                     // Kursorin siirto katkaisee sanaketjun.
                     learning.resetContext()
                 }
@@ -2755,7 +2787,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             activeTranslateBuffer().move(steps)
             updateTranslateBar()
         } else {
-            sendDownUpKeyEvents(
+            sendKeyToField(
                 if (steps > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
             )
             // Kursorin siirto katkaisee sanaketjun.
@@ -2781,20 +2813,20 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     private fun handleEnter() {
         val ic = currentInputConnection ?: return
-        val info = currentInputEditorInfo
-        val action = info.imeOptions and EditorInfo.IME_MASK_ACTION
-        // Sama sääntö kuin näppäimen nimellä: toiminto suoritetaan aina kun
-        // kenttä ei ole sitä kieltänyt — myös monirivisissä viestikentissä,
-        // joissa lähetysnappi on nimenomaan pyydetty.
-        val hasAction = info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION == 0 &&
-            action != EditorInfo.IME_ACTION_NONE &&
-            action != EditorInfo.IME_ACTION_UNSPECIFIED
-        if (hasAction) {
-            ic.performEditorAction(action)
-        } else {
-            ic.commitText("\n", 1)
-            // Rivinvaihdon jälkeen edeltävällä tekstillä ei ole väliä.
-            updateAutoCaps("\n")
+        val action = field.enterAction
+        when {
+            action != null -> {
+                ic.performEditorAction(action)
+                cursor.onUnknownEdit()
+            }
+            // Tyypitön kenttä (esim. pääte) ei välttämättä ymmärrä tekstinä
+            // tulevaa rivinvaihtoa.
+            field.rawKeys -> sendKeyToField(KeyEvent.KEYCODE_ENTER)
+            else -> {
+                commitToField(ic, "\n")
+                // Rivinvaihdon jälkeen edeltävällä tekstillä ei ole väliä.
+                updateAutoCaps("\n")
+            }
         }
         feedback(AudioManager.FX_KEYPRESS_RETURN)
     }
@@ -2824,7 +2856,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             } else {
                 val ic = currentInputConnection ?: return
                 val before = predicted
-                    ?: ic.getTextBeforeCursor(MAX_WORD_LOOKBACK, 0)
+                    ?: readBefore(ic, MAX_WORD_LOOKBACK)
                     ?: return
                 AutoCaps.wanted(before, info.inputType)
             }
@@ -2843,12 +2875,17 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         super.onUpdateSelection(
             oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd
         )
-        // Maalaus on aina käyttäjän tekemä; muuten ilman tuoretta omaa
-        // muokkausta valinnan muutos on kursorihyppy (kentän napautus).
-        // Molemmat katkaisevat sanaketjun kuten nuolinäppäimetkin.
-        if (newSelStart != newSelEnd ||
-            SystemClock.uptimeMillis() - lastEditTime > EXTERNAL_SELECTION_MS
-        ) {
+        selectionUpdates++
+        val update = cursor.classify(oldSelStart, oldSelEnd, newSelStart, newSelEnd)
+        val external = when (update) {
+            CursorExpectation.Update.OWN -> false
+            CursorExpectation.Update.EXTERNAL -> true
+            CursorExpectation.Update.UNKNOWN ->
+                SystemClock.uptimeMillis() - lastEditTime > EXTERNAL_SELECTION_MS
+        }
+        // Maalaus ja vieras kursorin siirto (kentän napautus) katkaisevat
+        // sanaketjun kuten nuolinäppäimetkin.
+        if (newSelStart != newSelEnd || external) {
             shift.onTextChanged()
             learning.resetContext()
             // Korjauksen peruutus ja undo tunnistavat kohteensa pelkästä
@@ -2856,12 +2893,12 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             // teksti voi olla muuallakin, jolloin askelpalautin muuttaisi
             // väärää esiintymää — sidonta katkeaa kun kursori siirtyy.
             pendingRevert = null
-            pendingSpaceRevert = null
+            pendingPeriodRevert = false
             textUndo.clear()
         }
-        updateAutoCaps()
+        // Hitaassa kentässä oman muokkauksen tarkistus odottaa kirjoitustaukoa.
+        if (external || !slowConnection.isSlow(SystemClock.uptimeMillis())) updateAutoCaps()
         if (autoSpaceState > 0) autoSpaceState--
-        if (smartSpaceState > 0) smartSpaceState--
         updateSuggestions()
     }
 
@@ -2912,6 +2949,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         const val DOUBLE_SPACE_PERIOD_MS = 1100L
         const val LIVE_TRANSLATE_DELAY_MS = 300L
         const val EXTERNAL_SELECTION_MS = 1000L
+        const val CURSOR_CHECK_LOOKBACK = 1024
+        const val SLOW_REFRESH_MS = 150L
+        const val WORD_DELETE_CHECK_MS = 200L
         const val MAX_IMAGE_CLIP_BYTES = 10L * 1024 * 1024
         const val FLUSH_THRESHOLD = 50
         const val SHOWN_TOP_COUNT = 3

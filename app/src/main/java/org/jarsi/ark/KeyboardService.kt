@@ -177,8 +177,17 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private val clipStore = ClipStore()
 
     // Tuore kopio tarjotaan ehdotusrivillä, kunnes tarjous vanhenee.
-    private val recentClip = RecentClipOffer()
-    private val recentClipExpiry = Runnable { refreshSuggestionRow() }
+    // Kulunut aika monotonisella kellolla: kellonajan siirto ei pidennä tarjousta.
+    private val recentClip = RecentClipOffer(SystemClock::elapsedRealtime)
+    private val recentClipExpiry = object : Runnable {
+        override fun run() {
+            // Ajastin kulkee uptime-kellolla ja tarjous elapsedRealtime-kellolla.
+            // Jos tarjous on yhä voimassa, odotetaan loppuaika: esikatselu ei
+            // saa jäädä riville ilman uutta vanhenemista.
+            val left = recentClip.remainingMs()
+            if (left > 0) mainHandler.postDelayed(this, left) else refreshSuggestionRow()
+        }
+    }
 
     // Kursoritilan Valitse: nuolet laajentavat valintaa.
     private var selectionMode = false

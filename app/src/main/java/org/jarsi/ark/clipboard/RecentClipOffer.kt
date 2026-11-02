@@ -3,9 +3,11 @@ package org.jarsi.ark.clipboard
 /**
  * Tuore kopio tarjotaan ehdotusrivillä liitettäväksi yhdellä napautuksella.
  * Tarjous vanhenee nopeasti, ettei vanha leike jää näkyviin rivin kärkeen;
- * kaikki leikkeet löytyvät yhä leikepöytäpaneelista.
+ * kaikki leikkeet löytyvät yhä leikepöytäpaneelista. [clock] on kulunutta
+ * aikaa mittaava kello (ei seinäkello): kellonajan siirto taaksepäin ei saa
+ * pidentää tarjousta.
  */
-class RecentClipOffer(private val clock: () -> Long = System::currentTimeMillis) {
+class RecentClipOffer(private val clock: () -> Long) {
 
     data class Offer(val clipId: Long, val text: String)
 
@@ -24,6 +26,12 @@ class RecentClipOffer(private val clock: () -> Long = System::currentTimeMillis)
 
     fun clear() {
         offer = null
+    }
+
+    /** Aikaa tarjouksen vanhenemiseen; 0, kun tarjousta ei ole tai se on vanhentunut. */
+    fun remainingMs(): Long {
+        current() ?: return 0L
+        return (OFFER_MS - (clock() - offeredAt)).coerceAtLeast(0L)
     }
 
     /** Poistettu leike ei saa jäädä liitettäväksi; true, jos tarjous poistui. */

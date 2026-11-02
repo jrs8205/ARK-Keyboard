@@ -72,4 +72,23 @@ class RecentClipOfferTest {
         val text = "a".repeat(RecentClipOffer.PREVIEW_CHARS - 1) + "😀😀"
         assertEquals("a".repeat(RecentClipOffer.PREVIEW_CHARS - 1) + "…", RecentClipOffer.preview(text))
     }
+
+    @Test
+    fun `jaljella oleva aika kuluu ja paattyy nollaan`() {
+        offer.offer(7L, "teksti")
+        assertEquals(RecentClipOffer.OFFER_MS, offer.remainingMs())
+        now += 10_000
+        assertEquals(RecentClipOffer.OFFER_MS - 10_000, offer.remainingMs())
+        now += RecentClipOffer.OFFER_MS
+        assertEquals(0L, offer.remainingMs())
+        assertNull(offer.current())
+    }
+
+    @Test
+    fun `ilman tarjousta aikaa ei ole jaljella`() {
+        assertEquals(0L, offer.remainingMs())
+        offer.offer(7L, "teksti")
+        offer.clear()
+        assertEquals(0L, offer.remainingMs())
+    }
 }

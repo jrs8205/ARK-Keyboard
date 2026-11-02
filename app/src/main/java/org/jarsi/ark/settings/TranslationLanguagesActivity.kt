@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
+import com.google.mlkit.common.sdkinternal.MlKitContext
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.TranslateRemoteModel
 import org.jarsi.ark.R
@@ -27,7 +28,9 @@ class TranslationLanguagesActivity : AppCompatActivity() {
     private data class Row(val code: String, val name: String)
 
     private val displayLocale: Locale get() = resources.configuration.locales[0]
-    private val modelManager = RemoteModelManager.getInstance()
+    // Vasta onCreate-vaiheessa: kirjaston alustus voi puuttua, jos prosessi
+    // syntyi lukitusnäytöllä eikä näppäimistöä ole avattu avauksen jälkeen.
+    private val modelManager by lazy { RemoteModelManager.getInstance() }
 
     private lateinit var adapter: LanguageAdapter
 
@@ -48,6 +51,8 @@ class TranslationLanguagesActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Sama varmistus kuin näppäimistöpalvelussa; alustus on idempotentti.
+        MlKitContext.initializeIfNeeded(applicationContext)
         adapter = LanguageAdapter()
         val list = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(this@TranslationLanguagesActivity)

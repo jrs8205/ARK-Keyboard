@@ -32,15 +32,19 @@ class ExportedTranslation {
 
     companion object {
         /**
-         * Kenttään todella mennyt osa viennistä: pituusraja voi katkaista sen tai hylätä
-         * kokonaan. Ilman varmuutta vientiä ei pidetä perille menneenä, jolloin lähde säilyy
-         * eikä seuraava vienti korvaa kentän tekstiä.
+         * Viennin jälkeen kentässä oleva teksti sellaisena kuin kenttä sen tallensi:
+         * pituusraja voi katkaista viennin tai hylätä sen kokonaan, ja suodatin voi muuttaa
+         * sen asua ja pituutta. Seuraava avaus vertaa kenttää tähän, joten alkuperäinen asu
+         * näyttäisi muuntavassa kentässä lähetetyltä viestiltä. Ilman varmuutta vientiä ei
+         * pidetä perille menneenä, jolloin lähde säilyy eikä seuraava vienti korvaa kentän tekstiä.
          */
-        fun insertedPart(exported: String, textBeforeCursor: String?, cursorMoved: Int?): String =
-            when {
-                textBeforeCursor == exported -> exported
-                cursorMoved == null -> ""
-                else -> exported.take(cursorMoved.coerceIn(0, exported.length))
-            }
+        fun insertedPart(exported: String, cursorMoved: Int?, readBefore: (Int) -> CharSequence?): String {
+            if (readBefore(exported.length)?.toString() == exported) return exported
+            val moved = cursorMoved?.takeIf { it > 0 } ?: return ""
+            return readBefore(moved)?.toString()?.takeIf { it.length == moved }.orEmpty()
+        }
+
+        /** Vienti ei mahtunut: pelkkä asun muutos ei lyhennä sitä. */
+        fun cutShort(exported: String, inserted: String): Boolean = inserted.length < exported.length
     }
 }

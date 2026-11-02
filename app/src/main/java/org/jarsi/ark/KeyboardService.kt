@@ -1614,7 +1614,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             null
         }
         val inserted = ExportedTranslation.insertedPart(translation, moved) { readBefore(ic, it) }
-        if (inserted.isNotEmpty()) textUndo.record(inserted)
+        if (inserted.isNotEmpty()) {
+            textUndo.record(inserted, (if (replaced) previous else "") + selected)
+        }
         exportedTranslation.record(inserted)
         if (ExportedTranslation.cutShort(translation, inserted)) showMessage(R.string.kaannos_ei_mahdu)
         feedback()

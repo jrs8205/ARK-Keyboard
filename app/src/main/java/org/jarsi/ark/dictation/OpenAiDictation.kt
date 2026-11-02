@@ -31,9 +31,12 @@ import kotlin.math.max
  */
 class OpenAiDictation(
     private val prefs: SharedPreferences,
-    private val language: String,
+    language: String,
     private val listener: DictationController.Listener,
 ) {
+
+    /** Tunnistuksen kieli; asetetaan jokaisen istunnon alussa puhelimen kielestä. */
+    var language: String = language
 
     var isActive = false
         private set

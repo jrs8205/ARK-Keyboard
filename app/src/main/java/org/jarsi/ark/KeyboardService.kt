@@ -386,12 +386,15 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         dictationCapNext = true
         if (prefs.getString(PREF_DICTATION_ENGINE, null) == "openai") {
             if (ApiKeyStore.exists(prefs, ApiKeyStore.Slot.OPENAI)) {
+                val language = resources.configuration.locales[0].language
                 val engine = openAiDictation
-                    ?: OpenAiDictation(prefs, resources.configuration.locales[0].language, dictationListener).also {
+                    ?: OpenAiDictation(prefs, language, dictationListener).also {
                         // Omat opitut sanat vihjeiksi kuten järjestelmätunnistimelle.
                         it.biasWords = { learning.biasWords(BIAS_WORD_MAX) }
                         openAiDictation = it
                     }
+                // Puhelimen kieli voi vaihtua moottorin eläessä: kieli joka istunnolle.
+                engine.language = language
                 engine.silenceLimitMs = silence
                 engine.start()
                 return

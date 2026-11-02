@@ -30,15 +30,19 @@ class TranslationLanguagesActivity : AppCompatActivity() {
     private val modelManager = RemoteModelManager.getInstance()
 
     private lateinit var adapter: LanguageAdapter
-    private val rows: List<Row> = TranslateLanguage.getAllLanguages()
-        .map { code ->
-            Row(
-                code,
-                Locale(code).getDisplayLanguage(displayLocale)
-                    .replaceFirstChar { it.titlecase(displayLocale) },
-            )
-        }
-        .sortedBy { it.name }
+
+    // Kielen nimet luetaan aktiviteetin kontekstista, jota ei vielä ole konstruktorissa.
+    private val rows: List<Row> by lazy {
+        TranslateLanguage.getAllLanguages()
+            .map { code ->
+                Row(
+                    code,
+                    Locale(code).getDisplayLanguage(displayLocale)
+                        .replaceFirstChar { it.titlecase(displayLocale) },
+                )
+            }
+            .sortedBy { it.name }
+    }
     private val downloaded = mutableSetOf<String>()
     private val downloading = mutableSetOf<String>()
 

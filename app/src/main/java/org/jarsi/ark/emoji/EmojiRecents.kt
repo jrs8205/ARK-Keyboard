@@ -52,6 +52,10 @@ class EmojiRecents(savedRecents: String? = null, savedVariants: String? = null) 
         const val MAX_RECENT = 40
 
         // Aiemman kirjastovalitsimen tallennusmuoto (pilkuin erotettu lista).
+        // Aiemman kirjastovalitsimen historian sijainti.
+        const val LEGACY_PREFS = "androidx.emoji2.emojipicker.preferences"
+        const val LEGACY_KEY = "pref_key_recent_emoji"
+
         fun fromLegacy(saved: String): EmojiRecents =
             EmojiRecents(saved.split(',').joinToString("\n"))
     }

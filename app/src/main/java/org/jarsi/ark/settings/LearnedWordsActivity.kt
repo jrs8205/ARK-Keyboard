@@ -19,6 +19,7 @@ import org.jarsi.ark.R
 import org.jarsi.ark.data.LearnedDataStamp
 import org.jarsi.ark.data.LearnedDatabase
 import org.jarsi.ark.data.WordEntity
+import org.jarsi.ark.emoji.EmojiRecents
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -237,7 +238,9 @@ class LearnedWordsActivity : AppCompatActivity() {
     }
 
     private fun clearAll() {
-        // Emojihistoria on sekin opittua tietoa käytöstä.
+        // Emojihistoria on sekin opittua tietoa käytöstä. Vanha tiedosto ensin: siirtämätön
+        // historia palaisi siitä, ja poisto saa käynnissä olevan palvelun lukemaan historian heti.
+        deleteSharedPreferences(EmojiRecents.LEGACY_PREFS)
         androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).edit()
             .remove("emoji_viimeisimmat")
             .remove("emoji_ihonvarit")

@@ -82,6 +82,7 @@ class KeyboardView(context: Context) : View(context) {
     /** Salasanakentässä ruudunlukija ei sano merkkejä ääneen. */
     var obscureKeyLabels = false
         set(value) {
+            if (field == value) return
             field = value
             accessHelper.invalidateRoot()
         }

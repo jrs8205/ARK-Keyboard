@@ -28,6 +28,8 @@ import androidx.autofill.inline.common.ViewStyle
 import androidx.autofill.inline.v1.InlineSuggestionUi
 import android.inputmethodservice.InputMethodService
 import android.net.Uri
+import android.database.ContentObserver
+import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Handler
@@ -414,6 +416,17 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     // yhteys viivästytä oppimisdatan kirjoituksia.
     private val aiExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    // Salasanakentän puhesuoja seuraa äänilaitteita ja puheasetusta myös kentän
+    // ollessa auki: kuulokkeiden irrotus ei saa jättää merkkejä kaiuttimesta
+    // puhuttaviksi, eikä asetuksen muutos saa odottaa kentän uudelleenavausta.
+    private val audioDeviceCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) = refreshObscureKeyLabels()
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) = refreshObscureKeyLabels()
+    }
+    private val speakPasswordObserver = object : ContentObserver(mainHandler) {
+        override fun onChange(selfChange: Boolean) = refreshObscureKeyLabels()
+    }
     @Volatile private var suggestGeneration = 0
     private var suggestionsVisible = true
     private var inlineChips: InlineChipsView? = null
@@ -508,6 +521,14 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     override fun onCreate() {
         super.onCreate()
+        getSystemService(AudioManager::class.java)
+            ?.registerAudioDeviceCallback(audioDeviceCallback, mainHandler)
+        @Suppress("DEPRECATION")
+        contentResolver.registerContentObserver(
+            Settings.Secure.getUriFor(Settings.Secure.ACCESSIBILITY_SPEAK_PASSWORD),
+            false,
+            speakPasswordObserver,
+        )
         lockedMode = !DeviceLock.isUnlocked(this)
         if (lockedMode) {
             prefs = PreferenceManager.getDefaultSharedPreferences(
@@ -627,6 +648,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     override fun onDestroy() {
         editorSessionId++
         cancelDeferredFieldWork()
+        getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(audioDeviceCallback)
+        contentResolver.unregisterContentObserver(speakPasswordObserver)
         watchTranslateBack(false)
         mainHandler.removeCallbacks(recentClipExpiry)
         dictation.stop()
@@ -2568,6 +2591,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
      * Salasanakentässä ruudunlukija ei sano merkkejä kaiuttimesta. Kuulokkeilla
      * tai järjestelmän asetuksen salliessa ne saa kuulla.
      */
+    private fun refreshObscureKeyLabels() {
+        keyboardView?.obscureKeyLabels = shouldObscureKeyLabels()
+    }
+
     private fun shouldObscureKeyLabels(): Boolean {
         if (!field.password) return false
         @Suppress("DEPRECATION")
@@ -3293,7 +3320,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         )
 
         applyVisualSettings()
-        keyboardView?.obscureKeyLabels = shouldObscureKeyLabels()
+        refreshObscureKeyLabels()
         if (lockedMode) toolbar?.visibility = View.GONE
 
         // Kentän vaihtuessa haku suljetaan ensin, ettei sen palauttama sivu jää

@@ -765,6 +765,16 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         cursor.onCommit(text.length)
     }
 
+    /**
+     * Kirjoittaa kenttään ja kirjaa peruutuksen. Kirjoitus korvaa valinnan,
+     * joten valittu teksti luetaan ensin talteen: peruutus palauttaa sen.
+     */
+    private fun commitWithUndo(ic: InputConnection, text: CharSequence) {
+        val selected = ic.getSelectedText(0)?.toString().orEmpty()
+        commitToField(ic, text)
+        textUndo.record(text.toString(), selected)
+    }
+
     /** Poistaa kursorin edeltä ja pitää kursorin odotuksen ajan tasalla. */
     private fun deleteFromField(ic: InputConnection, count: Int) {
         ic.deleteSurroundingText(count, 0)
@@ -1102,8 +1112,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             activeTranslateBuffer().insert(emoji)
             onTranslateBufferChanged()
         } else {
-            currentInputConnection?.let { ic -> commitToField(ic, emoji) }
-            textUndo.record(emoji)
+            currentInputConnection?.let { ic -> commitWithUndo(ic, emoji) }
         }
         rememberEmojiUse(emoji)
         feedback()
@@ -1125,8 +1134,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val ic = currentInputConnection ?: return
         learnCurrentWord()
         val text = EmojiIndex.insertion(readBefore(ic, 1) ?: "", emoji)
-        commitToField(ic, text)
-        textUndo.record(text)
+        commitWithUndo(ic, text)
         // Heti perään kirjoitettu välimerkki siirtää välin taakseen kuten sanoilla.
         autoSpaceState = 2
         feedback()
@@ -1926,8 +1934,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 activeTranslateBuffer().insert(clip.text)
                 onTranslateBufferChanged()
             } else {
-                commitToField(ic, clip.text)
-                textUndo.record(clip.text)
+                commitWithUndo(ic, clip.text)
             }
             hideClipboardPanel()
             feedback()
@@ -3179,8 +3186,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 activeTranslateBuffer().insert(offer.text)
                 onTranslateBufferChanged()
             } else {
-                commitToField(ic, offer.text)
-                textUndo.record(offer.text)
+                commitWithUndo(ic, offer.text)
                 updateAutoCaps()
             }
             feedback()

@@ -768,11 +768,21 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     /**
      * Kirjoittaa kenttään ja kirjaa peruutuksen. Kirjoitus korvaa valinnan,
      * joten valittu teksti luetaan ensin talteen: peruutus palauttaa sen.
+     * Kenttä voi hylätä tai katkaista liitoksen (pituusraja), joten peruutus
+     * kirjataan vain toteutuneelle lisäykselle; muuten se poistaisi kentän
+     * omaa tekstiä.
      */
     private fun commitWithUndo(ic: InputConnection, text: CharSequence) {
         val selected = ic.getSelectedText(0)?.toString().orEmpty()
+        val positionBefore = ic.getExtractedText(ExtractedTextRequest(), 0)?.let {
+            ExportedTranslation.replaceStart(it.startOffset, it.selectionStart, it.selectionEnd)
+        }
         commitToField(ic, text)
-        textUndo.record(text.toString(), selected)
+        val positionAfter = fieldPosition(ic)
+        positionAfter?.let { cursor.onSetSelection(it, it) }
+        val moved = if (positionBefore != null && positionAfter != null) positionAfter - positionBefore else null
+        val inserted = ExportedTranslation.insertedPart(text.toString(), moved) { readBefore(ic, it) }
+        if (inserted.isNotEmpty()) textUndo.record(inserted, selected)
     }
 
     /** Poistaa kursorin edeltä ja pitää kursorin odotuksen ajan tasalla. */

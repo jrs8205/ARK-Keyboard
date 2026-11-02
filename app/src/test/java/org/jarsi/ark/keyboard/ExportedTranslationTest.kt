@@ -62,6 +62,18 @@ class ExportedTranslationTest {
     }
 
     @Test
+    fun `hylatty vienti on tyhja vaikka kentan teksti sattuu vastaamaan`() {
+        // Kursori ei siirtynyt: kentässä ollut "alpha " ei ole vienti.
+        assertEquals("", ExportedTranslation.insertedPart("alpha ", 0, field("alpha ")))
+    }
+
+    @Test
+    fun `tunnettu siirtyma ratkaisee tekstin vastaavuuden sijaan`() {
+        assertEquals("Hi", ExportedTranslation.insertedPart("Hi", 2, field("Hi")))
+        assertEquals("i", ExportedTranslation.insertedPart("Hi", 1, field("Hi")))
+    }
+
+    @Test
     fun `ilman varmuutta vientia ei oleteta perille menneeksi`() {
         assertEquals("", ExportedTranslation.insertedPart("Hi there", null, field("Abcde")))
         assertEquals("", ExportedTranslation.insertedPart("Hi there", null) { null })

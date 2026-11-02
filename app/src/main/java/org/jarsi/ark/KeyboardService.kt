@@ -195,6 +195,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     // Emojiaineisto latautuu taustalla; null, kunnes se on valmis.
     private var emojiIndex: EmojiIndex? = null
+
+    // Kieli, jolla emojiaineisto on viimeksi ladattu tai latautumassa.
+    @Volatile
+    private var emojiIndexFinnish: Boolean? = null
     private var emojiRecents: EmojiRecents? = null
 
     // Emojihaku: näppäily kertyy hakusanaksi eikä mene kenttään.
@@ -572,15 +576,20 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         try {
             // Laitteen fontista puuttuvat emojit eivät kelpaa: ne näkyisivät neliöinä.
             val paint = Paint()
-            val asset = if (finnishUi) EMOJI_ASSET else EMOJI_ASSET_EN
+            val finnish = finnishUi
+            emojiIndexFinnish = finnish
+            val asset = if (finnish) EMOJI_ASSET else EMOJI_ASSET_EN
             val index = assets.open(asset).bufferedReader().useLines { lines ->
                 EmojiIndex.parse(lines) { paint.hasGlyph(it) }
             }
             mainHandler.post {
-                if (destroyed) return@post
+                // Kieli ehti vaihtua latauksen aikana: uudempi lataus on jo matkalla.
+                if (destroyed || finnish != finnishUi) return@post
                 emojiIndex = index
                 emojiPanel?.setData(index, emojiRecents)
                 if (emojiPanel?.visibility == View.VISIBLE) emojiPanel?.refresh()
+                if (emojiSearchActive) updateEmojiSearch()
+                updateSuggestions()
             }
         } catch (e: IOException) {
             // Aineisto ei aukea: emojipaneeli jää tyhjäksi, kirjoitus toimii silti.
@@ -591,13 +600,13 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun loadEmojiRecents(): EmojiRecents {
         val saved = prefs.getString(PREF_EMOJI_RECENTS, null)
         if (saved != null) return EmojiRecents(saved, prefs.getString(PREF_EMOJI_VARIANTS, null))
-        val legacy = getSharedPreferences(LEGACY_EMOJI_PREFS, MODE_PRIVATE)
-            .getString(LEGACY_EMOJI_KEY, null)
+        val legacy = getSharedPreferences(EmojiRecents.LEGACY_PREFS, MODE_PRIVATE)
+            .getString(EmojiRecents.LEGACY_KEY, null)
             ?: return EmojiRecents()
         // Siirto tehdään kerran: muuten tyhjennetty historia palaisi vanhasta tiedostosta.
         val migrated = EmojiRecents.fromLegacy(legacy)
         prefs.edit().putString(PREF_EMOJI_RECENTS, migrated.savedRecents()).apply()
-        deleteSharedPreferences(LEGACY_EMOJI_PREFS)
+        deleteSharedPreferences(EmojiRecents.LEGACY_PREFS)
         return migrated
     }
 
@@ -2524,6 +2533,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         super.onConfigurationChanged(newConfig)
         // Järjestelmän tumman tilan vaihtuminen päivittää teeman heti.
         applyVisualSettings()
+        // Puhelimen kielen vaihto ei käynnistä prosessia uudelleen.
+        val indexLanguage = emojiIndexFinnish
+        if (indexLanguage != null && indexLanguage != finnishUi) {
+            Thread { loadEmojiIndex() }.start()
+        }
     }
 
     /**
@@ -3875,9 +3889,6 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             AudioDeviceInfo.TYPE_USB_HEADSET,
         )
 
-        // Aiemman kirjastovalitsimen historian sijainti siirtoa varten.
-        const val LEGACY_EMOJI_PREFS = "androidx.emoji2.emojipicker.preferences"
-        const val LEGACY_EMOJI_KEY = "pref_key_recent_emoji"
         const val DOUBLE_SPACE_PERIOD_MS = 1100L
         const val LIVE_TRANSLATE_DELAY_MS = 300L
         const val EXTERNAL_SELECTION_MS = 1000L

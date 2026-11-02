@@ -56,8 +56,8 @@ class SymbolOrderActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), 0, dp(16), dp(8))
-            addView(legendItem("Sivu ?123", pageOne = true))
-            addView(legendItem("Sivu =\\<", pageOne = false))
+            addView(legendItem(getString(R.string.erikoismerkit_sivu, "?123"), pageOne = true))
+            addView(legendItem(getString(R.string.erikoismerkit_sivu, "=\\<"), pageOne = false))
         }
         val grid = RecyclerView(this).apply {
             layoutManager = GridLayoutManager(this@SymbolOrderActivity, SPAN_COUNT)

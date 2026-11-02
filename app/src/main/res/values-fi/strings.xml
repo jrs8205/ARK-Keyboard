@@ -49,6 +49,7 @@
     <string name="yksi_kasi_sulje">Näppäimistö täyteen leveyteen</string>
     <string name="tyokalu_asetukset">Asetukset</string>
     <string name="erikoismerkit_kuvaus">Järjestä symbolisivujen merkit raahaamalla</string>
+    <string name="erikoismerkit_sivu">Sivu %1$s</string>
     <string name="erikoismerkit_ohje">Siirrä merkkiä pitämällä sitä pohjassa ja raahaamalla uuteen kohtaan, myös sivujen välillä.</string>
     <string name="erikoismerkit_palauta">Palauta oletusjärjestys</string>
     <string name="erikoismerkit_palauta_varmistus">Palautetaanko erikoismerkit oletusjärjestykseen?</string>

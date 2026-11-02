@@ -49,6 +49,7 @@
     <string name="yksi_kasi_sulje">Full-width keyboard</string>
     <string name="tyokalu_asetukset">Settings</string>
     <string name="erikoismerkit_kuvaus">Drag to arrange the characters on the symbol pages</string>
+    <string name="erikoismerkit_sivu">Page %1$s</string>
     <string name="erikoismerkit_ohje">Press and hold a character, then drag it to a new position, also across pages.</string>
     <string name="erikoismerkit_palauta">Restore default order</string>
     <string name="erikoismerkit_palauta_varmistus">Restore the symbols to their default order?</string>

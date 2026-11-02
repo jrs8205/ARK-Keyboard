@@ -1591,7 +1591,12 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun commitTranslation(translation: String) {
         val ic = currentInputConnection ?: return
         markOwnEdit()
-        val positionBefore = fieldPosition(ic)
+        // Valinta korvautuu viennillä: lähtöpiste on valinnan pienempi pää myös
+        // käännetyssä valinnassa, ja valittu teksti palaa peruutuksessa.
+        val positionBefore = ic.getExtractedText(ExtractedTextRequest(), 0)?.let {
+            ExportedTranslation.replaceStart(it.startOffset, it.selectionStart, it.selectionEnd)
+        }
+        val selected = ic.getSelectedText(0)?.toString().orEmpty()
         ic.beginBatchEdit()
         val previous = exportedTranslation.text
         val replaced = previous.isNotEmpty() && readBefore(ic, previous.length)?.toString() == previous

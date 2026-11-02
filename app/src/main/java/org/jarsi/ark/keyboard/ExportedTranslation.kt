@@ -44,6 +44,16 @@ class ExportedTranslation {
             return readBefore(moved)?.toString()?.takeIf { it.length == moved }.orEmpty()
         }
 
+        /**
+         * Kohta, josta vienti korvaa kentän tekstiä: valinnan pienempi pää, koska
+         * käännetyssä valinnassa (kursori valinnan alussa) selectionStart on suurempi.
+         * Tuntematon valinta (negatiivinen) ei anna lähtöpistettä.
+         */
+        fun replaceStart(startOffset: Int, selectionStart: Int, selectionEnd: Int): Int? {
+            if (selectionStart < 0 || selectionEnd < 0) return null
+            return startOffset + minOf(selectionStart, selectionEnd)
+        }
+
         /** Vienti ei mahtunut: pelkkä asun muutos ei lyhennä sitä. */
         fun cutShort(exported: String, inserted: String): Boolean = inserted.length < exported.length
     }

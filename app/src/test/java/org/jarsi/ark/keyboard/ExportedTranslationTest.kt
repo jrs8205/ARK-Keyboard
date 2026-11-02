@@ -113,4 +113,18 @@ class ExportedTranslationTest {
         export.clear()
         assertEquals("", export.text)
     }
+
+    @Test
+    fun `korvaus alkaa valinnan pienemmasta paasta`() {
+        assertEquals(6, ExportedTranslation.replaceStart(0, 6, 10))
+        assertEquals(6, ExportedTranslation.replaceStart(0, 10, 6))
+        assertEquals(106, ExportedTranslation.replaceStart(100, 10, 6))
+        assertEquals(4, ExportedTranslation.replaceStart(0, 4, 4))
+    }
+
+    @Test
+    fun `tuntematon valinta ei anna lahtopistetta`() {
+        assertEquals(null, ExportedTranslation.replaceStart(0, -1, 3))
+        assertEquals(null, ExportedTranslation.replaceStart(0, 3, -1))
+    }
 }

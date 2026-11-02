@@ -573,6 +573,9 @@ class KeyboardView(context: Context) : View(context) {
         when {
             // Valikko jää auki; merkki valitaan napauttamalla.
             info.alternatesOpen -> Unit
+            // Lähtökohtaan palautettu liu'utus on peruttu: se ei saa poistaa
+            // kentän valmista valintaa, hakusanaa tai yhtään merkkiä.
+            info.backspaceSwiping && info.backspaceWords == 0 -> listener?.onBackspaceSwipeCancel()
             info.backspaceSwiping -> listener?.onBackspaceSwipeEnd()
             info.spaceSwiping || info.committed -> Unit
             else -> commit(info.bounded.key)

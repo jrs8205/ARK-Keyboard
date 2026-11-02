@@ -34,15 +34,13 @@ class ExportedTranslation {
         /**
          * Kenttään todella mennyt osa viennistä tai liitoksesta sellaisena kuin kenttä sen
          * tallensi: pituusraja voi katkaista tekstin tai hylätä sen kokonaan, ja suodatin voi
-         * muuttaa sen asua ja pituutta. Kursorin siirtymä ratkaisee, kun se tunnetaan: kentässä
-         * jo ollut sama teksti ei ole lisäys, eikä hylätyn liitoksen peruutus saa poistaa sitä.
-         * Ilman siirtymää verrataan tekstiin, ja ilman varmuutta lisäystä ei oleteta.
+         * muuttaa sen asua ja pituutta. Kursorin siirtymä ratkaisee: kentässä jo ollut sama
+         * teksti ei ole lisäys, eikä hylätyn liitoksen peruutus saa poistaa sitä. Jos kenttä ei
+         * kerro kursorin paikkaa, lisäystä ei oleteta jälkikäteen luetun tekstin perusteella:
+         * peruutus jää kentän omaksi, ja lähde säilyy kääntäjässä.
          */
         fun insertedPart(exported: String, cursorMoved: Int?, readBefore: (Int) -> CharSequence?): String {
-            if (cursorMoved == null) {
-                return if (readBefore(exported.length)?.toString() == exported) exported else ""
-            }
-            if (cursorMoved <= 0) return ""
+            if (cursorMoved == null || cursorMoved <= 0) return ""
             return readBefore(cursorMoved)?.toString()?.takeIf { it.length == cursorMoved }.orEmpty()
         }
 

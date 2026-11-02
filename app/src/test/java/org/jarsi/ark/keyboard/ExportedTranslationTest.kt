@@ -47,8 +47,10 @@ class ExportedTranslationTest {
     private fun field(before: String): (Int) -> CharSequence? = { before.takeLast(it) }
 
     @Test
-    fun `kokonaan kenttaan mennyt vienti tunnistetaan tekstista`() {
-        assertEquals("Hi there", ExportedTranslation.insertedPart("Hi there", null, field("Hi there")))
+    fun `ilman kursoritietoa lisaysta ei oleteta tekstin perusteella`() {
+        // Kenttä ei kerro kursorin paikkaa: jälkikäteen luettu sama teksti voi olla kentän omaa.
+        assertEquals("", ExportedTranslation.insertedPart("Hi there", null, field("Hi there")))
+        assertEquals("", ExportedTranslation.insertedPart("alpha ", null, field("alpha ")))
     }
 
     @Test

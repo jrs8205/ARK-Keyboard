@@ -3724,9 +3724,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             // Kursorin siirto katkaisee sanaketjun.
             learning.resetContext()
         }
-        // Kevyt napsaus jokaisesta askeleesta, jotta liu'utukseen saa tuntuman.
+        // Jokaisesta askeleesta sama tuntuma kuin näppäimestä: kevyempi
+        // CLOCK_TICK ei tuntunut puhelimissa lainkaan.
         if (vibrationEnabled) {
-            keyboardView?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            keyboardView?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
     }
 

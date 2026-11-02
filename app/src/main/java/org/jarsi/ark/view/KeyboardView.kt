@@ -107,6 +107,7 @@ class KeyboardView(context: Context) : View(context) {
     private var heightScale = 1f
     private var previewEnabled = true
     private var hapticsEnabled = true
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
 
     private val fiLocale = Locale.forLanguageTag("fi")
     private val speechLanguage: KeySpeech.Language
@@ -230,6 +231,7 @@ class KeyboardView(context: Context) : View(context) {
 
     private inner class PressInfo(val bounded: BoundedKey) {
         var spaceAnchorX = 0f
+        var spaceDownX = 0f
         var spaceSwiping = false
         var backspaceAnchorX = 0f
         var backspaceSwiping = false
@@ -500,6 +502,7 @@ class KeyboardView(context: Context) : View(context) {
             }
             if (key.action == KeyAction.Space) {
                 info.spaceAnchorX = x
+                info.spaceDownX = x
             }
             if (previewEnabled && key.action is KeyAction.Text) {
                 showPreview(bounded)
@@ -512,6 +515,12 @@ class KeyboardView(context: Context) : View(context) {
         val info = pressed[pointerId] ?: return
         if (info.alternatesOpen) return
         if (info.bounded.key.action == KeyAction.Space && !info.committed) {
+            // Liikkeelle lähtenyt sormi liu'uttaa kursoria eikä enää avaa
+            // näppäimistövalitsinta, vaikka ensimmäinen askel olisi kesken
+            // (vrt. Gboard). Muuten hidas liu'utus päätyi valitsimeen.
+            if (abs(x - info.spaceDownX) > touchSlop) {
+                removeCallbacks(info.longPressRunnable)
+            }
             val threshold = dp(16f)
             var dx = x - info.spaceAnchorX
             while (abs(dx) >= threshold) {
@@ -519,7 +528,6 @@ class KeyboardView(context: Context) : View(context) {
                 listener?.onSpaceSwipe(step)
                 info.spaceAnchorX += step * threshold
                 info.spaceSwiping = true
-                removeCallbacks(info.longPressRunnable)
                 dx = x - info.spaceAnchorX
             }
         }

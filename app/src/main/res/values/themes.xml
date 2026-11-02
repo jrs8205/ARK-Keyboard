@@ -13,6 +13,13 @@
         <item name="colorSurfaceContainerHighest">@color/vaalea_kortti</item>
     </style>
 
+    <!-- Käynnistyskuva: sovelluskuvake taustavärin päällä, sitten Theme.Ark. -->
+    <style name="Theme.Ark.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/vaalea_tausta</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Ark</item>
+    </style>
+
     <!-- Asetusrivit pyöristettyinä kortteina ja modernit M3-kytkimet.
          Material You -laitteilla värit tulevat taustakuvasta. -->
     <style name="ArkPreferenceTheme" parent="@style/PreferenceThemeOverlay">

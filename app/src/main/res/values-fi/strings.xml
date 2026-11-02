@@ -87,6 +87,7 @@
     <string name="asetus_api_avain">Claude API -avain</string>
     <string name="asetus_api_avain_kuvaus">Ottaa käyttöön käännösnäkymän AI-käännöksen. Teksti lähetetään Anthropicin palveluun vain kun käytät toimintoa itse; avain säilyy vain tällä laitteella salattuna.</string>
     <string name="asetus_malli">AI-käännöksen Claude-malli</string>
+    <string name="asetus_versio">Versio</string>
     <string name="asetus_malli_nykyinen">Käytössä: %1$s. Lista haetaan Anthropicilta omalla avaimellasi.</string>
     <string name="asetus_openai_avain">OpenAI API -avain (ChatGPT)</string>
     <string name="asetus_openai_avain_kuvaus">Ottaa käyttöön käännösnäkymän AI-käännöksen ja OpenAI-sanelun. Teksti tai puhe lähetetään OpenAI:n palveluun vain kun käytät toimintoa itse; avain säilyy vain tällä laitteella salattuna.</string>

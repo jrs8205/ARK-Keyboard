@@ -90,6 +90,8 @@ dependencies {
     implementation(libs.androidx.viewpager2)
     // Täyttöpalvelun inline-ehdotusten chipityyli (Android 11+).
     implementation(libs.androidx.autofill)
+    // Asetusten käynnistyskuva samanlaisena kaikilla Android-versioilla.
+    implementation(libs.androidx.core.splashscreen)
     // Paikallinen käännös: mallit ladataan kerran, käännös tapahtuu laitteella.
     implementation(libs.mlkit.translate)
     implementation(libs.mlkit.language.id)

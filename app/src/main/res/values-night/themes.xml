@@ -12,4 +12,10 @@
         <item name="colorSurfaceContainer">@color/tumma_nappain</item>
         <item name="colorSurfaceContainerHighest">@color/tumma_kortti</item>
     </style>
+
+    <style name="Theme.Ark.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/tumma_tausta</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Ark</item>
+    </style>
 </resources>

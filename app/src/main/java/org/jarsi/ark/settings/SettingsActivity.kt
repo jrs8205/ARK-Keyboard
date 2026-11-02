@@ -12,6 +12,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.text.InputType
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.pm.PackageInfoCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.Preference
@@ -37,6 +39,9 @@ import java.util.concurrent.Executors
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Käynnistyskuva kuvakkeella myös Android 8–11:ssä; Android 12+
+        // näyttää sen itse, ja kirjasto vaihtaa teemaan sen päätyttyä.
+        installSplashScreen()
         // Vanhoilla Android-versioilla ei ole järjestelmän tummaa tilaa;
         // niillä koko sovellus on aina tumma, kuten näppäimistökin.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -59,6 +64,13 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
+
+        /** Asennettu versio ja koontinumero, esim. "0.19.0 (17)". */
+        private fun appVersion(): String {
+            val context = requireContext()
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            return "${info.versionName} (${PackageInfoCompat.getLongVersionCode(info)})"
+        }
 
         // Korttirivit erottuvat raoillaan; kirjaston jakoviivat pois.
         override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
@@ -95,6 +107,7 @@ class SettingsActivity : AppCompatActivity() {
             setupChatGptLogin()
             setupDictationEngine()
             setupThemeChoices()
+            findPreference<Preference>("versio")?.summary = appVersion()
             findPreference<Preference>("avaa_ime_asetukset")?.setOnPreferenceClickListener {
                 startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
                 true

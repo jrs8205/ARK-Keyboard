@@ -87,6 +87,7 @@
     <string name="asetus_api_avain">Claude API key</string>
     <string name="asetus_api_avain_kuvaus">Enables AI translation in the translator. Text is sent to Anthropic\'s service only when you use the feature; the key stays encrypted on this device only.</string>
     <string name="asetus_malli">Claude model for AI translation</string>
+    <string name="asetus_versio">Version</string>
     <string name="asetus_malli_nykyinen">In use: %1$s. The list is fetched from Anthropic with your own key.</string>
     <string name="asetus_openai_avain">OpenAI API key (ChatGPT)</string>
     <string name="asetus_openai_avain_kuvaus">Enables AI translation in the translator and OpenAI dictation. Text or speech is sent to OpenAI\'s service only when you use the feature; the key stays encrypted on this device only.</string>

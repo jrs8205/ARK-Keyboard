@@ -230,4 +230,12 @@
             android:summary="@string/varmuuskopio_tuo_kuvaus"
             app:singleLineTitle="false" />
     </PreferenceCategory>
+
+    <!-- Käytössä oleva versio alimpana; arvo täytetään paketin tiedoista. -->
+    <Preference
+        android:key="versio"
+        android:icon="@drawable/ic_info"
+        android:title="@string/asetus_versio"
+        android:selectable="false"
+        app:singleLineTitle="false" />
 </PreferenceScreen>

@@ -157,8 +157,11 @@ object KeySpeech {
         "•" to "luettelomerkki",
     )
 
-    fun symbol(text: String, language: Language = Language.FI): String =
-        (if (language == Language.FI) SYMBOLS else SYMBOLS_EN)[text] ?: text
+    /** Merkin nimi; salasanakentässä ([obscured]) vain "merkki", kuten näppäimilläkin. */
+    fun symbol(text: String, language: Language = Language.FI, obscured: Boolean = false): String {
+        if (obscured) return (if (language == Language.FI) FI_WORDS else EN_WORDS).character
+        return (if (language == Language.FI) SYMBOLS else SYMBOLS_EN)[text] ?: text
+    }
 
     fun describe(
         key: Key,

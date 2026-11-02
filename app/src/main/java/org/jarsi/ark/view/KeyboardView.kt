@@ -85,7 +85,17 @@ class KeyboardView(context: Context) : View(context) {
             if (field == value) return
             field = value
             accessHelper.invalidateRoot()
+            refreshAlternateSpeech()
         }
+
+    /** Avoimen merkkivalikon nimet seuraavat suojaustilaa. */
+    private fun refreshAlternateSpeech() {
+        val row = alternatesRow ?: return
+        for (i in 0 until row.childCount) {
+            val cell = row.getChildAt(i) as? TextView ?: continue
+            cell.contentDescription = KeySpeech.symbol(cell.text.toString(), speechLanguage, obscureKeyLabels)
+        }
+    }
 
     /** Korostaa Valitse-näppäimen, kun nuolet laajentavat valintaa. */
     var selectionActive = false
@@ -266,6 +276,7 @@ class KeyboardView(context: Context) : View(context) {
     // noustessa ja merkki valitaan napauttamalla. Liu'utusvalinta osui
     // helposti viereiseen merkkiin.
     private var alternatesPopup: PopupWindow? = null
+    private var alternatesRow: LinearLayout? = null
 
     fun setKeyboardLayout(newLayout: KeyboardLayout) {
         if (newLayout == layout) return
@@ -664,7 +675,8 @@ class KeyboardView(context: Context) : View(context) {
             row.addView(
                 TextView(context).apply {
                     text = value
-                    contentDescription = KeySpeech.symbol(value, speechLanguage)
+                    // Salasanakentässä valikko ei paljasta merkkiä sen enempää kuin näppäinkään.
+                    contentDescription = KeySpeech.symbol(value, speechLanguage, obscureKeyLabels)
                     gravity = Gravity.CENTER
                     textSize = 20f
                     // Painettu solu korostuu kuten painettu näppäin.
@@ -692,6 +704,7 @@ class KeyboardView(context: Context) : View(context) {
             )
         }
 
+        alternatesRow = row
         val totalWidth = cellWidth * values.size
         val left = (bounded.rect.centerX() - totalWidth / 2f)
             .coerceIn(dp(4f), (width - totalWidth - dp(4f)).coerceAtLeast(dp(4f)))
@@ -730,6 +743,7 @@ class KeyboardView(context: Context) : View(context) {
     private fun hideAlternates() {
         alternatesPopup?.dismiss()
         alternatesPopup = null
+        alternatesRow = null
     }
 
     private fun showPreview(bounded: BoundedKey) {

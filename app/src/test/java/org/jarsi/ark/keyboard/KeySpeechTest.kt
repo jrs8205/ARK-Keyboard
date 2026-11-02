@@ -105,4 +105,12 @@ class KeySpeechTest {
         assertEquals("kauttaviiva", KeySpeech.symbol("/"))
         assertEquals("Å", KeySpeech.symbol("Å"))
     }
+
+    @Test
+    fun `vaihtoehtomerkki salataan salasanakentassa`() {
+        assertEquals("pilkku", KeySpeech.symbol(",", KeySpeech.Language.FI))
+        assertEquals("merkki", KeySpeech.symbol(",", KeySpeech.Language.FI, obscured = true))
+        assertEquals("character", KeySpeech.symbol(";", KeySpeech.Language.EN, obscured = true))
+        assertEquals("merkki", KeySpeech.symbol("Q", KeySpeech.Language.FI, obscured = true))
+    }
 }

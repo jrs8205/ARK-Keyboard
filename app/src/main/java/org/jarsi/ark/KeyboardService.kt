@@ -859,7 +859,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
                 persistClip(saved)
                 pruneClips()
                 refreshClipboardPanel()
-                saved.text?.let { recentClip.offer(saved.id, it) }
+                // Pikaliitos antaa kopion sellaisenaan reunavälineen; leikepöytä
+                // tallentaa ja esikatselu näyttää sen siistittynä.
+                recentClip.offer(saved.id, text.toString())
                 mainHandler.removeCallbacks(recentClipExpiry)
                 mainHandler.postDelayed(recentClipExpiry, RecentClipOffer.OFFER_MS)
                 refreshSuggestionRow()

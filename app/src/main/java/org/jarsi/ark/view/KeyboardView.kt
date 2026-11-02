@@ -57,9 +57,6 @@ class KeyboardView(context: Context) : View(context) {
         /** Pohjassa pidetyn näppäimen toistokerta; oletuksena kuin napautus. */
         fun onKeyRepeat(action: KeyAction) = onKey(action)
 
-        /** Välilyönnin pitkä painallus: näppäimistön vaihto. */
-        fun onSpaceLongPress()
-
         /** Liu'utus askelpalauttimesta vasemmalle: [words] sanaa valittuna poistoa varten. */
         fun onBackspaceSwipe(words: Int)
 
@@ -118,7 +115,6 @@ class KeyboardView(context: Context) : View(context) {
     private var heightScale = 1f
     private var previewEnabled = true
     private var hapticsEnabled = true
-    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
 
     private val fiLocale = Locale.forLanguageTag("fi")
     private val speechLanguage: KeySpeech.Language
@@ -204,7 +200,7 @@ class KeyboardView(context: Context) : View(context) {
             node.isTextEntryKey = true
             node.isClickable = true
             node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK)
-            if (key.longPress.isNotEmpty() || key.action == KeyAction.Space) {
+            if (key.longPress.isNotEmpty()) {
                 node.addAction(AccessibilityNodeInfoCompat.ACTION_LONG_CLICK)
             }
         }
@@ -218,7 +214,6 @@ class KeyboardView(context: Context) : View(context) {
             when (action) {
                 AccessibilityNodeInfoCompat.ACTION_CLICK -> commit(bounded.key)
                 AccessibilityNodeInfoCompat.ACTION_LONG_CLICK -> when {
-                    bounded.key.action == KeyAction.Space -> listener?.onSpaceLongPress()
                     bounded.key.longPress.isNotEmpty() && alternatesPopup == null ->
                         showAlternates(bounded)
                     else -> return false
@@ -242,7 +237,6 @@ class KeyboardView(context: Context) : View(context) {
 
     private inner class PressInfo(val bounded: BoundedKey) {
         var spaceAnchorX = 0f
-        var spaceDownX = 0f
         var spaceSwiping = false
         var backspaceAnchorX = 0f
         var backspaceSwiping = false
@@ -509,12 +503,14 @@ class KeyboardView(context: Context) : View(context) {
             commit(key)
             postDelayed(info.repeatRunnable, REPEAT_DELAY_MS)
         } else {
-            if (key.longPress.isNotEmpty() || key.action == KeyAction.Space) {
+            if (key.longPress.isNotEmpty()) {
                 postDelayed(info.longPressRunnable, ViewConfiguration.getLongPressTimeout().toLong())
             }
+            // Välilyönnillä ei ole pitkää painallusta: lepäävä sormi avasi
+            // näppäimistövalitsimen kesken kirjoituksen. Vaihto on
+            // navigointipalkin napissa ja asetuksissa.
             if (key.action == KeyAction.Space) {
                 info.spaceAnchorX = x
-                info.spaceDownX = x
             }
             if (previewEnabled && key.action is KeyAction.Text) {
                 showPreview(bounded)
@@ -527,12 +523,6 @@ class KeyboardView(context: Context) : View(context) {
         val info = pressed[pointerId] ?: return
         if (info.alternatesOpen) return
         if (info.bounded.key.action == KeyAction.Space && !info.committed) {
-            // Liikkeelle lähtenyt sormi liu'uttaa kursoria eikä enää avaa
-            // näppäimistövalitsinta, vaikka ensimmäinen askel olisi kesken
-            // (vrt. Gboard). Muuten hidas liu'utus päätyi valitsimeen.
-            if (abs(x - info.spaceDownX) > touchSlop) {
-                removeCallbacks(info.longPressRunnable)
-            }
             val threshold = dp(16f)
             var dx = x - info.spaceAnchorX
             while (abs(dx) >= threshold) {
@@ -629,13 +619,6 @@ class KeyboardView(context: Context) : View(context) {
 
     private fun handleLongPress(info: PressInfo) {
         val key = info.bounded.key
-        if (key.action == KeyAction.Space) {
-            // Väli ei enää kirjoitu sormen noustessa.
-            info.committed = true
-            if (hapticsEnabled) performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            listener?.onSpaceLongPress()
-            return
-        }
         if (key.longPress.isEmpty() || alternatesPopup != null) return
         info.alternatesOpen = true
         // Valikon avautuminen tuntuu samoin kuin valinta siitä (vrt. Gboard).

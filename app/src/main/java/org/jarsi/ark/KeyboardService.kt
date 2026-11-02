@@ -2105,10 +2105,6 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         return true
     }
 
-    override fun onSpaceLongPress() {
-        getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
-    }
-
     override fun onBackspaceSwipe(words: Int) {
         if (emojiSearchActive) return
         if (translateMode) {

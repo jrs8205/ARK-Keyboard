@@ -24,7 +24,6 @@ API-avaimet eivät kulje varmuuskopiossa.
 - **Piste:** kaksi nopeaa välilyöntiä. Askelpalautin heti perään palauttaa välit.
 - **Pienet kirjaimet lauseen alkuun:** napauta vaihtoa kerran. Nopea
   tuplanapautus lukitsee isot kirjaimet.
-- **Näppäimistön vaihto:** pidä välilyöntiä pohjassa.
 - **Tuore kopio:** kopioitu teksti näkyy minuutin ajan ehdotusrivillä, josta sen
   liittää yhdellä napautuksella.
 - **Emojin ihonväri:** pidä emojia pohjassa; valinta muistetaan.

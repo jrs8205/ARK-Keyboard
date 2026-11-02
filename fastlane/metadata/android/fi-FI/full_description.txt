@@ -1,0 +1,21 @@
+Suomalainen Android-näppäimistö, joka oppii sinun sanasi – kokonaan laitteella.
+
+Ominaisuudet:
+
+* Oppii sinun sanasi ja ennustaa seuraavan sanan
+* 5–8 ehdotusta vieritettävällä rivillä
+* Merkkivalikko pitkällä painalluksella, valinta napauttamalla
+* Käännösnäkymä laitteella sekä valinnainen ✨-käännös ChatGPT-tilauksella tai omalla API-avaimella
+* Sanelu laitteen tai OpenAI:n puheentunnistuksella
+* Leikepöytä kiinnitettävine leikkeineen
+* Emojit suomenkielisellä haulla ja ehdotuksilla
+* Kursoritila valinnalla, kopioinnilla ja liittämisellä sekä muokattava työkalurivi
+* Teemat: järjestelmän mukaan, vaalea, tumma, musta tai taustakuvan värit
+* Yhden käden tila ja tuore kopio ehdotusriviltä liitettävänä
+* TalkBack-tuki ja toiminta lukitusnäytöllä heti käynnistyksen jälkeen
+* Salasanojen täyttö suoraan ehdotusriviltä
+* Yksityinen: ei analytiikkaa eikä mainoksia, oppiminen pysyy laitteella
+
+Sovellus seuraa puhelimen kieltä: suomeksi suomenkielisessä puhelimessa, muuten englanniksi. Asettelu on suomalainen QWERTY, jossa ovat å, ä ja ö.
+
+Käännösmallit ladataan kerran kieliparia kohden (noin 30 Mt), minkä jälkeen käännökset tehdään laitteella. Valinnainen ✨-käännös ja OpenAI-sanelu lähettävät tekstiä tai puhetta palveluun vain napin painalluksesta, omalla tilauksella tai avaimella.

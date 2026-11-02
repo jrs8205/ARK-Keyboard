@@ -1,0 +1,1 @@
+Englanninkielinen käyttöliittymä muunkielisissä puhelimissa; emojivalitsin ja haku; yhden käden tila; teemat; TalkBack-tuki; liu'utus askelpalauttimesta poistaa sanoja; kääntäjän viennin korjaukset; versio näkyy asetuksissa.

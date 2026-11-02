@@ -1,0 +1,1 @@
+English user interface on phones set to another language; emoji picker with search; one-handed mode; themes; TalkBack support; sliding on backspace deletes words; translator export fixes; version shown in settings.

@@ -1,0 +1,21 @@
+An Android keyboard that learns your words, entirely on your device. Made for Finnish, and it works in English too.
+
+Features:
+
+* Learns your words and predicts the next one
+* 5–8 suggestions on a scrollable row
+* Character menu on long press, tap to choose
+* Translator on the device, plus optional ✨ translation with a ChatGPT subscription or your own API key
+* Dictation with the device's or OpenAI's speech recognition
+* Clipboard with pinnable clips
+* Emoji with search and suggestions
+* Cursor mode with selection, copy and paste, and a customisable toolbar
+* Themes: follow system, light, dark, black or wallpaper colours
+* One-handed mode and your latest copy ready to paste from the suggestion row
+* TalkBack support, and it works on the lock screen right after the phone starts
+* Password autofill right on the suggestion row
+* Private: no analytics and no ads, learning stays on the device
+
+The app follows your phone's language: Finnish on a phone set to Finnish, English on any other. The layout is Finnish QWERTY with å, ä and ö.
+
+Translation models are downloaded once per language pair (about 30 MB each) and translations are then done on the device. The optional ✨ translation and OpenAI dictation send text or speech to those services only when you tap the button, using your own subscription or key.

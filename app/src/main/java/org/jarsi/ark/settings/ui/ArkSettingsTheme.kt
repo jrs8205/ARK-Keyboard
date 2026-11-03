@@ -40,7 +40,8 @@ data class SettingsColors(
     val heroAttention: Surface,
     /** Tilakortin napin pinta ja teksti. */
     val heroButton: Surface,
-    val onTonalButton: Color,
+    /** Sävytetyn napin (tukikortti) pinta ja teksti. */
+    val tonalButton: Surface,
     val control: Color,
     val controlOff: Color,
 ) {
@@ -89,7 +90,10 @@ data class SettingsColors(
                     surfaceArgb to scheme.onPrimaryContainer.toArgb(),
                     surfaceArgb to scheme.primary.toArgb(),
                 ),
-                onTonalButton = text(scheme.secondaryContainer, scheme.onSecondaryContainer),
+                tonalButton = surface(
+                    scheme.secondaryContainer.toArgb() to scheme.onSecondaryContainer.toArgb(),
+                    derived(scheme.secondary),
+                ),
                 control = text(scheme.surfaceContainer, scheme.primary, minimum = 3.0),
                 controlOff = text(scheme.surfaceContainer, scheme.outline, minimum = 3.0),
             )

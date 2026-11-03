@@ -32,8 +32,8 @@ internal fun SupportSection(onOpen: (String) -> Unit) {
                 color = colors.onCardVariant,
             )
             val buttonColors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = colors.onTonalButton,
+                containerColor = colors.tonalButton.background,
+                contentColor = colors.tonalButton.text,
             )
             FlowRow(
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp),

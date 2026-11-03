@@ -17,10 +17,11 @@ splashscreen = "1.2.0"
 mlkitTranslate = "17.0.3"
 mlkitLanguageId = "17.0.6"
 okhttp = "5.1.0"
-# Asetussivu on Composella (material3 1.4 Expressive). 1.5-beta ja ui 1.12 vaatisivat
-# AGP 9.1:n ja compileSdk 37:n, joten pysytään nykyisen käännösympäristön versioissa.
+# Asetussivu on Composella (material3 Expressive). Vakaa 1.4.0 kätkee Expressive-
+# rajapinnat sisäisiksi, ja 1.5.0-alpha19:stä alkaen (sekä ui 1.12) vaaditaan AGP 9.1
+# ja compileSdk 37; alpha18 on uusin, joka toimii nykyisessä käännösympäristössä.
 composeUi = "1.11.4"
-composeMaterial3 = "1.4.0"
+composeMaterial3 = "1.5.0-alpha18"
 activityCompose = "1.13.0"
 
 [libraries]

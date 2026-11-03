@@ -36,4 +36,26 @@
     <color name="musta_vihje">#BAC0CC</color>
     <color name="musta_korostus">#A9C7FF</color>
     <color name="musta_korostusteksti">#122E52</color>
+    <!-- Asetussivun Compose-teeman staattiset roolit (Android 8–11, joilla ei
+         ole Material You -palettia). Sävyt CIELAB-vaaleuksina samaan tapaan
+         kuin dynaamisessa paletissa, ARKin sinisellä (sävykulma 265):
+         teksti ja pohja aina 60 vaaleusasteen päässä, mikä takaa WCAG AAA:n 7:1. -->
+    <color name="vaalea_pinta">#F7F9FD</color> <!-- tone 98 -->
+    <color name="vaalea_kortti_pinta">#E9EEF5</color> <!-- tone 94 -->
+    <color name="vaalea_korostuspohja">#D0E4FF</color> <!-- tone 90 -->
+    <color name="vaalea_korostuspohjateksti">#014A75</color> <!-- tone 30 -->
+    <color name="vaalea_toissijainen_pohja">#D4E4F9</color> <!-- tone 90 -->
+    <color name="vaalea_toissijainen_teksti">#37485C</color> <!-- tone 30 -->
+    <color name="vaalea_tertiaari_pohja">#F8D9F9</color> <!-- tone 90, sävykulma 325 -->
+    <color name="vaalea_tertiaari_teksti">#603962</color> <!-- tone 30 -->
+    <color name="vaalea_aariviiva">#6F7884</color> <!-- tone 50 -->
+    <color name="tumma_pinta">#111316</color> <!-- tone 6 -->
+    <color name="tumma_kortti_pinta">#1C2025</color> <!-- tone 12 -->
+    <color name="tumma_korostuspohja">#014A75</color> <!-- tone 30 -->
+    <color name="tumma_korostuspohjateksti">#D0E4FF</color> <!-- tone 90 -->
+    <color name="tumma_toissijainen_pohja">#37485C</color> <!-- tone 30 -->
+    <color name="tumma_toissijainen_teksti">#D7E4F5</color> <!-- tone 90 -->
+    <color name="tumma_tertiaari_pohja">#603962</color> <!-- tone 30 -->
+    <color name="tumma_tertiaari_teksti">#F8D9F9</color> <!-- tone 90 -->
+    <color name="tumma_aariviiva">#88929E</color> <!-- tone 60 -->
 </resources>

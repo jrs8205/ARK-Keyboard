@@ -15,7 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,7 +78,8 @@ fun SettingsScreen(
     actions: SettingsActions,
 ) {
     val colors = LocalSettingsColors.current
-    var dialog by remember { mutableStateOf<Dialog?>(null) }
+    // Pyöritys ei sulje avointa dialogia, kuten ei ennenkään.
+    var dialog by rememberSaveable { mutableStateOf<Dialog?>(null) }
     val themeNames = stringArrayResource(R.array.teema_nimet)
     val themeValues = stringArrayResource(R.array.teema_arvot)
     val engineNames = stringArrayResource(R.array.sanelu_moottori_nimet)

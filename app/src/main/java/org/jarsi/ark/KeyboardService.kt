@@ -780,7 +780,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val after = fieldText(ic)
         after?.position?.let { cursor.onSetSelection(it, it) }
         val inserted = ExportedTranslation.insertedPart(before, after)
-        if (inserted.isNotEmpty()) textUndo.record(inserted, selected)
+        // Tyhjä lisäys unohtaa myös edellisen kirjauksen: se ei saa täsmätä uuteen tekstiin.
+        textUndo.record(inserted, selected)
     }
 
     /** Poistaa kursorin edeltä ja pitää kursorin odotuksen ajan tasalla. */
@@ -1657,9 +1658,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val after = fieldText(ic)
         after?.position?.let { cursor.onSetSelection(it, it) }
         val inserted = ExportedTranslation.insertedPart(before, after, if (replaced) previous.length else 0)
-        if (inserted.isNotEmpty()) {
-            textUndo.record(inserted, (if (replaced) previous else "") + selected)
-        }
+        // Tyhjä lisäys unohtaa myös edellisen kirjauksen: se ei saa täsmätä uuteen tekstiin.
+        textUndo.record(inserted, (if (replaced) previous else "") + selected)
         exportedTranslation.record(inserted)
         if (ExportedTranslation.cutShort(translation, inserted)) showMessage(R.string.kaannos_ei_mahdu)
         feedback()

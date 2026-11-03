@@ -84,4 +84,15 @@ class TextUndoTest {
         undo.record("", "")
         assertFalse(undo.hasRecord)
     }
+
+    @Test
+    fun `tyhja lisays unohtaa edellisen kirjauksen`() {
+        // Uusi liitos ei mennyt kenttään: vanha kirjaus ei saa jäädä voimaan ja
+        // täsmätä sattumalta kentän muuttuneen tekstin loppuun.
+        val undo = TextUndo()
+        undo.record("-9999", "")
+        undo.record("", "")
+        assertFalse(undo.hasRecord)
+        assertNull(undo.consume { "(234) 999-9999".takeLast(it) })
+    }
 }

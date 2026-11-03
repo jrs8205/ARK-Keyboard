@@ -17,9 +17,17 @@ class TextUndo {
 
     val hasRecord: Boolean get() = committed != null
 
-    /** Kirjaa toimenpiteen: kenttään meni [committedText] ja alta poistui [replacedText]. */
+    /**
+     * Kirjaa toimenpiteen: kenttään meni [committedText] ja alta poistui [replacedText].
+     * Tyhjä lisäys (kenttä hylkäsi tai muotoili liitoksen) ei anna peruutettavaa, mutta
+     * se on silti uusi toimenpide: vanha kirjaus ei saa jäädä voimaan ja täsmätä
+     * sattumalta kentän muuttuneen tekstin loppuun.
+     */
     fun record(committedText: String, replacedText: String = "") {
-        if (committedText.isEmpty()) return
+        if (committedText.isEmpty()) {
+            clear()
+            return
+        }
         committed = committedText
         replaced = replacedText
     }

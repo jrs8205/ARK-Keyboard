@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.compose)
 }
 
 // Julkaisuavaimen tiedot luetaan gitin ulkopuolisesta tiedostosta;
@@ -55,6 +56,11 @@ android {
         }
     }
 
+    // Asetussivu on Composella; näppäimistö itse on View-pohjainen.
+    buildFeatures {
+        compose = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -77,6 +83,13 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        // Material 3 Expressive -rajapinnat ovat 1.4:ssä kokeellisia; opt-in
+        // koko moduulille, ettei jokaiseen tiedostoon tule samaa merkintää.
+        freeCompilerArgs.addAll(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=androidx.compose.foundation.layout.ExperimentalLayoutApi",
+        )
     }
 }
 
@@ -97,6 +110,12 @@ dependencies {
     implementation(libs.mlkit.language.id)
     // Sanelun suoratoisto: WebSocket OpenAI:n realtime-transkriptioon.
     implementation(libs.okhttp)
+    // Asetussivu: Compose ja Material 3 Expressive.
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.activity.compose)
+    debugImplementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)

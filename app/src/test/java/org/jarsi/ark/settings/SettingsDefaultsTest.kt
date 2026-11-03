@@ -56,4 +56,12 @@ class SettingsDefaultsTest {
     fun `taitetut osiot vain tunnetuista`() {
         assertEquals(setOf("sanelu"), SettingsDefaults.encodeCollapsed(setOf("sanelu", "roska")))
     }
+
+    @Test
+    fun `kaikki teemavalinnat kelpaavat`() {
+        for (choice in org.jarsi.ark.theme.ThemeChoice.entries) {
+            if (choice == org.jarsi.ark.theme.ThemeChoice.DYNAMIC) continue
+            assertEquals(choice.id, SettingsDefaults.legalTheme(choice.id, dynamicAvailable = false))
+        }
+    }
 }

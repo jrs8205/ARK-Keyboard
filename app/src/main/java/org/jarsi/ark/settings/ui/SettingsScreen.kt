@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -253,19 +254,20 @@ fun SettingsScreen(
         Text(
             text = versionLabel,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = colors.onPageVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )
         Text(
             text = stringResource(R.string.versio_avoin),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = colors.onPageVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
                 .clip(RoundedCornerShape(12.dp))
                 .clickable(role = Role.Button) { actions.openUrl(SupportLinks.REPO_URL) }
+                .minimumInteractiveComponentSize()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         )
     }

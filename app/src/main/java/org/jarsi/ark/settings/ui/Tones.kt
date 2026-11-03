@@ -24,8 +24,19 @@ object Tones {
         return if (hue < 0) hue + 360.0 else hue
     }
 
-    /** Sama sävy kuin [argb], mutta vaaleus [tone] ja kylläisyys enintään [chroma]. */
-    fun tone(argb: Int, tone: Double, chroma: Double): Int = lchToArgb(tone, chroma, hueOf(argb))
+    /** Kylläisyys CIELAB-avaruudessa; harmaalla nolla. */
+    fun chromaOf(argb: Int): Double {
+        val (_, a, b) = lab(argb)
+        return kotlin.math.sqrt(a * a + b * b)
+    }
+
+    /**
+     * Sama sävy kuin [argb], mutta vaaleus [tone] ja kylläisyys enintään
+     * [chroma]. Harmaalla lähteellä sävykulma on kohinaa, joten kylläisyys
+     * rajataan lähteen omaan eikä johdettu väri värjäydy.
+     */
+    fun tone(argb: Int, tone: Double, chroma: Double): Int =
+        lchToArgb(tone, minOf(chroma, chromaOf(argb)), hueOf(argb))
 
     /**
      * LCH → sRGB. Jos väri ei mahdu sRGB-avaruuteen, kylläisyyttä

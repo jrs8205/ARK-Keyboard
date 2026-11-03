@@ -42,6 +42,13 @@ data class SettingsColors(
     val heroButton: Surface,
     /** Sävytetyn napin (tukikortti) pinta ja teksti. */
     val tonalButton: Surface,
+    /** Dialogin otsikko ja listan tekstit dialogin pohjalla (surfaceContainerHigh). */
+    val onDialog: Color,
+    val onDialogVariant: Color,
+    /** Dialogin tekstinapit. */
+    val dialogAction: Color,
+    /** Toissijainen teksti suoraan sivun taustalla (versiorivi). */
+    val onPageVariant: Color,
     val control: Color,
     val controlOff: Color,
 ) {
@@ -94,6 +101,10 @@ data class SettingsColors(
                     scheme.secondaryContainer.toArgb() to scheme.onSecondaryContainer.toArgb(),
                     derived(scheme.secondary),
                 ),
+                onDialog = text(scheme.surfaceContainerHigh, scheme.onSurface),
+                onDialogVariant = text(scheme.surfaceContainerHigh, scheme.onSurfaceVariant),
+                dialogAction = text(scheme.surfaceContainerHigh, scheme.primary),
+                onPageVariant = text(scheme.background, scheme.onSurfaceVariant),
                 control = text(scheme.surfaceContainer, scheme.primary, minimum = 3.0),
                 controlOff = text(scheme.surfaceContainer, scheme.outline, minimum = 3.0),
             )
@@ -144,12 +155,27 @@ fun ArkSettingsTheme(content: @Composable () -> Unit) {
     }
 }
 
+/**
+ * Dialogi on oma ikkunansa, jonka juuri antaa tiheyden uudelleen; tällä
+ * dialogin sisältö saa saman fonttikaton kuin sivu.
+ */
+@Composable
+fun CappedFontScale(content: @Composable () -> Unit) {
+    val density = LocalDensity.current
+    CompositionLocalProvider(
+        LocalDensity provides Density(density.density, Contrast.cappedFontScale(density.fontScale)),
+        content = content,
+    )
+}
+
 @Composable
 private fun staticLightScheme(): ColorScheme = lightColorScheme(
     primary = colorResource(R.color.vaalea_korostus),
     onPrimary = colorResource(R.color.vaalea_korostusteksti),
     primaryContainer = colorResource(R.color.vaalea_korostuspohja),
     onPrimaryContainer = colorResource(R.color.vaalea_korostuspohjateksti),
+    secondary = colorResource(R.color.vaalea_toissijainen),
+    tertiary = colorResource(R.color.vaalea_tertiaari),
     secondaryContainer = colorResource(R.color.vaalea_toissijainen_pohja),
     onSecondaryContainer = colorResource(R.color.vaalea_toissijainen_teksti),
     tertiaryContainer = colorResource(R.color.vaalea_tertiaari_pohja),
@@ -159,9 +185,14 @@ private fun staticLightScheme(): ColorScheme = lightColorScheme(
     surface = colorResource(R.color.vaalea_pinta),
     onSurface = colorResource(R.color.vaalea_teksti),
     onSurfaceVariant = colorResource(R.color.vaalea_vihje),
+    surfaceVariant = colorResource(R.color.vaalea_pinta_korkein),
+    surfaceContainerLowest = colorResource(R.color.vaalea_pinta_matalin),
+    surfaceContainerLow = colorResource(R.color.vaalea_pinta_matala),
     surfaceContainer = colorResource(R.color.vaalea_kortti_pinta),
-    surfaceContainerHighest = colorResource(R.color.vaalea_erikoisnappain),
+    surfaceContainerHigh = colorResource(R.color.vaalea_pinta_korkea),
+    surfaceContainerHighest = colorResource(R.color.vaalea_pinta_korkein),
     outline = colorResource(R.color.vaalea_aariviiva),
+    outlineVariant = colorResource(R.color.vaalea_aariviiva_vaalea),
 )
 
 @Composable
@@ -170,6 +201,8 @@ private fun staticDarkScheme(): ColorScheme = darkColorScheme(
     onPrimary = colorResource(R.color.tumma_korostusteksti),
     primaryContainer = colorResource(R.color.tumma_korostuspohja),
     onPrimaryContainer = colorResource(R.color.tumma_korostuspohjateksti),
+    secondary = colorResource(R.color.tumma_toissijainen),
+    tertiary = colorResource(R.color.tumma_tertiaari),
     secondaryContainer = colorResource(R.color.tumma_toissijainen_pohja),
     onSecondaryContainer = colorResource(R.color.tumma_toissijainen_teksti),
     tertiaryContainer = colorResource(R.color.tumma_tertiaari_pohja),
@@ -179,7 +212,12 @@ private fun staticDarkScheme(): ColorScheme = darkColorScheme(
     surface = colorResource(R.color.tumma_pinta),
     onSurface = colorResource(R.color.tumma_teksti),
     onSurfaceVariant = colorResource(R.color.tumma_vihje),
+    surfaceVariant = colorResource(R.color.tumma_pinta_korkein),
+    surfaceContainerLowest = colorResource(R.color.tumma_pinta_matalin),
+    surfaceContainerLow = colorResource(R.color.tumma_pinta_matala),
     surfaceContainer = colorResource(R.color.tumma_kortti_pinta),
-    surfaceContainerHighest = colorResource(R.color.tumma_kortti),
+    surfaceContainerHigh = colorResource(R.color.tumma_pinta_korkea),
+    surfaceContainerHighest = colorResource(R.color.tumma_pinta_korkein),
     outline = colorResource(R.color.tumma_aariviiva),
+    outlineVariant = colorResource(R.color.tumma_aariviiva_tumma),
 )

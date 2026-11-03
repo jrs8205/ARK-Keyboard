@@ -47,4 +47,14 @@ class TonesTest {
         assertTrue(r in 0..255 && g in 0..255 && b in 0..255)
         assertTrue(g > r && g > b)
     }
+
+    @Test
+    fun `harmaa lahde pysyy harmaana`() {
+        // Monokromaattisella paletilla sävykulma on kohinaa; kylläisyys ei saa ylittää lähteen omaa.
+        val gray = Tones.tone(0xFF808080.toInt(), 90.0, 20.0)
+        val r = gray shr 16 and 0xFF
+        val g = gray shr 8 and 0xFF
+        val b = gray and 0xFF
+        assertTrue("$r $g $b", maxOf(r, g, b) - minOf(r, g, b) <= 2)
+    }
 }

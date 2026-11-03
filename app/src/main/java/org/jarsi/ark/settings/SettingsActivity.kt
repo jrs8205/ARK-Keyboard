@@ -75,6 +75,11 @@ class SettingsActivity : AppCompatActivity() {
             dynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
         )
         backup = BackupActions(applicationContext, ioExecutor, ::toastOnUi)
+        // Aiemmin avoimena tallennettu avain salataan kertaalleen.
+        ioExecutor.execute {
+            ApiKeyStore.read(prefs, ApiKeyStore.Slot.CLAUDE)
+            ApiKeyStore.read(prefs, ApiKeyStore.Slot.OPENAI)
+        }
         val actions = SettingsActions(
             enableIme = { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) },
             selectIme = {
@@ -145,7 +150,6 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         ioExecutor.shutdown()
-        backup.close()
         super.onDestroy()
     }
 

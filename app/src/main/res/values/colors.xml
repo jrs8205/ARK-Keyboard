@@ -58,4 +58,20 @@
     <color name="tumma_tertiaari_pohja">#603962</color> <!-- tone 30 -->
     <color name="tumma_tertiaari_teksti">#F8D9F9</color> <!-- tone 90 -->
     <color name="tumma_aariviiva">#88929E</color> <!-- tone 60 -->
+    <!-- Loput M3-roolit samasta sävystä, jotta dialogit ja neutraalit pinnat
+         eivät jää kirjaston violetille oletukselle Android 8–11:ssä. -->
+    <color name="vaalea_pinta_matalin">#FFFFFF</color> <!-- tone 100 -->
+    <color name="vaalea_pinta_matala">#F0F4F9</color> <!-- tone 96 -->
+    <color name="vaalea_pinta_korkea">#E4E9F0</color> <!-- tone 92 -->
+    <color name="vaalea_pinta_korkein">#DDE3EC</color> <!-- tone 90 -->
+    <color name="vaalea_toissijainen">#4B6078</color> <!-- tone 40 -->
+    <color name="vaalea_tertiaari">#745475</color> <!-- tone 40, sävykulma 325 -->
+    <color name="vaalea_aariviiva_vaalea">#BDC7D5</color> <!-- tone 80 -->
+    <color name="tumma_pinta_matalin">#0C0E12</color> <!-- tone 4 -->
+    <color name="tumma_pinta_matala">#191C1F</color> <!-- tone 10 -->
+    <color name="tumma_pinta_korkea">#262A2F</color> <!-- tone 17 -->
+    <color name="tumma_pinta_korkein">#30353C</color> <!-- tone 22 -->
+    <color name="tumma_toissijainen">#B3C8E4</color> <!-- tone 80 -->
+    <color name="tumma_tertiaari">#E0BBE0</color> <!-- tone 80 -->
+    <color name="tumma_aariviiva_tumma">#3F4853</color> <!-- tone 30 -->
 </resources>

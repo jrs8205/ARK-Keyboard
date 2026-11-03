@@ -1,5 +1,7 @@
 package org.jarsi.ark.settings
 
+import org.jarsi.ark.theme.ThemeChoice
+
 /**
  * Asetusten oletusarvot ja arvojen laillistus. Avaimet, tyypit ja
  * oletukset ovat samat, joita näppäimistöpalvelu lukee; mallien,
@@ -45,10 +47,9 @@ object SettingsDefaults {
         if (value == "openai") "openai" else "jarjestelma"
 
     /** Taustakuvan värit vaativat Android 12:n paletin; tuntematon arvo palautuu oletukseen. */
-    fun legalTheme(value: String?, dynamicAvailable: Boolean): String = when (value) {
-        "vaalea", "tumma", "musta" -> value
-        "taustakuva" -> if (dynamicAvailable) value else "jarjestelma"
-        else -> "jarjestelma"
+    fun legalTheme(value: String?, dynamicAvailable: Boolean): String {
+        val choice = ThemeChoice.entries.firstOrNull { it.id == value } ?: ThemeChoice.SYSTEM
+        return if (choice == ThemeChoice.DYNAMIC && !dynamicAvailable) ThemeChoice.SYSTEM.id else choice.id
     }
 
     /** Taitettujen osioiden joukko tallennettavaksi: vain tunnetut osiot. */

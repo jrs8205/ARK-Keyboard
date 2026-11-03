@@ -213,8 +213,7 @@ internal fun SliderRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 10.dp)
-            .semantics(mergeDescendants = true) { stateDescription = stateText },
+            .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             RowTexts(title, description, Modifier.weight(1f))
@@ -231,7 +230,10 @@ internal fun SliderRow(
                 )
             }
         }
+        // Arvo yksikköineen säätimen omaan solmuun: muuten TalkBack lukee
+        // prosenttiosuuden säätimen alueesta.
         Slider(
+            modifier = Modifier.semantics { stateDescription = stateText },
             value = current.toFloat(),
             onValueChange = { current = it.roundToInt().coerceIn(range) },
             valueRange = range.first.toFloat()..range.last.toFloat(),

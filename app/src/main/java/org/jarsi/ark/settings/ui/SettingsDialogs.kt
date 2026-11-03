@@ -11,6 +11,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -39,10 +40,14 @@ internal fun ChoiceDialog(
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val colors = LocalSettingsColors.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        titleContentColor = colors.onDialog,
+        textContentColor = colors.onDialogVariant,
+        title = { CappedFontScale { Text(title) } },
         text = {
+            CappedFontScale {
             Column(Modifier.selectableGroup().verticalScroll(rememberScrollState())) {
                 options.forEach { (value, label) ->
                     Row(
@@ -61,17 +66,29 @@ internal fun ChoiceDialog(
                         Text(
                             text = label,
                             style = MaterialTheme.typography.bodyLarge,
+                            color = colors.onDialog,
                             modifier = Modifier.padding(start = 12.dp),
                         )
                     }
                 }
             }
+            }
         },
         confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
-        },
+        dismissButton = { DialogButton(stringResource(android.R.string.cancel), onDismiss) },
     )
+}
+
+/** Dialogin tekstinappi vahdin värillä ja fonttikatolla. */
+@Composable
+private fun DialogButton(label: String, onClick: () -> Unit) {
+    val colors = LocalSettingsColors.current
+    CappedFontScale {
+        TextButton(
+            onClick = onClick,
+            colors = ButtonDefaults.textButtonColors(contentColor = colors.dialogAction),
+        ) { Text(label) }
+    }
 }
 
 /**
@@ -85,25 +102,26 @@ internal fun SecretDialog(
     onDismiss: () -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
+    val colors = LocalSettingsColors.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        titleContentColor = colors.onDialog,
+        textContentColor = colors.onDialogVariant,
+        title = { CappedFontScale { Text(title) } },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            CappedFontScale {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         },
-        confirmButton = {
-            TextButton(onClick = { onSave(text.trim()) }) { Text(stringResource(R.string.tallenna)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
-        },
+        confirmButton = { DialogButton(stringResource(R.string.tallenna)) { onSave(text.trim()) } },
+        dismissButton = { DialogButton(stringResource(android.R.string.cancel), onDismiss) },
     )
 }
 
@@ -115,14 +133,12 @@ internal fun ConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val colors = LocalSettingsColors.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        text = { Text(message) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) { Text(confirmLabel) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
-        },
+        textContentColor = colors.onDialog,
+        text = { CappedFontScale { Text(message) } },
+        confirmButton = { DialogButton(confirmLabel, onConfirm) },
+        dismissButton = { DialogButton(stringResource(android.R.string.cancel), onDismiss) },
     )
 }

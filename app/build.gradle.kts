@@ -83,7 +83,7 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        // Material 3 Expressive -rajapinnat ovat 1.4:ssä kokeellisia; opt-in
+        // Material 3 Expressive -rajapinnat ovat 1.5-alphassa kokeellisia; opt-in
         // koko moduulille, ettei jokaiseen tiedostoon tule samaa merkintää.
         freeCompilerArgs.addAll(
             "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",

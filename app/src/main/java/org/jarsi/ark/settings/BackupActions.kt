@@ -16,6 +16,8 @@ import java.util.concurrent.ExecutorService
  * sovelluskonteksti, jotta työ ei pidä aktiviteettia hengissä; tulos
  * kerrotaan [toast]-kutsulla, jonka kutsuja vie pääsäikeeseen.
  * Tuonnin jälkeen asetusrivit päivittyvät asetustiedoston kuuntelijasta.
+ * Tietokanta on sovelluksen yhteinen instanssi, jota ei koskaan suljeta:
+ * näppäimistöpalvelu käyttää samaa yhteyttä prosessin loppuun asti.
  */
 class BackupActions(
     private val context: Context,
@@ -98,10 +100,4 @@ class BackupActions(
             R.plurals.varmuuskopio_leikkeita, backup.clips.size, backup.clips.size
         ),
     )
-
-    /** Sulkee tietokannan, jos se ehdittiin avata. */
-    fun close() {
-        database?.close()
-        database = null
-    }
 }

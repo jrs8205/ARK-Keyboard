@@ -272,4 +272,5 @@
     <string name="enter_siirry">Siirry</string>
     <string name="enter_seuraava">Seuraava</string>
     <string name="enter_valmis">Valmis</string>
+    <string name="linkki_ei_sovellusta">Mikään sovellus ei avaa tätä linkkiä</string>
 </resources>

@@ -60,4 +60,24 @@ class ContrastTest {
         assertEquals(1.5f, Contrast.cappedFontScale(2.0f))
         assertEquals(0.85f, Contrast.cappedFontScale(0.85f))
     }
+
+    @Test
+    fun `pickPair ottaa ensimmaisen riittavan parin`() {
+        val mauve = 0xFF8B6B8D.toInt()
+        val lightGray = 0xFFE7E8EE.toInt()
+        val pairs = listOf(mauve to valkoinen, lightGray to musta)
+        assertEquals(lightGray to musta, Contrast.pickPair(pairs))
+    }
+
+    @Test
+    fun `pickPair pitaa ensimmaisen kun se riittaa`() {
+        val pairs = listOf(0xFFDAE2FF.toInt() to 0xFF434659.toInt(), valkoinen to musta)
+        assertEquals(pairs[0], Contrast.pickPair(pairs))
+    }
+
+    @Test
+    fun `pickPair valitsee parhaan kun mikaan ei riita`() {
+        val pairs = listOf(0xFF8B6B8D.toInt() to valkoinen, 0xFF999999.toInt() to valkoinen)
+        assertEquals(pairs[0], Contrast.pickPair(pairs))
+    }
 }

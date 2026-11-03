@@ -34,23 +34,61 @@ val LocalReducedMotion: ProvidableCompositionLocal<Boolean> = staticCompositionL
 data class SettingsColors(
     val onCard: Color,
     val onCardVariant: Color,
-    val onHeroPrimary: Color,
-    val onHeroTertiary: Color,
+    /** Valmiin tilakortin ja arvopillerin pinta ja teksti. */
+    val heroReady: Surface,
+    /** Keskeneräisen tilakortin pinta ja teksti. */
+    val heroAttention: Surface,
+    /** Tilakortin napin pinta ja teksti. */
+    val heroButton: Surface,
     val onTonalButton: Color,
     val control: Color,
     val controlOff: Color,
 ) {
+    data class Surface(val background: Color, val text: Color)
+
     companion object {
-        fun from(scheme: ColorScheme): SettingsColors {
+        /**
+         * Pintaparit valitaan järjestyksessä: laitteen oma roolipari, sitten
+         * laitteen sävystä johdettu tone 90/30 -pari (tummassa 30/90), joka
+         * täyttää 7:1 aina, ja viimeisenä neutraali pinta. Android 16:n
+         * paletti antaa containereille keskitumman sävyn (noin 4,7:1), jolloin
+         * johdettu pari pitää kortin värillisenä.
+         */
+        fun from(scheme: ColorScheme, dark: Boolean): SettingsColors {
             val fallback = scheme.onSurface.toArgb()
             fun text(background: Color, preferred: Color, minimum: Double = 7.0) = Color(
                 Contrast.textOn(background.toArgb(), preferred.toArgb(), fallback, minimum)
             )
+            fun derived(source: Color): Pair<Int, Int> {
+                val argb = source.toArgb()
+                val light = Tones.tone(argb, 90.0, 20.0)
+                val deep = Tones.tone(argb, 30.0, 30.0)
+                return if (dark) deep to light else light to deep
+            }
+            fun surface(vararg candidates: Pair<Int, Int>): Surface {
+                val pairs = candidates.toList() + listOf(
+                    scheme.surfaceContainerHigh.toArgb() to fallback,
+                    scheme.surface.toArgb() to fallback,
+                )
+                val (bg, fg) = Contrast.pickPair(pairs)
+                return Surface(Color(bg), Color(fg))
+            }
+            val surfaceArgb = scheme.surface.toArgb()
             return SettingsColors(
                 onCard = text(scheme.surfaceContainer, scheme.onSurface),
                 onCardVariant = text(scheme.surfaceContainer, scheme.onSurfaceVariant),
-                onHeroPrimary = text(scheme.primaryContainer, scheme.onPrimaryContainer),
-                onHeroTertiary = text(scheme.tertiaryContainer, scheme.onTertiaryContainer),
+                heroReady = surface(
+                    scheme.primaryContainer.toArgb() to scheme.onPrimaryContainer.toArgb(),
+                    derived(scheme.primary),
+                ),
+                heroAttention = surface(
+                    scheme.tertiaryContainer.toArgb() to scheme.onTertiaryContainer.toArgb(),
+                    derived(scheme.tertiary),
+                ),
+                heroButton = surface(
+                    surfaceArgb to scheme.onPrimaryContainer.toArgb(),
+                    surfaceArgb to scheme.primary.toArgb(),
+                ),
                 onTonalButton = text(scheme.secondaryContainer, scheme.onSecondaryContainer),
                 control = text(scheme.surfaceContainer, scheme.primary, minimum = 3.0),
                 controlOff = text(scheme.surfaceContainer, scheme.outline, minimum = 3.0),
@@ -85,7 +123,7 @@ fun ArkSettingsTheme(content: @Composable () -> Unit) {
             context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f
         ) == 0f
     }
-    val settingsColors = remember(scheme) { SettingsColors.from(scheme) }
+    val settingsColors = remember(scheme, dark) { SettingsColors.from(scheme, dark) }
     MaterialExpressiveTheme(
         colorScheme = scheme,
         motionScheme = MotionScheme.expressive(),

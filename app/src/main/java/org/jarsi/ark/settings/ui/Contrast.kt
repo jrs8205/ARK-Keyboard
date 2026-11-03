@@ -36,6 +36,16 @@ object Contrast {
         return if (preferredRatio >= fallbackRatio) preferred else fallback
     }
 
+    /**
+     * Pinta- ja tekstiväripari: ensimmäinen [pairs]-listan pari (pinta, teksti),
+     * joka täyttää [minimum]-rajan, muuten se, jonka suhde on suurin. Näin
+     * esimerkiksi tilakortti vaihtaa keskitumman tertiääripohjan neutraaliin,
+     * jos laitteen paletti ei anna AAA-kontrastia.
+     */
+    fun pickPair(pairs: List<Pair<Int, Int>>, minimum: Double = 7.0): Pair<Int, Int> =
+        pairs.firstOrNull { (background, text) -> ratio(background, text) >= minimum }
+            ?: pairs.maxBy { (background, text) -> ratio(background, text) }
+
     /** Järjestelmän fonttiskaala rajattuna: asetussivu kasvaa enintään [maximum]-kertaiseksi. */
     fun cappedFontScale(system: Float, maximum: Float = 1.5f): Float = min(system, maximum)
 

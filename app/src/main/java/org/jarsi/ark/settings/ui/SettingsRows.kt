@@ -104,7 +104,7 @@ internal fun SettingsCard(
                         label = "taitto",
                     )
                     Icon(
-                        painter = painterResource(R.drawable.ic_arrow_down),
+                        painter = painterResource(R.drawable.ic_chevron_down),
                         contentDescription = null,
                         tint = colors.onCardVariant,
                         modifier = Modifier.size(24.dp).rotate(rotation),
@@ -186,7 +186,7 @@ internal fun LinkRow(
         RowTexts(title, description, Modifier.weight(1f))
         Spacer(Modifier.width(14.dp))
         Icon(
-            painter = painterResource(R.drawable.ic_arrow_right),
+            painter = painterResource(R.drawable.ic_chevron_right),
             contentDescription = null,
             tint = colors.onCardVariant,
             modifier = Modifier.size(24.dp),
@@ -221,12 +221,12 @@ internal fun SliderRow(
             Spacer(Modifier.width(8.dp))
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = colors.heroReady.background,
             ) {
                 Text(
                     text = stateText,
                     style = MaterialTheme.typography.labelLarge,
-                    color = colors.onHeroPrimary,
+                    color = colors.heroReady.text,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
                 )
             }

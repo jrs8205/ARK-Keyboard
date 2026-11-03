@@ -45,8 +45,9 @@ internal fun ImeStatusCard(
     val scheme = MaterialTheme.colorScheme
     val colors = LocalSettingsColors.current
     val ready = status == ImeStatus.READY
-    val container = if (ready) scheme.primaryContainer else scheme.tertiaryContainer
-    val onContainer = if (ready) colors.onHeroPrimary else colors.onHeroTertiary
+    val hero = if (ready) colors.heroReady else colors.heroAttention
+    val container = hero.background
+    val onContainer = hero.text
     val title = stringResource(
         when (status) {
             ImeStatus.NOT_ENABLED -> R.string.ota_kayttoon
@@ -115,8 +116,8 @@ internal fun ImeStatusCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 val primaryColors = ButtonDefaults.buttonColors(
-                    containerColor = scheme.surface,
-                    contentColor = onContainer,
+                    containerColor = colors.heroButton.background,
+                    contentColor = colors.heroButton.text,
                 )
                 when (status) {
                     ImeStatus.NOT_ENABLED -> Button(onClick = onEnable, colors = primaryColors) {

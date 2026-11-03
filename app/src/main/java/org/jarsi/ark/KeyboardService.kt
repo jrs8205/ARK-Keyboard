@@ -768,20 +768,18 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     /**
      * Kirjoittaa kenttään ja kirjaa peruutuksen. Kirjoitus korvaa valinnan,
      * joten valittu teksti luetaan ensin talteen: peruutus palauttaa sen.
-     * Kenttä voi hylätä tai katkaista liitoksen (pituusraja), joten peruutus
-     * kirjataan vain toteutuneelle lisäykselle; muuten se poistaisi kentän
-     * omaa tekstiä.
+     * Kenttä voi hylätä tai katkaista liitoksen (pituusraja) tai muotoilla
+     * koko tekstinsä uusiksi, joten peruutus kirjataan vain lisäykselle, joka
+     * jätti muun tekstin ennalleen; muuten se poistaisi kentän omaa tekstiä,
+     * ja peruutus jää kentän omaksi.
      */
     private fun commitWithUndo(ic: InputConnection, text: CharSequence) {
         val selected = ic.getSelectedText(0)?.toString().orEmpty()
-        val positionBefore = ic.getExtractedText(ExtractedTextRequest(), 0)?.let {
-            ExportedTranslation.replaceStart(it.startOffset, it.selectionStart, it.selectionEnd)
-        }
+        val before = fieldText(ic)
         commitToField(ic, text)
-        val positionAfter = fieldPosition(ic)
-        positionAfter?.let { cursor.onSetSelection(it, it) }
-        val moved = if (positionBefore != null && positionAfter != null) positionAfter - positionBefore else null
-        val inserted = ExportedTranslation.insertedPart(text.toString(), moved) { readBefore(ic, it) }
+        val after = fieldText(ic)
+        after?.position?.let { cursor.onSetSelection(it, it) }
+        val inserted = ExportedTranslation.insertedPart(before, after)
         if (inserted.isNotEmpty()) textUndo.record(inserted, selected)
     }
 
@@ -1646,11 +1644,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun commitTranslation(translation: String) {
         val ic = currentInputConnection ?: return
         markOwnEdit()
-        // Valinta korvautuu viennillä: lähtöpiste on valinnan pienempi pää myös
-        // käännetyssä valinnassa, ja valittu teksti palaa peruutuksessa.
-        val positionBefore = ic.getExtractedText(ExtractedTextRequest(), 0)?.let {
-            ExportedTranslation.replaceStart(it.startOffset, it.selectionStart, it.selectionEnd)
-        }
+        // Valinta korvautuu viennillä, ja valittu teksti palaa peruutuksessa.
+        // Kentän teksti ennen vientiä kertoo, mikä osa jälkeen luetusta on lisäystä.
+        val before = fieldText(ic)
         val selected = ic.getSelectedText(0)?.toString().orEmpty()
         ic.beginBatchEdit()
         val previous = exportedTranslation.text
@@ -1658,14 +1654,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (replaced) deleteFromField(ic, previous.length)
         commitToField(ic, translation)
         ic.endBatchEdit()
-        val positionAfter = fieldPosition(ic)
-        positionAfter?.let { cursor.onSetSelection(it, it) }
-        val moved = if (positionBefore != null && positionAfter != null) {
-            positionAfter - positionBefore + if (replaced) previous.length else 0
-        } else {
-            null
-        }
-        val inserted = ExportedTranslation.insertedPart(translation, moved) { readBefore(ic, it) }
+        val after = fieldText(ic)
+        after?.position?.let { cursor.onSetSelection(it, it) }
+        val inserted = ExportedTranslation.insertedPart(before, after, if (replaced) previous.length else 0)
         if (inserted.isNotEmpty()) {
             textUndo.record(inserted, (if (replaced) previous else "") + selected)
         }
@@ -2445,10 +2436,14 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         repeat(WordTools.graphemeCount(word)) { sendKeyToField(KeyEvent.KEYCODE_DEL) }
     }
 
-    private fun fieldPosition(ic: InputConnection): Int? =
-        ic.getExtractedText(ExtractedTextRequest(), 0)
-            ?.takeIf { it.selectionStart >= 0 }
-            ?.let { it.startOffset + it.selectionStart }
+    private fun fieldPosition(ic: InputConnection): Int? = fieldText(ic)?.position
+
+    /** Kentän teksti ja valinta kentän kertomana; null, jos kenttä ei kerro niitä. */
+    private fun fieldText(ic: InputConnection): ExportedTranslation.FieldText? =
+        ic.getExtractedText(ExtractedTextRequest(), 0)?.let {
+            val text = it.text ?: return null
+            ExportedTranslation.FieldText(text.toString(), it.startOffset, it.selectionStart, it.selectionEnd)
+        }
 
     /**
      * Työkalurivin peruutus: viimeisin näppäimistön toimenpide perutaan
@@ -3655,6 +3650,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         commitToField(ic, output)
         if (shift.onCharacterTyped()) keyboardView?.shiftState = shift.state
+        // Kaikkien merkkien kentässä iso palaa heti ilman tekstikyselyä: hitaassa
+        // kentässä valintapäivityksen tarkistus odottaa kirjoitustaukoa, ja osa
+        // sovelluksista ei lähetä sitä lainkaan.
+        if (AutoCaps.alwaysWanted(currentInputEditorInfo?.inputType ?: 0)) updateAutoCaps()
         feedback()
     }
 
@@ -3845,6 +3844,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             val info = currentInputEditorInfo ?: return
             if (!AutoCaps.requested(info.inputType)) {
                 false
+            } else if (AutoCaps.alwaysWanted(info.inputType)) {
+                // Kaikki merkit isoina: ei riipu tekstistä, joten kenttää ei kysytä.
+                true
             } else {
                 val ic = currentInputConnection ?: return
                 val before = predicted

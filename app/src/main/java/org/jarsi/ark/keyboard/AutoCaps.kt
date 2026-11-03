@@ -27,10 +27,17 @@ object AutoCaps {
         inputType and InputType.TYPE_MASK_CLASS == InputType.TYPE_CLASS_TEXT &&
             inputType and CAP_FLAGS != 0
 
+    /**
+     * Kenttä pyytää kaikki merkit isoina: iso ei riipu kursorin edeltävästä tekstistä,
+     * joten se voidaan päättää ilman tekstikyselyä.
+     */
+    fun alwaysWanted(inputType: Int): Boolean =
+        requested(inputType) && inputType and InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS != 0
+
     /** Kuuluuko seuraavan kirjaimen olla iso, kun [before] on kursorin edellä. */
     fun wanted(before: CharSequence, inputType: Int): Boolean {
         if (!requested(inputType)) return false
-        if (inputType and InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS != 0) return true
+        if (alwaysWanted(inputType)) return true
         val sentences = inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0
         // Avaavat lainaus- ja sulkumerkit eivät katkaise: lauseen alku on
         // iso myös sulkeen sisällä.

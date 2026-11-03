@@ -30,28 +30,42 @@ class ExportedTranslation {
         text = ""
     }
 
+    /**
+     * Kentän teksti ja valinta kentän kertomana (getExtractedText). [startOffset] on tekstin
+     * alku koko sisällössä; valinnan päät ovat tekstin sisäisiä. Tuntematon valinta on negatiivinen.
+     */
+    data class FieldText(val text: String, val startOffset: Int, val selectionStart: Int, val selectionEnd: Int) {
+        /** Kursorin (valinnan alun) paikka koko sisällössä. */
+        val position: Int? get() = if (selectionStart >= 0) startOffset + selectionStart else null
+    }
+
     companion object {
         /**
          * Kenttään todella mennyt osa viennistä tai liitoksesta sellaisena kuin kenttä sen
          * tallensi: pituusraja voi katkaista tekstin tai hylätä sen kokonaan, ja suodatin voi
-         * muuttaa sen asua ja pituutta. Kursorin siirtymä ratkaisee: kentässä jo ollut sama
-         * teksti ei ole lisäys, eikä hylätyn liitoksen peruutus saa poistaa sitä. Jos kenttä ei
-         * kerro kursorin paikkaa, lisäystä ei oleteta jälkikäteen luetun tekstin perusteella:
-         * peruutus jää kentän omaksi, ja lähde säilyy kääntäjässä.
+         * muuttaa sen asua ja pituutta. Vertailu tehdään kentän tekstiin ennen ja jälkeen:
+         * lisäys on se, mitä valinnan tilalle tuli, kun valintaa edeltävä ja seuraava teksti
+         * ovat ennallaan ja kursori on lisäyksen lopussa. Jos kenttä muutti muutakin (esim.
+         * puhelinnumeron muotoilija muotoilee koko kentän), kursorin siirtymä ei kerro
+         * lisäystä, eikä omaa peruutusta kirjata: se poistaisi kentän omaa tekstiä. Sama, jos
+         * kenttä ei kerro tekstiään tai valintaansa. [replacedBefore] merkkiä valinnan edeltä
+         * poistettiin ennen vientiä (edellinen viety käännös), eivätkä ne kuulu vertailuun.
          */
-        fun insertedPart(exported: String, cursorMoved: Int?, readBefore: (Int) -> CharSequence?): String {
-            if (cursorMoved == null || cursorMoved <= 0) return ""
-            return readBefore(cursorMoved)?.toString()?.takeIf { it.length == cursorMoved }.orEmpty()
-        }
-
-        /**
-         * Kohta, josta vienti korvaa kentän tekstiä: valinnan pienempi pää, koska
-         * käännetyssä valinnassa (kursori valinnan alussa) selectionStart on suurempi.
-         * Tuntematon valinta (negatiivinen) ei anna lähtöpistettä.
-         */
-        fun replaceStart(startOffset: Int, selectionStart: Int, selectionEnd: Int): Int? {
-            if (selectionStart < 0 || selectionEnd < 0) return null
-            return startOffset + minOf(selectionStart, selectionEnd)
+        fun insertedPart(before: FieldText?, after: FieldText?, replacedBefore: Int = 0): String {
+            if (before == null || after == null) return ""
+            if (before.selectionStart < 0 || before.selectionEnd < 0) return ""
+            if (after.selectionStart < 0 || after.selectionStart != after.selectionEnd) return ""
+            if (before.startOffset != after.startOffset) return ""
+            val prefixEnd = minOf(before.selectionStart, before.selectionEnd) - replacedBefore
+            val suffixStart = maxOf(before.selectionStart, before.selectionEnd)
+            if (prefixEnd < 0 || suffixStart > before.text.length) return ""
+            val prefix = before.text.substring(0, prefixEnd)
+            val suffix = before.text.substring(suffixStart)
+            val insertedEnd = after.text.length - suffix.length
+            if (insertedEnd < prefix.length) return ""
+            if (!after.text.startsWith(prefix) || !after.text.endsWith(suffix)) return ""
+            if (after.selectionStart != insertedEnd) return ""
+            return after.text.substring(prefix.length, insertedEnd)
         }
 
         /** Vienti ei mahtunut: pelkkä asun muutos ei lyhennä sitä. */

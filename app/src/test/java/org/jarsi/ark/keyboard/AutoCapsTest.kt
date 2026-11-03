@@ -103,4 +103,15 @@ class AutoCapsTest {
         assertTrue(AutoCaps.wanted("hei", characters))
         assertTrue(AutoCaps.wanted("", characters))
     }
+
+    @Test
+    fun `merkkikentan iso ei riipu tekstista`() {
+        assertTrue(AutoCaps.alwaysWanted(characters))
+        assertTrue(AutoCaps.alwaysWanted(characters or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES))
+        assertFalse(AutoCaps.alwaysWanted(sentences))
+        assertFalse(AutoCaps.alwaysWanted(words))
+        assertFalse(AutoCaps.alwaysWanted(InputType.TYPE_CLASS_TEXT))
+        // TYPE_NUMBER_FLAG_SIGNED jakaa bitin CAP_CHARACTERS-lipun kanssa.
+        assertFalse(AutoCaps.alwaysWanted(InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED))
+    }
 }

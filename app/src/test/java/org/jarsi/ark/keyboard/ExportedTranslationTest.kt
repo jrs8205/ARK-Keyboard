@@ -43,73 +43,106 @@ class ExportedTranslationTest {
         assertEquals("", export.text)
     }
 
-    /** Kentta, jossa kursorin edella on [before]: lyhyempi teksti palautuu kokonaan kuten Androidilla. */
-    private fun field(before: String): (Int) -> CharSequence? = { before.takeLast(it) }
+    /** Kentän teksti ja valinta kentän kertomana; [cursor] yksin tarkoittaa pelkkää kursoria. */
+    private fun field(text: String, cursor: Int, end: Int = cursor, offset: Int = 0) =
+        ExportedTranslation.FieldText(text, offset, cursor, end)
+
+    private fun inserted(
+        before: ExportedTranslation.FieldText?,
+        after: ExportedTranslation.FieldText?,
+        replacedBefore: Int = 0,
+    ) = ExportedTranslation.insertedPart(before, after, replacedBefore)
 
     @Test
     fun `ilman kursoritietoa lisaysta ei oleteta tekstin perusteella`() {
-        // Kenttä ei kerro kursorin paikkaa: jälkikäteen luettu sama teksti voi olla kentän omaa.
-        assertEquals("", ExportedTranslation.insertedPart("Hi there", null, field("Hi there")))
-        assertEquals("", ExportedTranslation.insertedPart("alpha ", null, field("alpha ")))
+        // Kenttä ei kerro tekstiään tai valintaansa: jälkikäteen luettu sama teksti voi olla kentän omaa.
+        assertEquals("", inserted(null, field("Hi there", 8)))
+        assertEquals("", inserted(field("", 0), null))
+        assertEquals("", inserted(field("", -1), field("Hi there", 8)))
+        assertEquals("", inserted(field("", 0, -1), field("Hi there", 8)))
+        assertEquals("", inserted(field("", 0), field("Hi there", -1)))
     }
 
     @Test
-    fun `pituusrajan katkaisema vienti on kursorin siirtyman mittainen`() {
-        assertEquals("Hi th", ExportedTranslation.insertedPart("Hi there", 5, field("Hi th")))
+    fun `vienti tyhjaan kenttaan on koko teksti`() {
+        assertEquals("Hi there", inserted(field("", 0), field("Hi there", 8)))
+    }
+
+    @Test
+    fun `vienti tekstin keskelle sailyttaa ympariston`() {
+        assertEquals("Hi", inserted(field("alku loppu", 5), field("alku Hiloppu", 7)))
+    }
+
+    @Test
+    fun `pituusrajan katkaisema vienti on kentassa oleva osa`() {
+        assertEquals("Hi th", inserted(field("", 0), field("Hi th", 5)))
+        assertEquals("HI T", inserted(field("", 0), field("HI T", 4)))
     }
 
     @Test
     fun `hylatty vienti on tyhja`() {
-        assertEquals("", ExportedTranslation.insertedPart("Hi there", 0, field("Abcde")))
+        assertEquals("", inserted(field("Abcde", 5), field("Abcde", 5)))
     }
 
     @Test
     fun `hylatty vienti on tyhja vaikka kentan teksti sattuu vastaamaan`() {
-        // Kursori ei siirtynyt: kentässä ollut "alpha " ei ole vienti.
-        assertEquals("", ExportedTranslation.insertedPart("alpha ", 0, field("alpha ")))
-    }
-
-    @Test
-    fun `tunnettu siirtyma ratkaisee tekstin vastaavuuden sijaan`() {
-        assertEquals("Hi", ExportedTranslation.insertedPart("Hi", 2, field("Hi")))
-        assertEquals("i", ExportedTranslation.insertedPart("Hi", 1, field("Hi")))
-    }
-
-    @Test
-    fun `ilman varmuutta vientia ei oleteta perille menneeksi`() {
-        assertEquals("", ExportedTranslation.insertedPart("Hi there", null, field("Abcde")))
-        assertEquals("", ExportedTranslation.insertedPart("Hi there", null) { null })
+        // Kenttä ei muuttunut: kentässä ollut "alpha " ei ole vienti.
+        assertEquals("", inserted(field("alpha ", 6), field("alpha ", 6)))
     }
 
     @Test
     fun `kentan muuntama vienti tallentuu kentan asussa`() {
-        assertEquals("HI THERE", ExportedTranslation.insertedPart("Hi there", 8, field("HI THERE")))
+        assertEquals("HI THERE", inserted(field("", 0), field("HI THERE", 8)))
+        assertEquals("HI THERE", inserted(field("alku ", 5), field("alku HI THERE", 13)))
+        assertEquals("STRASSE", inserted(field("alku ", 5), field("alku STRASSE", 12)))
     }
 
     @Test
-    fun `aiempi teksti ei kuulu muunnettuun vientiin`() {
-        assertEquals("HI THERE", ExportedTranslation.insertedPart("Hi there", 8, field("alku HI THERE")))
+    fun `valinnan korvaava vienti on valinnan tilalle tullut teksti`() {
+        assertEquals("X", inserted(field("alpha beta gamma", 6, 10), field("alpha X gamma", 7)))
+        // Käännetty valinta: kursori valinnan alussa.
+        assertEquals("X", inserted(field("alpha beta gamma", 10, 6), field("alpha X gamma", 7)))
+        // Valinnan tilalle ei tullut mitään: peruutukselle ei ole omaa lisäystä.
+        assertEquals("", inserted(field("alpha beta gamma", 6, 10), field("alpha  gamma", 6)))
     }
 
     @Test
-    fun `muunnos voi pidentaa vientia`() {
-        assertEquals("STRASSE", ExportedTranslation.insertedPart("Straße", 7, field("alku STRASSE")))
+    fun `edellinen vienti poistettiin ennen uutta`() {
+        assertEquals("Hello", inserted(field("alku Hi", 7), field("alku Hello", 10), replacedBefore = 2))
+        assertEquals("", inserted(field("Hi", 1), field("Hello", 5), replacedBefore = 2))
     }
 
     @Test
-    fun `muunnettu ja katkaistu vienti tallentuu kentan asussa`() {
-        assertEquals("HI T", ExportedTranslation.insertedPart("Hi there", 4, field("HI T")))
+    fun `muotoilijan muuttama aiempi teksti ei ole vienti`() {
+        // Puhelinnumeron muotoilija muotoili koko kentän: kursorin siirtymä ei kerro lisäystä.
+        assertEquals("", inserted(field("234-5678", 8), field("(234) 567-8999", 14)))
     }
 
     @Test
-    fun `siirtymaa vastaamaton luku ei ole varma vienti`() {
-        assertEquals("", ExportedTranslation.insertedPart("Hi there", 8, field("HI")))
-        assertEquals("", ExportedTranslation.insertedPart("Hi there", 8) { null })
+    fun `muuttunut kursorin jalkeinen teksti ei ole vienti`() {
+        assertEquals("", inserted(field("ab cd", 2), field("abXY cd!", 4)))
+        assertEquals("", inserted(field("ab cd", 2), field("abXYcd", 4)))
     }
 
     @Test
-    fun `taaksepain siirtynyt kursori ei ole vienti`() {
-        assertEquals("", ExportedTranslation.insertedPart("Hi there", -3, field("HI THERE")))
+    fun `kursori muualla kuin lisayksen lopussa ei ole vienti`() {
+        assertEquals("", inserted(field("ab", 2), field("abXY", 3)))
+        assertEquals("", inserted(field("ab", 2), field("abXY", 2, 4)))
+    }
+
+    @Test
+    fun `lyhentynyt teksti ei ole vienti`() {
+        assertEquals("", inserted(field("abc", 3), field("ab", 2)))
+    }
+
+    @Test
+    fun `eri alkukohdasta luettu teksti ei kelpaa vertailuun`() {
+        assertEquals("", inserted(field("", 0), field("Hi there", 8, offset = 5)))
+    }
+
+    @Test
+    fun `epajohdonmukainen valinta ei ole vienti`() {
+        assertEquals("", inserted(field("ab", 5), field("abXY", 4)))
     }
 
     @Test
@@ -122,23 +155,17 @@ class ExportedTranslationTest {
     }
 
     @Test
+    fun `kentan paikka on kursorin paikka koko sisallossa`() {
+        assertEquals(7, field("alku Hi", 7).position)
+        assertEquals(107, field("alku Hi", 7, offset = 100).position)
+        assertEquals(106, field("alku Hi", 6, 7, offset = 100).position)
+        assertEquals(null, field("alku Hi", -1).position)
+    }
+
+    @Test
     fun `tyhjennys unohtaa viennin`() {
         val export = exported(chat)
         export.clear()
         assertEquals("", export.text)
-    }
-
-    @Test
-    fun `korvaus alkaa valinnan pienemmasta paasta`() {
-        assertEquals(6, ExportedTranslation.replaceStart(0, 6, 10))
-        assertEquals(6, ExportedTranslation.replaceStart(0, 10, 6))
-        assertEquals(106, ExportedTranslation.replaceStart(100, 10, 6))
-        assertEquals(4, ExportedTranslation.replaceStart(0, 4, 4))
-    }
-
-    @Test
-    fun `tuntematon valinta ei anna lahtopistetta`() {
-        assertEquals(null, ExportedTranslation.replaceStart(0, -1, 3))
-        assertEquals(null, ExportedTranslation.replaceStart(0, 3, -1))
     }
 }

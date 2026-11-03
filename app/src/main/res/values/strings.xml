@@ -273,4 +273,19 @@
     <string name="enter_seuraava">Next</string>
     <string name="enter_valmis">Done</string>
     <string name="linkki_ei_sovellusta">No app can open this link</string>
+    <!-- Asetussivu: tilakortti, tukikortti ja rivien tilatekstit. -->
+    <string name="tila_valmis">Enabled and selected</string>
+    <string name="tila_valmis_kuvaus">ARK-Keyboard is this device\'s keyboard.</string>
+    <string name="tila_ota_kayttoon_nappi">Enable</string>
+    <string name="tuki_otsikko">Support ARK-Keyboard</string>
+    <string name="tuki_teksti">ARK-Keyboard is free and open source, and stays that way. If it makes typing nicer, you can buy me a coffee or sponsor the work.</string>
+    <string name="tuki_github">Sponsor on GitHub</string>
+    <string name="tuki_kahvi">Buy me a coffee</string>
+    <string name="tuki_paypal" translatable="false">PayPal</string>
+    <string name="versio_avoin">Open source · GitHub</string>
+    <string name="avain_tallennettu">Saved</string>
+    <string name="avain_ei_asetettu">Not set</string>
+    <string name="osio_avattu">Expanded</string>
+    <string name="osio_taitettu">Collapsed</string>
+    <string name="tallenna">Save</string>
 </resources>

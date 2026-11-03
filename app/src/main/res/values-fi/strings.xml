@@ -273,4 +273,18 @@
     <string name="enter_seuraava">Seuraava</string>
     <string name="enter_valmis">Valmis</string>
     <string name="linkki_ei_sovellusta">Mikään sovellus ei avaa tätä linkkiä</string>
+    <!-- Asetussivu: tilakortti, tukikortti ja rivien tilatekstit. -->
+    <string name="tila_valmis">Käytössä ja valittu</string>
+    <string name="tila_valmis_kuvaus">ARK-näppäimistö on tämän laitteen näppäimistö.</string>
+    <string name="tila_ota_kayttoon_nappi">Ota käyttöön</string>
+    <string name="tuki_otsikko">Tue ARK-näppäimistöä</string>
+    <string name="tuki_teksti">ARK-näppäimistö on ilmainen ja avointa lähdekoodia, ja pysyy sellaisena. Jos se tekee kirjoittamisesta mukavampaa, voit tarjota kahvin tai sponsoroida työtä.</string>
+    <string name="tuki_github">Sponsoroi GitHubissa</string>
+    <string name="tuki_kahvi">Tarjoa kahvi</string>
+    <string name="versio_avoin">Avoin lähdekoodi · GitHub</string>
+    <string name="avain_tallennettu">Tallennettu</string>
+    <string name="avain_ei_asetettu">Ei asetettu</string>
+    <string name="osio_avattu">Avattu</string>
+    <string name="osio_taitettu">Taitettu</string>
+    <string name="tallenna">Tallenna</string>
 </resources>

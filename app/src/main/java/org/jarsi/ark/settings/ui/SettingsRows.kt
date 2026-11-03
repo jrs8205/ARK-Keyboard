@@ -201,6 +201,7 @@ internal fun LinkRow(
 @Composable
 internal fun SliderRow(
     title: String,
+    description: String? = null,
     value: Int,
     range: IntRange,
     unit: String,
@@ -216,12 +217,7 @@ internal fun SliderRow(
             .semantics(mergeDescendants = true) { stateDescription = stateText },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = colors.onCard,
-                modifier = Modifier.weight(1f),
-            )
+            RowTexts(title, description, Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             Surface(
                 shape = RoundedCornerShape(8.dp),

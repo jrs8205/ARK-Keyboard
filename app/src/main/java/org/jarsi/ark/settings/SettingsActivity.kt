@@ -2,41 +2,60 @@ package org.jarsi.ark.settings
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import android.text.InputType
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.edit
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.preference.EditTextPreference
-import androidx.preference.ListPreference
-import androidx.preference.Preference
-import androidx.preference.PreferenceFragmentCompat
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.lifecycle.Lifecycle
+import androidx.preference.PreferenceManager
 import org.jarsi.ark.R
 import org.jarsi.ark.data.ApiKeyStore
 import org.jarsi.ark.data.ChatGptPlan
 import org.jarsi.ark.dictation.OpenAiDictation
-import org.jarsi.ark.data.Backup
 import org.jarsi.ark.engine.AiRequests
-import org.jarsi.ark.data.BackupCodec
-import org.jarsi.ark.data.LearnedDataStamp
-import org.jarsi.ark.data.LearnedDatabase
-import org.jarsi.ark.theme.KeyboardTheme
-import org.jarsi.ark.theme.ThemeChoice
+import org.jarsi.ark.settings.ui.ArkSettingsTheme
+import org.jarsi.ark.settings.ui.ModelPicker
+import org.jarsi.ark.settings.ui.SettingsActions
+import org.jarsi.ark.settings.ui.SettingsScreen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
+import javax.net.ssl.HttpsURLConnection
 
-/** Näppäimistön asetukset ja käyttöönotto. Asetusten oma ulkoasu seuraa järjestelmää. */
+/**
+ * Näppäimistön asetukset Composella. Asetusten oma ulkoasu seuraa
+ * järjestelmää; näkymän tila elää [SettingsState]-oliossa ja Androidin
+ * rajapintoja kutsutaan vain täältä.
+ */
 class SettingsActivity : AppCompatActivity() {
+
+    private lateinit var prefs: SharedPreferences
+    private lateinit var state: SettingsState
+    private lateinit var backup: BackupActions
+    private val ioExecutor = Executors.newSingleThreadExecutor()
+    private val catalog = ModelCatalog(ioExecutor)
+    private val imeStatus = mutableStateOf(ImeStatus.NOT_ENABLED)
+    private val modelPicker = mutableStateOf<ModelPicker?>(null)
+
+    private val exportLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> if (uri != null) backup.export(uri) }
+
+    private val importLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) backup.import(uri) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Käynnistyskuva kuvakkeella myös Android 8–11:ssä; Android 12+
@@ -48,615 +67,246 @@ class SettingsActivity : AppCompatActivity() {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         }
         super.onCreate(savedInstanceState)
-        SettingsUi.install(this, content = null, showBack = false)
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.asetus_sisalto, SettingsFragment())
-                .commit()
-            // Ensimmäinen avaus ohjataan esittelyyn, joka opastaa myös
-            // näppäimistön käyttöönoton.
-            val prefs = androidx.preference.PreferenceManager
-                .getDefaultSharedPreferences(this)
-            if (!prefs.getBoolean(IntroActivity.PREF_SEEN, false)) {
-                startActivity(Intent(this, IntroActivity::class.java))
+        enableEdgeToEdge()
+        prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        state = SettingsState(
+            prefs,
+            finnish = resources.getBoolean(R.bool.kieli_suomi),
+            dynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+        )
+        backup = BackupActions(applicationContext, ioExecutor, ::toastOnUi)
+        val actions = SettingsActions(
+            enableIme = { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) },
+            selectIme = {
+                (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .showInputMethodPicker()
+            },
+            openIntro = { startActivity(Intent(this, IntroActivity::class.java)) },
+            openSymbols = { startActivity(Intent(this, SymbolOrderActivity::class.java)) },
+            openToolbar = { startActivity(Intent(this, ToolbarOrderActivity::class.java)) },
+            openLearnedWords = { startActivity(Intent(this, LearnedWordsActivity::class.java)) },
+            openLanguages = { startActivity(Intent(this, TranslationLanguagesActivity::class.java)) },
+            openChatGptLogin = { startActivity(Intent(this, ChatGptLoginActivity::class.java)) },
+            signOutChatGpt = ::signOutChatGpt,
+            exportBackup = {
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(Date())
+                exportLauncher.launch("ark-varmuuskopio-$date.json")
+            },
+            importBackup = { importLauncher.launch(arrayOf("application/json")) },
+            pickClaudeModel = ::pickClaudeModel,
+            pickOpenAiModel = ::pickOpenAiModel,
+            pickDictationModel = ::pickDictationModel,
+            saveClaudeKey = { saveKey(it, ApiKeyStore.Slot.CLAUDE) },
+            saveOpenAiKey = { saveKey(it, ApiKeyStore.Slot.OPENAI) },
+            openUrl = { SupportLinks.open(this, it) },
+            showToast = { Toast.makeText(this, it, Toast.LENGTH_LONG).show() },
+        )
+        val versionLabel = appVersion()
+        setContent {
+            ArkSettingsTheme {
+                SettingsScreen(
+                    state = state,
+                    imeStatus = imeStatus.value,
+                    versionLabel = versionLabel,
+                    modelPicker = modelPicker.value,
+                    onDismissModelPicker = { modelPicker.value = null },
+                    actions = actions,
+                )
             }
+        }
+        // Ensimmäinen avaus ohjataan esittelyyn, joka opastaa myös
+        // näppäimistön käyttöönoton.
+        if (savedInstanceState == null && !prefs.getBoolean(IntroActivity.PREF_SEEN, false)) {
+            startActivity(Intent(this, IntroActivity::class.java))
         }
     }
 
-    class SettingsFragment : PreferenceFragmentCompat() {
+    override fun onStart() {
+        super.onStart()
+        state.start()
+    }
 
-        /** Asennettu versio ja koontinumero, esim. "0.19.0 (17)". */
-        private fun appVersion(): String {
-            val context = requireContext()
-            val info = context.packageManager.getPackageInfo(context.packageName, 0)
-            return "${info.versionName} (${PackageInfoCompat.getLongVersionCode(info)})"
+    override fun onStop() {
+        state.stop()
+        super.onStop()
+    }
+
+    // Käyttöönoton tila päivittyy, kun järjestelmän asetuksista tai
+    // näppäimistövalitsimesta palataan tähän näkymään.
+    override fun onResume() {
+        super.onResume()
+        refreshImeStatus()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) refreshImeStatus()
+    }
+
+    override fun onDestroy() {
+        ioExecutor.shutdown()
+        backup.close()
+        super.onDestroy()
+    }
+
+    private fun refreshImeStatus() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val enabled = imm.enabledInputMethodList.any { it.packageName == packageName }
+        val selected = ImeSetup.isOwnIme(
+            Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD),
+            packageName,
+        )
+        imeStatus.value = ImeStatus.of(enabled, selected)
+    }
+
+    /** Sovelluksen nimi, asennettu versio ja koontinumero, esim. "ARK-näppäimistö 0.19.0 (17)". */
+    private fun appVersion(): String {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        return "${getString(R.string.app_name)} ${info.versionName} " +
+            "(${PackageInfoCompat.getLongVersionCode(info)})"
+    }
+
+    /**
+     * API-avain salataan Android Keystorella. Salaus voi epäonnistua
+     * laitteella, jonka Keystore on rikki: avain tallennetaan silti, jotta
+     * ominaisuus toimii, mutta käyttäjän pitää tietää se, koska
+     * asetusteksti lupaa salauksen.
+     */
+    private fun saveKey(key: String, slot: ApiKeyStore.Slot) {
+        if (!ApiKeyStore.save(prefs, key, slot)) {
+            Toast.makeText(this, R.string.asetus_avain_ei_salausta, Toast.LENGTH_LONG).show()
         }
+    }
 
-        // Korttirivit erottuvat raoillaan; kirjaston jakoviivat pois.
-        override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
-            super.onViewCreated(view, savedInstanceState)
-            setDivider(null)
-            setDividerHeight(0)
-        }
-
-        private val ioExecutor = Executors.newSingleThreadExecutor()
-        private var database: LearnedDatabase? = null
-
-        private val exportLauncher = registerForActivityResult(
-            ActivityResultContracts.CreateDocument("application/json")
-        ) { uri -> if (uri != null) exportBackup(uri) }
-
-        private val importLauncher = registerForActivityResult(
-            ActivityResultContracts.OpenDocument()
-        ) { uri -> if (uri != null) importBackup(uri) }
-
-        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-            setPreferencesFromResource(R.xml.asetukset, rootKey)
-            // API-avaimet kirjoitetaan piilotettuina kuten salasanat, eikä
-            // niitä tallenneta avoimina: ApiKeyStore salaa Android Keystorella.
-            setupApiKeyPreference("claude_api_avain", ApiKeyStore.Slot.CLAUDE)
-            setupApiKeyPreference("openai_api_avain", ApiKeyStore.Slot.OPENAI)
-            // Aiemmin avoimena tallennettu avain salataan kertaalleen.
-            preferenceManager.sharedPreferences?.let { prefs ->
-                ioExecutor.execute {
-                    ApiKeyStore.read(prefs, ApiKeyStore.Slot.CLAUDE)
-                    ApiKeyStore.read(prefs, ApiKeyStore.Slot.OPENAI)
-                }
-            }
-            setupAiServiceVisibility()
-            setupChatGptLogin()
-            setupDictationEngine()
-            setupThemeChoices()
-            findPreference<Preference>("versio")?.summary = appVersion()
-            findPreference<Preference>("avaa_ime_asetukset")?.setOnPreferenceClickListener {
-                startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
-                true
-            }
-            findPreference<Preference>("vaihda_nappaimisto")?.setOnPreferenceClickListener {
-                val imm = requireContext()
-                    .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showInputMethodPicker()
-                true
-            }
-            findPreference<Preference>("esittely")?.setOnPreferenceClickListener {
-                startActivity(Intent(requireContext(), IntroActivity::class.java))
-                true
-            }
-            findPreference<Preference>("opitut_sanat")?.setOnPreferenceClickListener {
-                startActivity(Intent(requireContext(), LearnedWordsActivity::class.java))
-                true
-            }
-            findPreference<Preference>("erikoismerkit")?.setOnPreferenceClickListener {
-                startActivity(Intent(requireContext(), SymbolOrderActivity::class.java))
-                true
-            }
-            findPreference<Preference>("tyokalurivi")?.setOnPreferenceClickListener {
-                startActivity(Intent(requireContext(), ToolbarOrderActivity::class.java))
-                true
-            }
-            findPreference<Preference>("kaannoskielet")?.setOnPreferenceClickListener {
-                startActivity(Intent(requireContext(), TranslationLanguagesActivity::class.java))
-                true
-            }
-            findPreference<Preference>("varmuuskopio_vie")?.setOnPreferenceClickListener {
-                val date = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(Date())
-                exportLauncher.launch("ark-varmuuskopio-$date.json")
-                true
-            }
-            findPreference<Preference>("varmuuskopio_tuo")?.setOnPreferenceClickListener {
-                importLauncher.launch(arrayOf("application/json"))
-                true
-            }
-            setupModelPreference(
-                key = "claude_malli",
-                defaultModel = AiRequests.MODEL,
-                slot = ApiKeyStore.Slot.CLAUDE,
-                modelsUrl = AiRequests.MODELS_ENDPOINT,
-                summaryRes = R.string.asetus_malli_nykyinen,
-                authorize = { connection, apiKey ->
-                    connection.setRequestProperty("x-api-key", apiKey)
-                    connection.setRequestProperty("anthropic-version", "2023-06-01")
-                },
-                parse = AiRequests::parseModels,
-            )
-            setupOpenAiModelPreference()
-        }
-
-        override fun onResume() {
-            super.onResume()
-            // Kirjautumisesta palatessa rivit kertovat uuden tilan.
-            refreshAiServiceRows(findPreference<ListPreference>("ai_palvelu")?.value)
-        }
-
-        /**
-         * ChatGPT-tilauksen kirjautuminen: kirjautumattomana rivi avaa
-         * selainkirjautumisen, kirjautuneena se kirjaa ulos. Uloskirjautuminen
-         * kumoaa tokenit myös palvelimella, ettei laitteelta mahdollisesti
-         * kopioitu tietue jää käyttökelpoiseksi.
-         */
-        private fun setupChatGptLogin() {
-            val pref = findPreference<Preference>("chatgpt_kirjautuminen") ?: return
-            pref.setOnPreferenceClickListener {
-                val prefs = preferenceManager.sharedPreferences
-                    ?: return@setOnPreferenceClickListener true
-                val login = ChatGptPlan.load(prefs)
-                if (login == null) {
-                    startActivity(Intent(requireContext(), ChatGptLoginActivity::class.java))
-                    return@setOnPreferenceClickListener true
-                }
-                MaterialAlertDialogBuilder(requireContext())
-                    .setMessage(R.string.chatgpt_uloskirjautuminen_varmistus)
-                    .setPositiveButton(R.string.chatgpt_kirjaudu_ulos) { _, _ ->
-                        ioExecutor.execute {
-                            // Paikallinen poisto tehdään aina; jos kumoaminen
-                            // ei onnistu (ei yhteyttä), lupa jää voimaan
-                            // OpenAI:n päässä ja siitä on kerrottava.
-                            val revoked = ChatGptPlan.revoke(login)
-                            ChatGptPlan.clear(prefs)
-                            activity?.runOnUiThread {
-                                if (!isAdded) return@runOnUiThread
-                                Toast.makeText(
-                                    requireContext(),
-                                    if (revoked) {
-                                        R.string.chatgpt_kirjauduttu_ulos
-                                    } else {
-                                        R.string.chatgpt_kirjauduttu_ulos_paikallisesti
-                                    },
-                                    Toast.LENGTH_LONG,
-                                ).show()
-                                refreshAiServiceRows(
-                                    findPreference<ListPreference>("ai_palvelu")?.value
-                                )
-                            }
-                        }
+    /**
+     * Uloskirjautuminen kumoaa tokenit myös palvelimella, ettei laitteelta
+     * mahdollisesti kopioitu tietue jää käyttökelpoiseksi. Paikallinen
+     * poisto tehdään aina; jos kumoaminen ei onnistu (ei yhteyttä), lupa
+     * jää voimaan OpenAI:n päässä ja siitä on kerrottava.
+     */
+    private fun signOutChatGpt() {
+        val login = ChatGptPlan.load(prefs) ?: return
+        ioExecutor.execute {
+            val revoked = ChatGptPlan.revoke(login)
+            ChatGptPlan.clear(prefs)
+            toastOnUi(
+                getString(
+                    if (revoked) {
+                        R.string.chatgpt_kirjauduttu_ulos
+                    } else {
+                        R.string.chatgpt_kirjauduttu_ulos_paikallisesti
                     }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
-                true
-            }
-        }
-
-        /**
-         * AI-käännöksen ChatGPT-malli: kirjautuneena lista haetaan tilauksen
-         * tokenilla (eri mallijoukko ja oma asetusavain), muuten API-avaimella.
-         * Tilauksen malleille ei näytetä hintaluokkaa, koska ne eivät maksa
-         * erikseen.
-         */
-        private fun setupOpenAiModelPreference() {
-            val pref = findPreference<Preference>("openai_malli") ?: return
-            updateOpenAiModelSummary()
-            pref.setOnPreferenceClickListener {
-                val prefs = preferenceManager.sharedPreferences
-                    ?: return@setOnPreferenceClickListener true
-                if (ChatGptPlan.exists(prefs)) {
-                    ioExecutor.execute {
-                        val (models, error) = ChatGptPlan.models(prefs)
-                        activity?.runOnUiThread {
-                            if (isAdded) {
-                                showModelPicker(
-                                    pref, ChatGptPlan.PREF_MODEL, null, models, error,
-                                    hints = false,
-                                ) { updateOpenAiModelSummary() }
-                            }
-                        }
-                    }
-                    return@setOnPreferenceClickListener true
-                }
-                val apiKey = ApiKeyStore.read(prefs, ApiKeyStore.Slot.OPENAI).orEmpty()
-                if (apiKey.isEmpty()) {
-                    Toast.makeText(
-                        requireContext(), R.string.malli_aseta_avain, Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnPreferenceClickListener true
-                }
-                fetchModels(
-                    AiRequests.OPENAI_MODELS_ENDPOINT,
-                    apiKey,
-                    { connection, key ->
-                        connection.setRequestProperty("authorization", "Bearer $key")
-                    },
-                    AiRequests::parseOpenAiModels,
-                ) { models, error ->
-                    showModelPicker(
-                        pref, "openai_malli", AiRequests.OPENAI_MODEL, models, error,
-                        hints = true,
-                    ) { updateOpenAiModelSummary() }
-                }
-                true
-            }
-        }
-
-        private fun updateOpenAiModelSummary() {
-            val pref = findPreference<Preference>("openai_malli") ?: return
-            val prefs = preferenceManager.sharedPreferences ?: return
-            pref.summary = if (ChatGptPlan.exists(prefs)) {
-                val current = prefs.getString(ChatGptPlan.PREF_MODEL, null)
-                    ?.takeIf { it.isNotBlank() }
-                    ?: getString(R.string.asetus_malli_tilaus_oletus)
-                getString(R.string.asetus_malli_nykyinen_chatgpt_tilaus, current)
-            } else {
-                val current = prefs.getString("openai_malli", null)
-                    ?.takeIf { it.isNotBlank() } ?: AiRequests.OPENAI_MODEL
-                getString(R.string.asetus_malli_nykyinen_openai, current)
-            }
-        }
-
-        private fun setupApiKeyPreference(key: String, slot: ApiKeyStore.Slot) {
-            findPreference<EditTextPreference>(key)?.apply {
-                setOnBindEditTextListener { edit ->
-                    edit.inputType = InputType.TYPE_CLASS_TEXT or
-                        InputType.TYPE_TEXT_VARIATION_PASSWORD
-                }
-                setOnPreferenceChangeListener { _, newValue ->
-                    preferenceManager.sharedPreferences?.let {
-                        // Salaus voi epäonnistua laitteella jonka Keystore on
-                        // rikki. Avain tallennetaan silti, jotta ominaisuus
-                        // toimii — mutta käyttäjän pitää tietää se, koska
-                        // asetusteksti lupaa salauksen.
-                        if (!ApiKeyStore.save(it, newValue as? String ?: "", slot)) {
-                            Toast.makeText(
-                                requireContext(),
-                                R.string.asetus_avain_ei_salausta,
-                                Toast.LENGTH_LONG,
-                            ).show()
-                        }
-                    }
-                    // Palvelurivin "Käytössä / Ei käytössä" seuraa avainta heti.
-                    refreshAiServiceRows(
-                        findPreference<ListPreference>("ai_palvelu")?.value
-                    )
-                    false
-                }
-            }
-        }
-
-        /**
-         * Sanelumoottorin valinta: OpenAI-tunnistus vaatii OpenAI-avaimen,
-         * ja valinnan yhteydessä muistutetaan jos se puuttuu — sanelu
-         * pudonnee muuten laitteen tunnistukseen.
-         */
-        // Taustakuvan värit vaativat Android 12:n järjestelmäpaletin.
-        private fun setupThemeChoices() {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
-            val pref = findPreference<ListPreference>(KeyboardTheme.PREF_KEY) ?: return
-            val dynamicIndex = pref.entryValues.indexOf(ThemeChoice.DYNAMIC.id)
-            if (dynamicIndex < 0) return
-            pref.entries = pref.entries.filterIndexed { i, _ -> i != dynamicIndex }.toTypedArray()
-            pref.entryValues =
-                pref.entryValues.filterIndexed { i, _ -> i != dynamicIndex }.toTypedArray()
-            if (pref.value == ThemeChoice.DYNAMIC.id) pref.value = ThemeChoice.SYSTEM.id
-        }
-
-        private fun setupDictationEngine() {
-            val pref = findPreference<ListPreference>("sanelu_moottori") ?: return
-            // Poistetun paikallisen tunnistuksen vanha valinta palautetaan
-            // oletukseen, ettei lista jää tyhjän arvon varaan.
-            if (pref.value != null && pref.value !in
-                resources.getStringArray(R.array.sanelu_moottori_arvot)
-            ) {
-                pref.value = "jarjestelma"
-            }
-            val names = resources.getStringArray(R.array.sanelu_moottori_nimet)
-            val values = resources.getStringArray(R.array.sanelu_moottori_arvot)
-            pref.summaryProvider = Preference.SummaryProvider<ListPreference> { p ->
-                val name = names.getOrNull(values.indexOf(p.value ?: "jarjestelma"))
-                    ?: names[0]
-                getString(R.string.asetus_sanelu_moottori_nykyinen, name)
-            }
-            // Mallivalinta koskee vain OpenAI-tunnistusta; muulloin piilossa.
-            fun updateModelRow(value: String?) {
-                findPreference<Preference>(OpenAiDictation.PREF_MODEL)?.isVisible =
-                    value == "openai"
-            }
-            updateModelRow(pref.value)
-            pref.setOnPreferenceChangeListener { _, newValue ->
-                updateModelRow(newValue as? String)
-                val needsKey = newValue == "openai" &&
-                    preferenceManager.sharedPreferences?.let {
-                        ApiKeyStore.exists(it, ApiKeyStore.Slot.OPENAI)
-                    } != true
-                if (needsKey) {
-                    Toast.makeText(
-                        requireContext(),
-                        R.string.sanelu_openai_ei_avainta,
-                        Toast.LENGTH_LONG,
-                    ).show()
-                }
-                true
-            }
-            setupModelPreference(
-                key = OpenAiDictation.PREF_MODEL,
-                defaultModel = OpenAiDictation.DEFAULT_MODEL,
-                slot = ApiKeyStore.Slot.OPENAI,
-                modelsUrl = AiRequests.OPENAI_MODELS_ENDPOINT,
-                summaryRes = R.string.asetus_malli_nykyinen_openai,
-                authorize = { connection, apiKey ->
-                    connection.setRequestProperty("authorization", "Bearer $apiKey")
-                },
-                parse = AiRequests::parseTranscribeModels,
+                )
             )
         }
+    }
 
-        /** Näyttää valitun AI-palvelun mallirivin ja päivittää tilarivin. */
-        private fun setupAiServiceVisibility() {
-            val service = findPreference<ListPreference>("ai_palvelu") ?: return
-            refreshAiServiceRows(service.value)
-            service.setOnPreferenceChangeListener { _, newValue ->
-                refreshAiServiceRows(newValue as? String)
-                true
-            }
+    private fun pickClaudeModel() {
+        val apiKey = ApiKeyStore.read(prefs, ApiKeyStore.Slot.CLAUDE).orEmpty()
+        if (apiKey.isEmpty()) {
+            Toast.makeText(this, R.string.malli_aseta_avain, Toast.LENGTH_SHORT).show()
+            return
         }
+        catalog.fetch(
+            url = AiRequests.MODELS_ENDPOINT,
+            apiKey = apiKey,
+            connectionError = getString(R.string.yhteys_virhe),
+            authorize = { connection, key ->
+                connection.setRequestProperty("x-api-key", key)
+                connection.setRequestProperty("anthropic-version", "2023-06-01")
+            },
+            parse = AiRequests::parseModels,
+        ) { showModels(it, R.string.asetus_malli, "claude_malli", AiRequests.MODEL, hints = true) }
+    }
 
-        private fun refreshAiServiceRows(value: String?) {
-            val service = findPreference<ListPreference>("ai_palvelu") ?: return
-            val names = resources.getStringArray(R.array.ai_palvelu_nimet)
-            val values = resources.getStringArray(R.array.ai_palvelu_arvot)
-            val chatgpt = value == "chatgpt"
-            val planLogin = preferenceManager.sharedPreferences?.let { ChatGptPlan.load(it) }
-            val name = if (chatgpt && planLogin != null) {
-                getString(R.string.ai_palvelu_chatgpt_tilaus)
-            } else {
-                names.getOrNull(values.indexOf(value ?: "claude")) ?: names[0]
+    /**
+     * AI-käännöksen ChatGPT-malli: kirjautuneena lista haetaan tilauksen
+     * tokenilla (eri mallijoukko ja oma asetusavain), muuten API-avaimella.
+     */
+    private fun pickOpenAiModel() {
+        if (ChatGptPlan.exists(prefs)) {
+            catalog.fetchPlan(prefs) {
+                showModels(it, R.string.asetus_openai_malli, ChatGptPlan.PREF_MODEL, null, hints = false)
             }
-            // "Käytössä" vasta kun valitulla palvelulla on avain tai
-            // kirjautuminen — muuten rivi kertoo, mitä puuttuu.
-            val hasKey = (chatgpt && planLogin != null) ||
-                preferenceManager.sharedPreferences?.let {
-                    ApiKeyStore.exists(
-                        it,
-                        if (chatgpt) ApiKeyStore.Slot.OPENAI else ApiKeyStore.Slot.CLAUDE,
-                    )
-                } == true
-            findPreference<Preference>("chatgpt_kirjautuminen")?.summary =
-                if (planLogin != null) {
-                    getString(R.string.asetus_chatgpt_kirjautunut, planLogin.email.orEmpty())
-                } else {
-                    getString(R.string.asetus_chatgpt_kirjautuminen_kuvaus)
-                }
-            updateOpenAiModelSummary()
-            service.summary = getString(
-                if (hasKey) {
-                    R.string.asetus_ai_palvelu_nykyinen
-                } else {
-                    R.string.asetus_ai_palvelu_ei_avainta
-                },
-                name,
-            )
-            // Avainrivit näkyvät aina: OpenAI-avainta tarvitaan saneluun
-            // silloinkin, kun AI-käännös käyttää Claudea — palvelut
-            // toimivat rinnakkain eikä valinta piilota toisen avainta.
-            findPreference<Preference>("claude_malli")?.isVisible = !chatgpt
-            findPreference<Preference>("openai_malli")?.isVisible = chatgpt
+            return
         }
+        val apiKey = ApiKeyStore.read(prefs, ApiKeyStore.Slot.OPENAI).orEmpty()
+        if (apiKey.isEmpty()) {
+            Toast.makeText(this, R.string.malli_aseta_avain, Toast.LENGTH_SHORT).show()
+            return
+        }
+        catalog.fetch(
+            url = AiRequests.OPENAI_MODELS_ENDPOINT,
+            apiKey = apiKey,
+            connectionError = getString(R.string.yhteys_virhe),
+            authorize = ::bearer,
+            parse = AiRequests::parseOpenAiModels,
+        ) { showModels(it, R.string.asetus_openai_malli, "openai_malli", AiRequests.OPENAI_MODEL, hints = true) }
+    }
 
-        /**
-         * AI-käännöksen mallin valinta: lista haetaan palvelun
-         * Models-rajapinnasta käyttäjän omalla avaimella, joten uudet
-         * mallit näkyvät ilman sovelluspäivitystä.
-         */
-        private fun setupModelPreference(
-            key: String,
-            defaultModel: String,
-            slot: ApiKeyStore.Slot,
-            modelsUrl: String,
-            summaryRes: Int,
-            authorize: (javax.net.ssl.HttpsURLConnection, String) -> Unit,
-            parse: (String) -> List<Pair<String, String>>,
+    private fun pickDictationModel() {
+        val apiKey = ApiKeyStore.read(prefs, ApiKeyStore.Slot.OPENAI).orEmpty()
+        if (apiKey.isEmpty()) {
+            Toast.makeText(this, R.string.malli_aseta_avain, Toast.LENGTH_SHORT).show()
+            return
+        }
+        catalog.fetch(
+            url = AiRequests.OPENAI_MODELS_ENDPOINT,
+            apiKey = apiKey,
+            connectionError = getString(R.string.yhteys_virhe),
+            authorize = ::bearer,
+            parse = AiRequests::parseTranscribeModels,
         ) {
-            val pref = findPreference<Preference>(key) ?: return
-            fun updateSummary() {
-                val current = preferenceManager.sharedPreferences
-                    ?.getString(key, null)?.takeIf { it.isNotBlank() }
-                    ?: defaultModel
-                pref.summary = getString(summaryRes, current)
-            }
-            updateSummary()
-            pref.setOnPreferenceClickListener {
-                val apiKey = preferenceManager.sharedPreferences
-                    ?.let { ApiKeyStore.read(it, slot) }.orEmpty()
-                if (apiKey.isEmpty()) {
-                    Toast.makeText(
-                        requireContext(), R.string.malli_aseta_avain, Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnPreferenceClickListener true
-                }
-                fetchModels(modelsUrl, apiKey, authorize, parse) { models, error ->
-                    showModelPicker(pref, key, defaultModel, models, error, hints = true) {
-                        updateSummary()
-                    }
-                }
-                true
-            }
+            showModels(
+                it, R.string.asetus_sanelu_malli, OpenAiDictation.PREF_MODEL,
+                OpenAiDictation.DEFAULT_MODEL, hints = true,
+            )
         }
+    }
 
-        /** Mallivalikko haetusta listasta; ilman listaa syy kerrotaan. */
-        private fun showModelPicker(
-            pref: Preference,
-            key: String,
-            defaultModel: String?,
-            models: List<Pair<String, String>>?,
-            error: String?,
-            hints: Boolean,
-            onChosen: () -> Unit,
-        ) {
+    private fun bearer(connection: HttpsURLConnection, key: String) {
+        connection.setRequestProperty("authorization", "Bearer $key")
+    }
+
+    /**
+     * Mallivalikko haetusta listasta; ilman listaa syy kerrotaan, jotta
+     * väärä tai rajattu avain erottuu verkko-ongelmasta. Tulos näytetään
+     * vain, jos näkymä on yhä käyttäjän edessä.
+     */
+    private fun showModels(
+        result: ModelCatalog.Result,
+        titleRes: Int,
+        prefKey: String,
+        defaultModel: String?,
+        hints: Boolean,
+    ) {
+        runOnUiThread {
+            if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return@runOnUiThread
+            val models = result.models
             if (models.isNullOrEmpty()) {
-                // Syy näkyviin, jotta väärä tai rajattu avain erottuu
-                // verkko-ongelmasta ilman arvailua.
-                val message = error
+                val message = result.error
                     ?.let { getString(R.string.malli_haku_virhe_syy, it) }
                     ?: getString(R.string.malli_haku_virhe)
-                Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
-                return
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                return@runOnUiThread
             }
-            val current = preferenceManager.sharedPreferences
-                ?.getString(key, null) ?: defaultModel
-            val checked = models.indexOfFirst { it.first == current }
-            // Nopeus- ja hintaluokka auttaa valinnassa, kun
-            // mallilista elää eikä hintoja saada rajapinnasta.
-            val labels = models.map { model ->
-                if (hints) {
-                    AiRequests.modelHint(model.first)
-                        ?.let { "${model.second} – $it" } ?: model.second
-                } else {
-                    model.second
-                }
-            }
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle(pref.title)
-                .setSingleChoiceItems(labels.toTypedArray(), checked) { dialog, index ->
-                    preferenceManager.sharedPreferences?.edit()
-                        ?.putString(key, models[index].first)
-                        ?.apply()
-                    onChosen()
-                    dialog.dismiss()
-                }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
+            val labels = ModelCatalog.labels(models, hints)
+            modelPicker.value = ModelPicker(
+                title = getString(titleRes),
+                options = models.indices.map { models[it].first to labels[it] },
+                selected = prefs.getString(prefKey, null) ?: defaultModel,
+                onSelect = { value ->
+                    prefs.edit { putString(prefKey, value) }
+                    modelPicker.value = null
+                },
+            )
         }
+    }
 
-        private fun fetchModels(
-            url: String,
-            apiKey: String,
-            authorize: (javax.net.ssl.HttpsURLConnection, String) -> Unit,
-            parse: (String) -> List<Pair<String, String>>,
-            onResult: (List<Pair<String, String>>?, String?) -> Unit,
-        ) {
-            // Luetaan jo tässä: taustasäikeessä näkymä voi olla jo irronnut aktiviteetista.
-            val connectionError = getString(R.string.yhteys_virhe)
-            ioExecutor.execute {
-                var error: String? = null
-                val models = try {
-                    val connection = java.net.URL(url)
-                        .openConnection() as javax.net.ssl.HttpsURLConnection
-                    try {
-                        connection.connectTimeout = 10_000
-                        connection.readTimeout = 20_000
-                        authorize(connection, apiKey)
-                        if (connection.responseCode in 200..299) {
-                            connection.inputStream.bufferedReader().use { it.readText() }
-                                .let(parse)
-                        } else {
-                            val body = connection.errorStream
-                                ?.bufferedReader()?.use { it.readText() }
-                            error = AiRequests.parseErrorMessage(body)
-                                ?: "HTTP ${connection.responseCode}"
-                            null
-                        }
-                    } finally {
-                        connection.disconnect()
-                    }
-                } catch (e: Exception) {
-                    error = connectionError
-                    null
-                }
-                activity?.runOnUiThread {
-                    if (isAdded) onResult(models, error)
-                }
-            }
-        }
-
-        override fun onDestroy() {
-            ioExecutor.shutdown()
-            super.onDestroy()
-        }
-
-        // Suoritetaan taustasäikeessä; tietokanta avataan vasta tarvittaessa.
-        private fun openDao(context: Context) =
-            (database ?: LearnedDatabase.create(context).also { database = it }).dao()
-
-        private fun exportBackup(uri: Uri) {
-            val context = requireContext().applicationContext
-            ioExecutor.execute {
-                try {
-                    val dao = openDao(context)
-                    val backup = Backup(
-                        words = dao.allWords(),
-                        bigrams = dao.allBigrams(),
-                        trigrams = dao.allTrigrams(),
-                        // Kuvaleikkeet jäävät pois: ne ovat tiedostoja, eivät dataa.
-                        clips = dao.allClips().filter { it.pinned && it.text != null },
-                        // Asetukset mukaan, jotta näppäimistö toimii uudella
-                        // laitteella samoin; API-avaimet suodattuvat pois.
-                        settings = BackupCodec.exportableSettings(
-                            androidx.preference.PreferenceManager
-                                .getDefaultSharedPreferences(context).all
-                        ),
-                    )
-                    context.contentResolver.openOutputStream(uri, "wt")?.use {
-                        it.write(BackupCodec.encode(backup).toByteArray(Charsets.UTF_8))
-                    } ?: error("Tiedosto ei auennut")
-                    toast(
-                        context.getString(
-                            R.string.varmuuskopio_viety,
-                            context.resources.getQuantityString(
-                                R.plurals.varmuuskopio_sanoja, backup.words.size, backup.words.size
-                            ),
-                            context.resources.getQuantityString(
-                                R.plurals.varmuuskopio_leikkeita, backup.clips.size, backup.clips.size
-                            ),
-                        )
-                    )
-                } catch (e: Exception) {
-                    toast(context.getString(R.string.varmuuskopio_virhe))
-                }
-            }
-        }
-
-        private fun importBackup(uri: Uri) {
-            val context = requireContext().applicationContext
-            ioExecutor.execute {
-                try {
-                    val text = context.contentResolver.openInputStream(uri)
-                        ?.bufferedReader()?.use { it.readText() }
-                        ?: error("Tiedosto ei auennut")
-                    val backup = BackupCodec.decode(text)
-                    val dao = openDao(context)
-                    dao.upsertWords(BackupCodec.mergeWords(dao.allWords(), backup.words))
-                    dao.upsertBigrams(BackupCodec.mergeBigrams(dao.allBigrams(), backup.bigrams))
-                    dao.upsertTrigrams(
-                        BackupCodec.mergeTrigrams(dao.allTrigrams(), backup.trigrams)
-                    )
-                    BackupCodec.newClips(dao.allClips(), backup.clips, System.currentTimeMillis())
-                        .forEach { dao.upsertClip(it) }
-                    if (backup.settings.isNotEmpty()) {
-                        val editor = androidx.preference.PreferenceManager
-                            .getDefaultSharedPreferences(context).edit()
-                        backup.settings.forEach { (key, value) ->
-                            when (value) {
-                                is Boolean -> editor.putBoolean(key, value)
-                                is Int -> editor.putInt(key, value)
-                                is Long -> editor.putLong(key, value)
-                                is String -> editor.putString(key, value)
-                            }
-                        }
-                        editor.apply()
-                    }
-                    LearnedDataStamp.bump()
-                    toast(
-                        context.getString(
-                            R.string.varmuuskopio_tuotu,
-                            context.resources.getQuantityString(
-                                R.plurals.varmuuskopio_sanoja, backup.words.size, backup.words.size
-                            ),
-                            context.resources.getQuantityString(
-                                R.plurals.varmuuskopio_leikkeita, backup.clips.size, backup.clips.size
-                            ),
-                        )
-                    )
-                    if (backup.settings.isNotEmpty()) {
-                        // Asetusrivit näyttäisivät muuten vanhat arvot.
-                        activity?.runOnUiThread { activity?.recreate() }
-                    }
-                } catch (e: Exception) {
-                    toast(context.getString(R.string.varmuuskopio_virhe))
-                }
-            }
-        }
-
-        private fun toast(message: String) {
-            val activity = activity ?: return
-            activity.runOnUiThread {
-                Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
+    private fun toastOnUi(message: String) {
+        runOnUiThread {
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }
     }

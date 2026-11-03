@@ -2,8 +2,8 @@ package org.jarsi.ark.settings
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
+import androidx.core.net.toUri
 import org.jarsi.ark.R
 
 /**
@@ -35,7 +35,7 @@ object SupportLinks {
     /** Avaa linkin; jos mikään sovellus ei ota sitä vastaan, kerrotaan toastilla. */
     fun open(context: Context, url: String) {
         val opened = targets(url).any { target ->
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(target.url))
+            val intent = Intent(Intent.ACTION_VIEW, target.url.toUri())
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             target.packageName?.let { intent.setPackage(it) }
             runCatching { context.startActivity(intent) }.isSuccess

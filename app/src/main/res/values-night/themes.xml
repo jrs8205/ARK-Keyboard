@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Ark" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="preferenceTheme">@style/ArkPreferenceTheme</item>
         <item name="colorPrimary">@color/tumma_korostus</item>
         <item name="colorOnPrimary">@color/tumma_korostusteksti</item>
         <item name="android:colorBackground">@color/tumma_tausta</item>

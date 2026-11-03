@@ -2,6 +2,7 @@ package org.jarsi.ark.settings
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import org.jarsi.ark.R
 import org.jarsi.ark.data.Backup
@@ -69,16 +70,16 @@ class BackupActions(
                 BackupCodec.newClips(dao.allClips(), backup.clips, System.currentTimeMillis())
                     .forEach { dao.upsertClip(it) }
                 if (backup.settings.isNotEmpty()) {
-                    val editor = PreferenceManager.getDefaultSharedPreferences(context).edit()
-                    backup.settings.forEach { (key, value) ->
-                        when (value) {
-                            is Boolean -> editor.putBoolean(key, value)
-                            is Int -> editor.putInt(key, value)
-                            is Long -> editor.putLong(key, value)
-                            is String -> editor.putString(key, value)
+                    PreferenceManager.getDefaultSharedPreferences(context).edit {
+                        backup.settings.forEach { (key, value) ->
+                            when (value) {
+                                is Boolean -> putBoolean(key, value)
+                                is Int -> putInt(key, value)
+                                is Long -> putLong(key, value)
+                                is String -> putString(key, value)
+                            }
                         }
                     }
-                    editor.apply()
                 }
                 LearnedDataStamp.bump()
                 toast(summary(R.string.varmuuskopio_tuotu, backup))

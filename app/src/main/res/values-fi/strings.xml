@@ -4,7 +4,6 @@
     <string name="subtype_suomi">suomi</string>
 
     <!-- Asetukset -->
-    <string name="asetukset_kayttoonotto">Käyttöönotto</string>
     <string name="ota_kayttoon">Ota näppäimistö käyttöön</string>
     <string name="ota_kayttoon_kuvaus">Avaa järjestelmän asetukset ja salli ARK-näppäimistö</string>
     <string name="vaihda_nappaimistoksi">Vaihda näppäimistöksi</string>
@@ -87,7 +86,6 @@
     <string name="asetus_api_avain">Claude API -avain</string>
     <string name="asetus_api_avain_kuvaus">Ottaa käyttöön käännösnäkymän AI-käännöksen. Teksti lähetetään Anthropicin palveluun vain kun käytät toimintoa itse; avain säilyy vain tällä laitteella salattuna.</string>
     <string name="asetus_malli">AI-käännöksen Claude-malli</string>
-    <string name="asetus_versio">Versio</string>
     <string name="asetus_malli_nykyinen">Käytössä: %1$s. Lista haetaan Anthropicilta omalla avaimellasi.</string>
     <string name="asetus_openai_avain">OpenAI API -avain (ChatGPT)</string>
     <string name="asetus_openai_avain_kuvaus">Ottaa käyttöön käännösnäkymän AI-käännöksen ja OpenAI-sanelun. Teksti tai puhe lähetetään OpenAI:n palveluun vain kun käytät toimintoa itse; avain säilyy vain tällä laitteella salattuna.</string>
@@ -204,7 +202,6 @@
 
     <!-- Ensiasennuksen esittely -->
     <string name="esittely">Esittely</string>
-    <string name="esittely_kuvaus">Katso käyttöönoton opastus uudelleen</string>
     <string name="esittely_ohita">Ohita</string>
     <string name="esittely_seuraava">Seuraava</string>
     <string name="esittely_valmis_nappi">Valmis</string>
@@ -287,4 +284,5 @@
     <string name="osio_avattu">Avattu</string>
     <string name="osio_taitettu">Taitettu</string>
     <string name="tallenna">Tallenna</string>
+    <string name="asetukset">Asetukset</string>
 </resources>

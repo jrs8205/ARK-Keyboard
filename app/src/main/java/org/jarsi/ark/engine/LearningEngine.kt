@@ -19,6 +19,8 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         var acceptedCount: Int = 0,
         var ignoredCount: Int = 0,
         var pinned: Boolean = false,
+        /** Taivutusperheen avain, laskettu kerran sanan syntyessä. */
+        val stem: String = "",
     )
 
     private class CountState(var count: Int, var lastUsed: Long)
@@ -59,20 +61,22 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
 
     /** Sanan tila; uusi sana liitetään samalla taivutusperheeseensä. */
     private fun stateFor(key: String, word: String): WordState = words.getOrPut(key) {
-        families.getOrPut(WordTools.stem(key)) { HashSet() } += key
-        WordState(word, 0, clock(), false, clock())
+        val stem = WordTools.stem(key)
+        families.getOrPut(stem) { HashSet() } += key
+        WordState(word, 0, clock(), false, clock(), stem = stem)
     }
 
     /** Saman vartalon muiden käytettyjen muotojen käyttö (määrä × tuoreus). */
-    private fun familyUsageOf(key: String): Float {
-        val members = families[WordTools.stem(key)] ?: return 0f
+    private fun familyUsageOf(state: WordState, key: String): Float {
+        val members = families[state.stem] ?: return 0f
         if (members.size < 2) return 0f
+        val now = clock()
         var sum = 0f
         for (member in members) {
             if (member == key) continue
-            val state = words[member] ?: continue
-            if (state.blocked || state.count == 0) continue
-            sum += state.count * recency(state.lastUsed)
+            val other = words[member] ?: continue
+            if (other.blocked || other.count == 0) continue
+            sum += other.count * recency(other.lastUsed, now)
         }
         return sum
     }
@@ -111,11 +115,12 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         trigrams.clear()
         for (w in loadedWords) {
             val key = keyOf(w.word)
+            val stem = WordTools.stem(key)
             words[key] = WordState(
                 w.word, w.count, w.lastUsed, w.blocked, w.created,
-                w.acceptedCount, w.ignoredCount, w.pinned,
+                w.acceptedCount, w.ignoredCount, w.pinned, stem,
             )
-            families.getOrPut(WordTools.stem(key)) { HashSet() } += key
+            families.getOrPut(stem) { HashSet() } += key
         }
         for (b in loadedBigrams) {
             bigrams.getOrPut(b.previous) { HashMap() }[b.next] = CountState(b.count, b.lastUsed)
@@ -188,7 +193,12 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
      */
     @Synchronized
     fun onSuggestionAccepted(word: String) {
-        if (!loaded) return
+        // Kylmäkäynnistyksessä hyväksyntää ei jonoteta; ketju katkaistaan,
+        // ettei jonossa oleva lauseen alku tartu seuraavaan sanaan.
+        if (!loaded) {
+            resetContext()
+            return
+        }
         val key = keyOf(word)
         val state = stateFor(key, word)
         adoptLowercase(state, word)
@@ -207,7 +217,10 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
      */
     @Synchronized
     fun onTypedWordAccepted(word: String) {
-        if (!loaded) return
+        if (!loaded) {
+            resetContext()
+            return
+        }
         if (isEligibleWord(word)) {
             val key = keyOf(word)
             val state = stateFor(key, word)
@@ -280,6 +293,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
     /** Sanan pisteytyssignaalit tai null, jos sanasta ei ole mitään tietoa. */
     @Synchronized
     fun signals(word: String): WordSignals? = words[keyOf(word)]?.let {
+        val key = keyOf(word)
         WordSignals(
             usage = it.count * recency(it.lastUsed),
             count = it.count,
@@ -290,13 +304,9 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
             ignoredCount = it.ignoredCount,
             pinned = it.pinned,
             blocked = it.blocked,
-            familyUsage = familyUsageOf(keyOf(word)),
+            familyUsage = familyUsageOf(it, key),
         )
     }
-
-    /** Saman vartalon muiden omien muotojen käyttö yhteensä. */
-    @Synchronized
-    fun familyUsage(word: String): Float = familyUsageOf(keyOf(word))
 
     /** Tallennettu kirjoitusasu tai avain sellaisenaan. */
     @Synchronized
@@ -340,8 +350,8 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
     }
 
     /** Tuoreuskerroin: alle 7 pv ×1,0, alle 30 pv ×0,7, muuten ×0,4. */
-    private fun recency(lastUsed: Long): Float {
-        val age = clock() - lastUsed
+    private fun recency(lastUsed: Long, now: Long = clock()): Float {
+        val age = now - lastUsed
         return when {
             age < 7L * 24 * 60 * 60 * 1000 -> 1.0f
             age < 30L * 24 * 60 * 60 * 1000 -> 0.7f
@@ -409,10 +419,14 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
     @Synchronized
     fun removeWord(word: String) {
         val key = keyOf(word)
-        if (words.remove(key) != null) {
+        words.remove(key)?.let { removed ->
             dirtyWords -= key
             removedWords += key
-            families[WordTools.stem(key)]?.remove(key)
+            val family = families[removed.stem]
+            if (family != null) {
+                family.remove(key)
+                if (family.isEmpty()) families.remove(removed.stem)
+            }
         }
         // Myös sanaketjut siivotaan, ettei poistettu sana palaa ennustuksista.
         bigrams.remove(key)

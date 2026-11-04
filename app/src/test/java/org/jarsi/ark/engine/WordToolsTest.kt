@@ -103,6 +103,15 @@ class WordToolsTest {
     }
 
     @Test
+    fun `viimeinen sana loytyy lauseen lopun yli`() {
+        assertEquals("Kiitos", WordTools.lastWord("Kiitos! "))
+        assertEquals("kiitos", WordTools.lastWord("no kiitos. "))
+        assertEquals("hei", WordTools.lastWord("hei\nmoi"))
+        assertEquals(null, WordTools.lastWord(""))
+        assertEquals(null, WordTools.lastWord("moi"))
+    }
+
+    @Test
     fun `rajamerkki vie kiintion viimeisena`() =
         assertEquals(listOf("hei", "moi"), WordTools.previousWords("Jaa. hei moi ", 2))
 
@@ -323,6 +332,14 @@ class WordToolsTest {
 
     @Test
     fun `paljonko kuorii liitteen ja paatteen`() = assertEquals("paljo", WordTools.stem("paljonko"))
+
+    @Test
+    fun `a-loppuinen perusmuoto kuuluu samaan perheeseen kuin taivutusmuotonsa`() {
+        listOf("kissa", "kissan", "kissaa", "kissassa").forEach { assertEquals(it, "kiss", WordTools.stem(it)) }
+        listOf("kirja", "kirjan", "kirjaa").forEach { assertEquals(it, "kirj", WordTools.stem(it)) }
+        assertEquals("kala", WordTools.stem("kala"))
+        assertEquals("kala", WordTools.stem("kalan"))
+    }
 
     @Test
     fun `lyhyt sana ei kuoriudu alle neljan`() {

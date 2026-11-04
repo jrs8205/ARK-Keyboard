@@ -50,6 +50,16 @@ class LearningEngineTest {
     }
 
     @Test
+    fun `kylmakaynnistyksessa hylatty hyvaksynta ei siirra lauseen alkua seuraavaan sanaan`() {
+        val e = LearningEngine { now }
+        e.onSentenceStart()
+        e.onSuggestionAccepted("hei")
+        e.onWordCommitted("sinä")
+        e.load(emptyList(), emptyList(), emptyList())
+        assertEquals(emptyList<String>(), e.predictNext(listOf(LearningEngine.SENTENCE_START)))
+    }
+
+    @Test
     fun `lauseen alun sana oppii rajaparin`() {
         val e = engine()
         e.onWordCommitted("moi")

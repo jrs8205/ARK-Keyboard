@@ -337,11 +337,23 @@ class SuggestionEngineTest {
         repeat(3) { l.onWordCommitted("hei"); l.onWordCommitted("kaupunginvaltuustossa") }
         l.resetContext()
         repeat(3) { l.onWordCommitted("hei"); l.onWordCommitted("moi") }
-        // hei → moi ja hei → kaupunginvaltuustossa ovat tasapelissä; ilman
-        // täydennysarvoa kumpikin on kahden kärjessä ja tulos on deterministinen.
-        val result = s.emptyInput(listOf("hei"), includeCommon = false)
-        assertEquals(setOf("moi", "kaupunginvaltuustossa"), result.take(2).toSet())
-        assertEquals(result, s.emptyInput(listOf("hei"), includeCommon = false))
+        l.resetContext()
+        l.onWordCommitted("moi")
+        // Parit ovat tasan; "moi" on käytetympi ja voittaa vain, jos tyhjä
+        // syöte ei anna pitkälle sanalle täydennysarvoa.
+        assertEquals(listOf("moi", "kaupunginvaltuustossa"), s.emptyInput(listOf("hei"), includeCommon = false))
+    }
+
+    @Test
+    fun `korjausvaihtoehdot eivat suosi pitkia sanoja`() {
+        val (s, l) = build("kala 100")
+        repeat(3) { l.onWordCommitted("hei"); l.onWordCommitted("kaupunginvaltuustossa") }
+        l.resetContext()
+        repeat(3) { l.onWordCommitted("hei"); l.onWordCommitted("moi") }
+        l.resetContext()
+        l.onWordCommitted("moi")
+        // Lyhyt sana saa vaihtoehdot kontekstista; käytetympi "moi" ensin.
+        assertEquals("moi", s.alternatives("mio", listOf("hei")).first())
     }
 
     @Test

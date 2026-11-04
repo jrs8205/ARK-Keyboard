@@ -3531,13 +3531,15 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         // Käännöstilassa ehdotukset lasketaan siitä alueesta, jota kirjoitetaan.
         // Käännösnäkymässä koko puskuri on käytettävissä, joten sen alku on
         // lauseen alku; kentästä luetaan yksi merkki yli ikkunan samasta syystä.
-        val before: CharSequence = if (translateMode) {
+        val read: CharSequence? = if (translateMode) {
             val buffer = activeTranslateBuffer()
             buffer.text.substring(0, buffer.cursor)
         } else {
-            currentInputConnection?.let { readContextBefore(it) } ?: ""
+            currentInputConnection?.let { readContextBefore(it) }
         }
-        val startIsSentence = translateMode || before.length <= MAX_WORD_LOOKBACK
+        val before: CharSequence = read ?: ""
+        // Lukukelvoton kenttä ei ole lauseen alku: sen sijainnista ei tiedetä mitään.
+        val startIsSentence = translateMode || (read != null && before.length <= MAX_WORD_LOOKBACK)
         // Lauseen alussa (automaattinen iso kirjain päällä) ehdotukset alkavat isolla.
         val shiftActive = shift.state != ShiftState.OFF
         val index = emojiIndex
@@ -3545,9 +3547,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         executeSuggest {
             val word = WordTools.currentWord(before)
             val context = WordTools.previousWords(before, startIsSentence = startIsSentence)
-            // Emoji kirjoitettavalle tai juuri valmistuneelle sanalle.
+            // Emoji kirjoitettavalle tai juuri valmistuneelle sanalle; lauseen
+            // raja ei piilota sitä ("Kiitos! " saa yhä kiitos-emojin).
             val emoji = index
-                ?.suggest(word.ifEmpty { context.lastOrNull().orEmpty() }, recents?.recent.orEmpty().toSet())
+                ?.suggest(word.ifEmpty { WordTools.lastWord(before).orEmpty() }, recents?.recent.orEmpty().toSet())
                 .orEmpty()
                 .map { SuggestionItem.Emoji(recents?.variantFor(it.emoji) ?: it.emoji) }
             val candidates = if (word.isNotEmpty()) {

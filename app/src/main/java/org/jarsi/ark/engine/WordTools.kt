@@ -13,9 +13,10 @@ object WordTools {
     // Taivutusperheen karkea vartalo: liitepartikkelit, tavallisimmat
     // sijapäätteet ja vartalon loppuvokaalit kuoritaan, jotta saman sanan
     // muodot (sovellus, sovelluksen, sovelluksessa) saavat saman avaimen.
-    // Heuristiikka: astevaihtelua ei tunneta (kaupunki/kaupungin eroavat),
-    // mutta sama funktio käsittelee kaikki muodot, joten ryhmittely on
-    // johdonmukainen. Vartalo on aina vähintään [STEM_MIN] merkkiä.
+    // Heuristiikka: astevaihtelua ei tunneta (kaupunki/kaupungin eroavat)
+    // ja sta/ta on pinnalta kaksiselitteinen (sovellusta → sovellu), mutta
+    // sama funktio käsittelee kaikki muodot. Vartalo on aina vähintään
+    // [STEM_MIN] merkkiä.
     private const val STEM_MIN = 4
     private val CLITICS = listOf("kaan", "kään", "kin", "han", "hän", "ko", "kö", "pa", "pä")
     private val CASE_ENDINGS = listOf(
@@ -23,6 +24,7 @@ object WordTools {
         "ta", "tä", "na", "nä", "a", "ä", "n", "t",
     )
     private const val VOWELS = "aeiouyäö"
+    private const val STEM_VOWELS = "eiaä"
 
     /**
      * Karkea vartalo pienennetylle avaimelle [key]. Muut kuin kirjaimista
@@ -46,8 +48,10 @@ object WordTools {
         if (s.length > STEM_MIN && s[s.length - 1] == s[s.length - 2] && s.last() in VOWELS) {
             s = s.dropLast(1)
         }
-        // Vartalon sidevokaali pois (sovellukse → sovelluks, kaikki → kaikk).
-        while (s.length > STEM_MIN && (s.last() == 'e' || s.last() == 'i')) s = s.dropLast(1)
+        // Vartalon loppuvokaali pois (sovellukse → sovelluks, kaikki → kaikk,
+        // kissa → kiss): näin perusmuoto päätyy samaan perheeseen kuin
+        // taivutusmuotonsa, joista pääte on juuri kuorittu.
+        while (s.length > STEM_MIN && s.last() in STEM_VOWELS) s = s.dropLast(1)
         // us/ukse-vaihtelu (sovelluks → sovellus).
         if (s.length > STEM_MIN && s.endsWith("ks")) s = s.dropLast(2) + "s"
         return s
@@ -205,6 +209,19 @@ object WordTools {
             end -= word.length
         }
         return words.toList()
+    }
+
+    /**
+     * Viimeinen valmis sana kursorin keskeneräisen sanan edeltä lauseen
+     * rajasta välittämättä, tai null jos sitä ei ole. Emojiehdotus hakee
+     * tällä juuri päättyneen sanan ("Kiitos! " → kiitos), jota lauseen
+     * raja ei saa piilottaa.
+     */
+    fun lastWord(textBefore: CharSequence): String? {
+        var end = textBefore.length - currentWord(textBefore).length
+        while (end > 0 && !isCore(textBefore[end - 1])) end--
+        if (end == 0) return null
+        return currentWord(textBefore.subSequence(0, end)).takeIf { it.isNotEmpty() }
     }
 
     /** Liu'utuspoiston pituus: [words] sanaa kursorin edeltä, enintään koko teksti. */

@@ -155,12 +155,12 @@ class PredictionBenchmarkTest {
                     val result = engine.suggest(target.take(p), case.context)
                     queries++
                     val visible = result.take(TOP).map { it.lowercase() }
-                    junkHits += visible.count { it in loaded.junk }
+                    // Roska lasketaan vain top3-osumaan asti, jotta luku ei
+                    // riipu siitä, kuinka pitkälle top1-haku jatkuu.
+                    if (firstTop3 == target.length) junkHits += visible.count { it in loaded.junk }
                     if (firstTop1 == target.length && visible.firstOrNull() == target) firstTop1 = p
-                    if (firstTop3 == target.length && target in visible) {
-                        firstTop3 = p
-                        break
-                    }
+                    if (firstTop3 == target.length && target in visible) firstTop3 = p
+                    if (firstTop1 < target.length) break
                 }
                 val w = case.weight
                 weightSum += w

@@ -39,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -208,6 +210,7 @@ internal fun SliderRow(
     onValueChangeFinished: (Int) -> Unit,
 ) {
     val colors = LocalSettingsColors.current
+    val haptic = LocalHapticFeedback.current
     var current by remember(value) { mutableIntStateOf(value) }
     val stateText = "$current $unit"
     Column(
@@ -235,7 +238,12 @@ internal fun SliderRow(
         Slider(
             modifier = Modifier.semantics { stateDescription = stateText },
             value = current.toFloat(),
-            onValueChange = { current = it.roundToInt().coerceIn(range) },
+            onValueChange = {
+                val next = it.roundToInt().coerceIn(range)
+                // Askel tuntuu sormessa kuten laitteen omissa säätimissä.
+                if (next != current) haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+                current = next
+            },
             valueRange = range.first.toFloat()..range.last.toFloat(),
             steps = (range.last - range.first - 1).coerceAtLeast(0),
             onValueChangeFinished = { onValueChangeFinished(current) },

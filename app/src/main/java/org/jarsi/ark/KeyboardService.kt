@@ -2876,6 +2876,11 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
                 override fun onClear() {
                     feedback()
+                    // Tyhjennys tarkoittaa alusta aloittamista: käynnissä oleva
+                    // sanelu päättyy, koska tunnistin toimittaa keskeneräisen
+                    // lauseen aina kokonaisena ja kirjoittaisi sen muuten heti
+                    // takaisin riville.
+                    stopDictation()
                     translateBuffer.clear()
                     currentTranslation = ""
                     translationFresh = false

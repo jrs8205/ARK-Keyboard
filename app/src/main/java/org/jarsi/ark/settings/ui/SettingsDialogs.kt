@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -20,12 +21,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -101,7 +103,9 @@ internal fun SecretDialog(
     onSave: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var text by remember { mutableStateOf("") }
+    // Kirjoitettu avain säilyy pyörityksessä kuten dialogi itsekin; muuten
+    // Tallenna tyhjällä kentällä poistaisi vanhan avaimen huomaamatta.
+    var text by rememberSaveable { mutableStateOf("") }
     val colors = LocalSettingsColors.current
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -110,12 +114,15 @@ internal fun SecretDialog(
         title = { CappedFontScale { Text(title) } },
         text = {
             CappedFontScale {
+                // Näppäimistön Valmis tallentaa: vaakatilassa korkea näppäimistö
+                // voi peittää dialogin napit.
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onSave(text.trim()) }),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

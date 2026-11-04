@@ -196,10 +196,19 @@ class SuggestionEngineTest {
     }
 
     @Test
-    fun `omat sanat nousevat karkeen`() {
+    fun `kahdesti kirjoitettu oma sana nousee yleissanan edelle`() {
+        val (s, l) = build("auto 100", "autio 50")
+        repeat(2) { l.onWordCommitted("autotalli") }
+        assertEquals(listOf("autotalli", "auto", "autio"), s.suggest("au"))
+    }
+
+    @Test
+    fun `kerran kirjoitettu sana on ehdolla mutta ei ohita yleissanaa`() {
         val (s, l) = build("auto 100", "autio 50")
         l.onWordCommitted("autotalli")
-        assertEquals(listOf("autotalli", "auto", "autio"), s.suggest("au"))
+        val result = s.suggest("au")
+        assertEquals("auto", result.first())
+        assertTrue("autotalli" in result)
     }
 
     @Test

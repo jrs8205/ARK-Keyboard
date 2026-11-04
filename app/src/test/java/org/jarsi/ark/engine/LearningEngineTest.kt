@@ -13,6 +13,16 @@ class LearningEngineTest {
         LearningEngine { now }.apply { load(emptyList(), emptyList(), emptyList()) }
 
     @Test
+    fun `kerran kirjoitettu ei ole viela kasin kirjoitettu signaali`() {
+        val e = engine()
+        e.onWordCommitted("mutti")
+        assertFalse(e.signals("mutti")!!.manuallyTyped)
+        assertTrue(e.isOwnWord("mutti"))
+        e.onWordCommitted("mutti")
+        assertTrue(e.signals("mutti")!!.manuallyTyped)
+    }
+
+    @Test
     fun `pienella kirjoitettu korvaa lauseen alussa opitun asun`() {
         val e = engine()
         e.onWordCommitted("Jako")

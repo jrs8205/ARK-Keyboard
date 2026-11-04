@@ -232,7 +232,9 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
     fun signals(word: String): WordSignals? = words[keyOf(word)]?.let {
         WordSignals(
             usage = it.count * recency(it.lastUsed),
-            manuallyTyped = it.count > 0,
+            // Yksi kirjoituskerta voi olla kirjoitusvirhe: oman sanan bonus
+            // alkaa vasta toisesta kerrasta.
+            manuallyTyped = it.count >= 2,
             acceptedCount = it.acceptedCount,
             ignoredCount = it.ignoredCount,
             pinned = it.pinned,

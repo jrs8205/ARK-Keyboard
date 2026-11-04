@@ -12,7 +12,11 @@ data class LearnedWord(
     val pinned: Boolean = false,
 )
 
-/** Sanan pisteytyssignaalit; [usage] on käyttömäärä × tuoreuskerroin. */
+/**
+ * Sanan pisteytyssignaalit; [usage] on käyttömäärä × tuoreuskerroin ja
+ * [manuallyTyped] tosi vasta vähintään kahdesti kirjoitetulle sanalle, koska
+ * yksi kerta voi olla kirjoitusvirhe.
+ */
 data class WordSignals(
     val usage: Float,
     val manuallyTyped: Boolean,

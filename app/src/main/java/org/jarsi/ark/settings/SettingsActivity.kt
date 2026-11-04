@@ -28,6 +28,8 @@ import org.jarsi.ark.settings.ui.ArkSettingsTheme
 import org.jarsi.ark.settings.ui.ModelPicker
 import org.jarsi.ark.settings.ui.SettingsActions
 import org.jarsi.ark.settings.ui.SettingsScreen
+import org.jarsi.ark.theme.KeyboardTheme
+import org.jarsi.ark.theme.ThemeChoice
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -35,8 +37,8 @@ import java.util.concurrent.Executors
 import javax.net.ssl.HttpsURLConnection
 
 /**
- * Näppäimistön asetukset Composella. Asetusten oma ulkoasu seuraa
- * järjestelmää; näkymän tila elää [SettingsState]-oliossa ja Androidin
+ * Näppäimistön asetukset Composella. Asetusten ulkoasu seuraa näppäimistön
+ * teemavalintaa; näkymän tila elää [SettingsState]-oliossa ja Androidin
  * rajapintoja kutsutaan vain täältä.
  */
 class SettingsActivity : AppCompatActivity() {
@@ -57,18 +59,22 @@ class SettingsActivity : AppCompatActivity() {
         ActivityResultContracts.OpenDocument()
     ) { uri -> if (uri != null) backup.import(uri) }
 
+    // Näppäimistön teemavalinta määrää myös asetussivun ja alisivujen yötilan.
+    // Muutos tulee asetustiedoston kautta (myös varmuuskopion tuonnista), ja
+    // AppCompat luo näkymän uudelleen, jos yötila vaihtuu.
+    private val themeListener = SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+        if (key == KeyboardTheme.PREF_KEY) applyNightMode(p)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Käynnistyskuva kuvakkeella myös Android 8–11:ssä; Android 12+
         // näyttää sen itse, ja kirjasto vaihtaa teemaan sen päätyttyä.
         installSplashScreen()
-        // Vanhoilla Android-versioilla ei ole järjestelmän tummaa tilaa;
-        // niillä koko sovellus on aina tumma, kuten näppäimistökin.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-        }
+        prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        applyNightMode(prefs)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        prefs.registerOnSharedPreferenceChangeListener(themeListener)
         state = SettingsState(
             prefs,
             finnish = resources.getBoolean(R.bool.kieli_suomi),
@@ -108,7 +114,7 @@ class SettingsActivity : AppCompatActivity() {
         )
         val versionLabel = appVersion()
         setContent {
-            ArkSettingsTheme {
+            ArkSettingsTheme(choice = ThemeChoice.from(state.theme)) {
                 SettingsScreen(
                     state = state,
                     imeStatus = imeStatus.value,
@@ -149,8 +155,18 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        prefs.unregisterOnSharedPreferenceChangeListener(themeListener)
         ioExecutor.shutdown()
         super.onDestroy()
+    }
+
+    private fun applyNightMode(prefs: SharedPreferences) {
+        AppCompatDelegate.setDefaultNightMode(
+            SettingsDefaults.nightMode(
+                prefs.getString(KeyboardTheme.PREF_KEY, null),
+                systemDarkModeAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q,
+            )
+        )
     }
 
     private fun refreshImeStatus() {

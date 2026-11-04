@@ -1,5 +1,6 @@
 package org.jarsi.ark.settings
 
+import androidx.appcompat.app.AppCompatDelegate
 import org.jarsi.ark.theme.ThemeChoice
 
 /**
@@ -50,6 +51,19 @@ object SettingsDefaults {
     fun legalTheme(value: String?, dynamicAvailable: Boolean): String {
         val choice = ThemeChoice.entries.firstOrNull { it.id == value } ?: ThemeChoice.SYSTEM
         return if (choice == ThemeChoice.DYNAMIC && !dynamicAvailable) ThemeChoice.SYSTEM.id else choice.id
+    }
+
+    /**
+     * Asetussivun ja muiden näkymien yötila teemavalinnasta: vaalea ja tumma
+     * pakottavat, järjestelmän mukainen ja taustakuvan värit seuraavat
+     * puhelinta. Ennen Android 10:tä järjestelmällä ei ole tummaa tilaa,
+     * jolloin seuraaminen tarkoittaa tummaa kuten näppäimistössäkin.
+     */
+    fun nightMode(theme: String?, systemDarkModeAvailable: Boolean): Int = when (ThemeChoice.from(theme)) {
+        ThemeChoice.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+        ThemeChoice.DARK, ThemeChoice.BLACK -> AppCompatDelegate.MODE_NIGHT_YES
+        ThemeChoice.SYSTEM, ThemeChoice.DYNAMIC ->
+            if (systemDarkModeAvailable) AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM else AppCompatDelegate.MODE_NIGHT_YES
     }
 
     /** Taitettujen osioiden joukko tallennettavaksi: vain tunnetut osiot. */

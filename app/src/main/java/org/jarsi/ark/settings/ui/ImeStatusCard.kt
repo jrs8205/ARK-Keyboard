@@ -116,8 +116,8 @@ internal fun ImeStatusCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 val primaryColors = ButtonDefaults.buttonColors(
-                    containerColor = colors.heroButton.background,
-                    contentColor = colors.heroButton.text,
+                    containerColor = colors.chip.background,
+                    contentColor = colors.chip.text,
                 )
                 when (status) {
                     ImeStatus.NOT_ENABLED -> Button(onClick = onEnable, colors = primaryColors) {

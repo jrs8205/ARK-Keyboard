@@ -1,5 +1,6 @@
 package org.jarsi.ark.settings
 
+import androidx.appcompat.app.AppCompatDelegate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -50,6 +51,19 @@ class SettingsDefaultsTest {
         assertEquals("taustakuva", SettingsDefaults.legalTheme("taustakuva", dynamicAvailable = true))
         assertEquals("musta", SettingsDefaults.legalTheme("musta", dynamicAvailable = false))
         assertEquals("jarjestelma", SettingsDefaults.legalTheme("outo", dynamicAvailable = true))
+    }
+
+    @Test
+    fun `teemavalinta maaraa sovelluksen yotilan`() {
+        assertEquals(AppCompatDelegate.MODE_NIGHT_NO, SettingsDefaults.nightMode("vaalea", systemDarkModeAvailable = true))
+        assertEquals(AppCompatDelegate.MODE_NIGHT_YES, SettingsDefaults.nightMode("tumma", systemDarkModeAvailable = true))
+        assertEquals(AppCompatDelegate.MODE_NIGHT_YES, SettingsDefaults.nightMode("musta", systemDarkModeAvailable = true))
+        assertEquals(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, SettingsDefaults.nightMode("jarjestelma", systemDarkModeAvailable = true))
+        assertEquals(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, SettingsDefaults.nightMode("taustakuva", systemDarkModeAvailable = true))
+        assertEquals(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM, SettingsDefaults.nightMode(null, systemDarkModeAvailable = true))
+        // Ennen Android 10:tä ei ole järjestelmän tummaa tilaa: järjestelmän mukainen on tumma.
+        assertEquals(AppCompatDelegate.MODE_NIGHT_YES, SettingsDefaults.nightMode("jarjestelma", systemDarkModeAvailable = false))
+        assertEquals(AppCompatDelegate.MODE_NIGHT_NO, SettingsDefaults.nightMode("vaalea", systemDarkModeAvailable = false))
     }
 
     @Test

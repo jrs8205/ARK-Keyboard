@@ -67,7 +67,7 @@ internal fun SettingsCard(
     val colors = LocalSettingsColors.current
     Surface(
         shape = CardShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = colors.card,
         modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
     ) {
         Column(Modifier.padding(6.dp)) {
@@ -220,12 +220,12 @@ internal fun SliderRow(
             Spacer(Modifier.width(8.dp))
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = colors.heroReady.background,
+                color = colors.chip.background,
             ) {
                 Text(
                     text = stateText,
                     style = MaterialTheme.typography.labelLarge,
-                    color = colors.heroReady.text,
+                    color = colors.chip.text,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
                 )
             }
@@ -242,9 +242,9 @@ internal fun SliderRow(
             colors = SliderDefaults.colors(
                 thumbColor = colors.control,
                 activeTrackColor = colors.control,
-                inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
+                inactiveTrackColor = colors.trackOff,
                 activeTickColor = colors.control,
-                inactiveTickColor = MaterialTheme.colorScheme.secondaryContainer,
+                inactiveTickColor = colors.trackOff,
             ),
         )
     }

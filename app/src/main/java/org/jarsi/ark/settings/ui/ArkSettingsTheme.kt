@@ -22,26 +22,29 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.Density
 import org.jarsi.ark.R
+import org.jarsi.ark.theme.ThemeChoice
 
 /** Tosi, kun käyttäjä on poistanut animaatiot käytöstä (kehittäjäasetus tai esteettömyys). */
 val LocalReducedMotion: ProvidableCompositionLocal<Boolean> = staticCompositionLocalOf { false }
 
 /**
- * Asetussivun tekstivärit kontrastivahdin läpi: jokainen on ensisijainen
+ * Asetussivun värit kontrastivahdin läpi: jokainen teksti on ensisijainen
  * Material-rooli, jos se täyttää WCAG AAA:n 7:1 taustaansa vasten, muuten
- * onSurface. Säätimille raja on 3:1.
+ * johdettu tai varaväri. Säätimille raja on 3:1. Tummassa tilassa kortti
+ * ja raide nostetaan taustaa selvästi vaaleammiksi, koska OLED-mustan
+ * lähellä Materialin sävyaskeleet (tone 6 → 12) eivät erotu.
  */
 data class SettingsColors(
+    /** Osiokortin pinta sivun taustalla. */
+    val card: Color,
     val onCard: Color,
     val onCardVariant: Color,
-    /** Valmiin tilakortin ja arvopillerin pinta ja teksti. */
+    /** Valmiin tilakortin pinta ja teksti. */
     val heroReady: Surface,
     /** Keskeneräisen tilakortin pinta ja teksti. */
     val heroAttention: Surface,
-    /** Tilakortin napin pinta ja teksti. */
-    val heroButton: Surface,
-    /** Sävytetyn napin (tukikortti) pinta ja teksti. */
-    val tonalButton: Surface,
+    /** Sivun taustan värinen nappi tai pilleri kortin päällä: tilakortin nappi, arvopilleri ja tukinapit. */
+    val chip: Surface,
     /** Dialogin otsikko ja listan tekstit dialogin pohjalla (surfaceContainerHigh). */
     val onDialog: Color,
     val onDialogVariant: Color,
@@ -51,10 +54,18 @@ data class SettingsColors(
     val onPageVariant: Color,
     val control: Color,
     val controlOff: Color,
+    /** Liukusäätimen passiivinen raide ja askelmerkit kortin päällä. */
+    val trackOff: Color,
 ) {
     data class Surface(val background: Color, val text: Color)
 
     companion object {
+        /** Kortin vaaleus tummassa tilassa; tausta on tone 6 tai musta. */
+        private const val CARD_TONE_DARK = 22.0
+
+        /** Pintojen vähimmäissuhde, jolla kortti erottuu taustasta ja raide kortista. */
+        const val SURFACE_MINIMUM = 1.4
+
         /**
          * Pintaparit valitaan järjestyksessä: laitteen oma roolipari, sitten
          * laitteen sävystä johdettu tone 90/30 -pari (tummassa 30/90), joka
@@ -64,8 +75,10 @@ data class SettingsColors(
          */
         fun from(scheme: ColorScheme, dark: Boolean): SettingsColors {
             val fallback = scheme.onSurface.toArgb()
-            fun text(background: Color, preferred: Color, minimum: Double = 7.0) = Color(
-                Contrast.textOn(background.toArgb(), preferred.toArgb(), fallback, minimum)
+            val surfaceArgb = scheme.surface.toArgb()
+            val card = if (dark) Tones.tone(surfaceArgb, CARD_TONE_DARK, 8.0) else scheme.surfaceContainer.toArgb()
+            fun text(background: Int, preferred: Color, minimum: Double = 7.0) = Color(
+                Contrast.textOn(background, preferred.toArgb(), fallback, minimum)
             )
             fun derived(source: Color): Pair<Int, Int> {
                 val argb = source.toArgb()
@@ -81,10 +94,28 @@ data class SettingsColors(
                 val (bg, fg) = Contrast.pickPair(pairs)
                 return Surface(Color(bg), Color(fg))
             }
-            val surfaceArgb = scheme.surface.toArgb()
+            // Selite pysyy otsikkoa vaimeampana myös vaaleammalla kortilla:
+            // roolin oma sävy, sitten siitä johdettu kirkkaampi, vasta sitten onSurface.
+            val variant = scheme.onSurfaceVariant.toArgb()
+            val onCardVariant = Contrast.pickPair(
+                listOf(
+                    card to variant,
+                    card to Tones.tone(variant, if (dark) 85.0 else 30.0, 16.0),
+                    card to fallback,
+                )
+            ).second
+            val secondaryContainer = scheme.secondaryContainer.toArgb()
+            val trackOff = Contrast.pickPair(
+                listOf(
+                    card to secondaryContainer,
+                    card to Tones.tone(scheme.secondary.toArgb(), if (dark) 45.0 else 80.0, 24.0),
+                ),
+                minimum = SURFACE_MINIMUM,
+            ).second
             return SettingsColors(
-                onCard = text(scheme.surfaceContainer, scheme.onSurface),
-                onCardVariant = text(scheme.surfaceContainer, scheme.onSurfaceVariant),
+                card = Color(card),
+                onCard = text(card, scheme.onSurface),
+                onCardVariant = Color(onCardVariant),
                 heroReady = surface(
                     scheme.primaryContainer.toArgb() to scheme.onPrimaryContainer.toArgb(),
                     derived(scheme.primary),
@@ -93,20 +124,17 @@ data class SettingsColors(
                     scheme.tertiaryContainer.toArgb() to scheme.onTertiaryContainer.toArgb(),
                     derived(scheme.tertiary),
                 ),
-                heroButton = surface(
-                    surfaceArgb to scheme.onPrimaryContainer.toArgb(),
+                chip = surface(
                     surfaceArgb to scheme.primary.toArgb(),
+                    surfaceArgb to scheme.onPrimaryContainer.toArgb(),
                 ),
-                tonalButton = surface(
-                    scheme.secondaryContainer.toArgb() to scheme.onSecondaryContainer.toArgb(),
-                    derived(scheme.secondary),
-                ),
-                onDialog = text(scheme.surfaceContainerHigh, scheme.onSurface),
-                onDialogVariant = text(scheme.surfaceContainerHigh, scheme.onSurfaceVariant),
-                dialogAction = text(scheme.surfaceContainerHigh, scheme.primary),
-                onPageVariant = text(scheme.background, scheme.onSurfaceVariant),
-                control = text(scheme.surfaceContainer, scheme.primary, minimum = 3.0),
-                controlOff = text(scheme.surfaceContainer, scheme.outline, minimum = 3.0),
+                onDialog = text(scheme.surfaceContainerHigh.toArgb(), scheme.onSurface),
+                onDialogVariant = text(scheme.surfaceContainerHigh.toArgb(), scheme.onSurfaceVariant),
+                dialogAction = text(scheme.surfaceContainerHigh.toArgb(), scheme.primary),
+                onPageVariant = text(scheme.background.toArgb(), scheme.onSurfaceVariant),
+                control = text(card, scheme.primary, minimum = 3.0),
+                controlOff = text(card, scheme.outline, minimum = 3.0),
+                trackOff = Color(trackOff),
             )
         }
     }
@@ -117,20 +145,23 @@ val LocalSettingsColors: ProvidableCompositionLocal<SettingsColors> = staticComp
 }
 
 /**
- * Asetussivun teema: Material 3 Expressive, Android 12+:lla taustakuvan
- * paletti ja sitä vanhemmilla ARKin oma sininen. Fonttiskaala rajataan
- * 150 prosenttiin, jotta rivit pysyvät luettavina ja säätimet ruudulla.
+ * Asetussivun teema näppäimistön teemavalinnan mukaan: Material 3 Expressive,
+ * taustakuvan värit Android 12+:n paletista, muuten ARKin oma sininen
+ * vaaleana, tummana tai mustalla pohjalla. Vaalea ja tumma tulevat
+ * yötilasta, jonka aktiviteetti asettaa samasta valinnasta. Fonttiskaala
+ * rajataan 150 prosenttiin, jotta rivit pysyvät luettavina ja säätimet ruudulla.
  */
 @Composable
-fun ArkSettingsTheme(content: @Composable () -> Unit) {
+fun ArkSettingsTheme(choice: ThemeChoice, content: @Composable () -> Unit) {
     val context = LocalContext.current
-    val dark = isSystemInDarkTheme()
-    val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-    } else if (dark) {
-        staticDarkScheme()
-    } else {
-        staticLightScheme()
+    val black = choice == ThemeChoice.BLACK
+    val dark = black || isSystemInDarkTheme()
+    val scheme = when {
+        choice == ThemeChoice.DYNAMIC && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        black -> staticBlackScheme()
+        dark -> staticDarkScheme()
+        else -> staticLightScheme()
     }
     val density = LocalDensity.current
     val reducedMotion = remember(context) {
@@ -221,3 +252,14 @@ private fun staticDarkScheme(): ColorScheme = darkColorScheme(
     outline = colorResource(R.color.tumma_aariviiva),
     outlineVariant = colorResource(R.color.tumma_aariviiva_tumma),
 )
+
+/** Musta teema: tumma paletti mustalla sivupohjalla kuten näppäimistössä. */
+@Composable
+private fun staticBlackScheme(): ColorScheme {
+    val black = colorResource(R.color.musta_tausta)
+    return staticDarkScheme().copy(
+        background = black,
+        surface = black,
+        surfaceContainerLowest = black,
+    )
+}

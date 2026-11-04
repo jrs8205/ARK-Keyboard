@@ -1260,6 +1260,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
      */
     private fun hideTranslateBar() {
         if (!translateMode) return
+        // Kääntäjässä aloitettu sanelu päättyy näkymän mukana (Takaisin, ✕,
+        // työkalurivin nappi, vienti): muuten seuraavat tulokset menisivät
+        // kääntämättöminä suoraan sovelluksen kenttään.
+        stopDictation()
         translateLastUsed = SystemClock.elapsedRealtime()
         translateMode = false
         watchTranslateBack(false)

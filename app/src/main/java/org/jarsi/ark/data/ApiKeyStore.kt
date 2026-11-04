@@ -39,6 +39,7 @@ object ApiKeyStore {
     private val cached = java.util.concurrent.ConcurrentHashMap<Slot, String>()
 
     /** Avain käyttöä varten tai null; siirtää avoimen avaimen salatuksi. */
+    @Synchronized
     fun read(prefs: SharedPreferences, slot: Slot = Slot.CLAUDE): String? {
         cached[slot]?.let { return it }
         prefs.getString(slot.encryptedPref, null)?.let { encrypted ->
@@ -64,14 +65,20 @@ object ApiKeyStore {
      * ominaisuus toimii myös rikkinäisellä Keystorella — mutta kutsujan
      * pitää kertoa siitä käyttäjälle, koska asetusteksti lupaa salauksen.
      */
+    @Synchronized
     fun save(prefs: SharedPreferences, plainKey: String, slot: Slot = Slot.CLAUDE): Boolean {
         val trimmed = plainKey.trim()
+        // Välimuisti päivitetään ennen kirjoitusta: asetustiedoston kuuntelija
+        // (asetussivu) lukee tietueen jo kirjoituksen ilmoituksen aikana, ja
+        // pääsäikeellä ilmoitus tulee kirjoituksen sisältä. Lukko pitää
+        // toisen säikeen luvun kirjoituksen ulkopuolella.
         if (trimmed.isEmpty()) {
-            prefs.edit().remove(slot.encryptedPref).remove(slot.plainPref).apply()
             cached.remove(slot)
+            prefs.edit().remove(slot.encryptedPref).remove(slot.plainPref).apply()
             return true
         }
         val encrypted = encrypt(trimmed)
+        cached[slot] = trimmed
         prefs.edit().apply {
             if (encrypted != null) {
                 putString(slot.encryptedPref, encrypted)
@@ -82,7 +89,6 @@ object ApiKeyStore {
                 remove(slot.encryptedPref)
             }
         }.apply()
-        cached[slot] = trimmed
         return encrypted != null
     }
 

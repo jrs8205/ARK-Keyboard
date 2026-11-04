@@ -3491,6 +3491,9 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val before = known.orEmpty()
         val current = WordTools.currentWord(before)
         val committed = if (spaceAfterSuggestion) "$word " else word
+        // Konteksti ennen kentän muokkausta: kirjoitus siirtää odotetun
+        // kursorisijainnin, jolloin kentän alkua ei enää tunnistettaisi.
+        val context = if (known != null) contextWords(before) else emptyList()
         ic.beginBatchEdit()
         if (current.isNotEmpty()) deleteFromField(ic, current.length)
         commitToField(ic, committed)
@@ -3501,7 +3504,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             // Muut näkyneet täydennykset ohitettiin; valittu sana saa hyväksynnän.
             learning.onSuggestionsIgnored(shownCompletions, word)
             shownCompletions = emptyList()
-            if (known != null) noteSentenceStart(contextWords(before))
+            noteSentenceStart(context)
             if (word == current) {
                 // Rivin kärjessä ollut oma kirjoitettu sana opitaan kuin kirjoitettuna.
                 learning.onTypedWordAccepted(word)

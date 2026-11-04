@@ -316,6 +316,35 @@ class SuggestionEngineTest {
     }
 
     @Test
+    fun `pitka oma sana ohittaa hieman kaytetymman lyhyen oman sanan`() {
+        val (s, l) = build("kala 100")
+        repeat(4) { l.onWordCommitted("kaupunki") }
+        repeat(3) { l.onWordCommitted("kaupunginvaltuustossa") }
+        assertEquals(listOf("kaupunginvaltuustossa", "kaupunki"), s.suggest("kaup").take(2))
+    }
+
+    @Test
+    fun `lyhyt yleinen oma sana pysyy ykkosena`() {
+        val (s, l) = build("ja 1000", "jo 900")
+        repeat(20) { l.onWordCommitted("ja") }
+        repeat(3) { l.onWordCommitted("jotenkin") }
+        assertEquals(listOf("ja", "jotenkin"), s.suggest("j").take(2))
+    }
+
+    @Test
+    fun `tyhja syote ei suosi pitkia sanoja`() {
+        val (s, l) = build("kala 100")
+        repeat(3) { l.onWordCommitted("hei"); l.onWordCommitted("kaupunginvaltuustossa") }
+        l.resetContext()
+        repeat(3) { l.onWordCommitted("hei"); l.onWordCommitted("moi") }
+        // hei → moi ja hei → kaupunginvaltuustossa ovat tasapelissä; ilman
+        // täydennysarvoa kumpikin on kahden kärjessä ja tulos on deterministinen.
+        val result = s.emptyInput(listOf("hei"), includeCommon = false)
+        assertEquals(setOf("moi", "kaupunginvaltuustossa"), result.take(2).toSet())
+        assertEquals(result, s.emptyInput(listOf("hei"), includeCommon = false))
+    }
+
+    @Test
     fun `kaikki omat sanat paasevat ehdolle`() {
         val (s, l) = build("kala 100")
         val shorts = listOf("kaa", "kab", "kac", "kad", "kae", "kaf", "kag", "kah", "kai", "kaj", "kak")

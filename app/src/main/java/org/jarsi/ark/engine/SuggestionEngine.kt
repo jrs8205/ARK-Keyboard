@@ -33,7 +33,7 @@ class SuggestionEngine(
         for (key in contextMatches.keys) {
             if (key.startsWith(prefixKey)) candidates += key
         }
-        return rank(candidates, contextMatches, max)
+        return rank(candidates, contextMatches, max, prefixLength = prefixKey.length)
     }
 
     /**
@@ -144,19 +144,26 @@ class SuggestionEngine(
         return rank(candidates, contextMatches, max)
     }
 
+    /**
+     * Pisteyttää ehdokkaat. [prefixLength] on kirjoitetun alun pituus, kun
+     * täydennetään sanaa; tyhjälle syötteelle ja korjausvaihtoehdoille sitä
+     * ei anneta, jolloin säästetyt kirjaimet eivät vaikuta pisteisiin.
+     */
     private fun rank(
         candidateKeys: Collection<String>,
         contextMatches: Map<String, NextMatch>,
         max: Int,
+        prefixLength: Int = -1,
         adjust: (String, Float) -> Float = { _, base -> base },
     ): List<String> {
         val maxFreq = dictionary.maxFrequency()
         val candidates = candidateKeys.mapNotNull { key ->
             val signals = learning.signals(key)
             if (signals?.blocked == true) return@mapNotNull null
+            val saved = if (prefixLength >= 0) key.length - prefixLength else 0
             Candidate(
                 key,
-                adjust(key, baseScore(key, signals, contextMatches[key], maxFreq)),
+                adjust(key, baseScore(key, signals, contextMatches[key], maxFreq, saved)),
                 signals?.pinned == true,
             )
         }
@@ -180,6 +187,7 @@ class SuggestionEngine(
         signals: WordSignals?,
         match: NextMatch?,
         maxFreq: Long,
+        saved: Int,
     ): Float {
         var score = 0f
         if (maxFreq > 0) {
@@ -191,9 +199,21 @@ class SuggestionEngine(
             score += match.trigram / (match.trigram + 3f) * TRIGRAM_WEIGHT
         }
         if (signals != null) {
-            score += signals.usage / (signals.usage + 5f) * USAGE_WEIGHT
+            // Oma käyttö logaritmisesti kuten yleisyys: 800 ja 400 käyttöä
+            // erottuvat yhä toisistaan, kun kyllästyvä muoto tasasi ne jo
+            // muutaman käytön jälkeen.
+            score += (ln(1.0 + signals.usage) / ln(1.0 + USAGE_SCALE)).toFloat() * USAGE_WEIGHT
             score += signals.acceptedCount / (signals.acceptedCount + 3f) * ACCEPTED_WEIGHT
-            if (signals.manuallyTyped) score += MANUAL_WEIGHT
+            if (signals.manuallyTyped) {
+                score += MANUAL_WEIGHT
+                // Täydennysarvo: mitä enemmän kirjaimia ehdotus säästää, sitä
+                // enemmän se saa, mutta vain vähintään kahdesti kirjoitetuille
+                // omille sanoille. Sanalistan sanat eivät saa termiä, jotta
+                // lyhyet yleissanat pysyvät kärjessä lyhyellä alulla.
+                if (saved > 0) {
+                    score += saved / (saved + COMPLETION_SATURATION) * COMPLETION_WEIGHT
+                }
+            }
             if (signals.ignoredCount >= IGNORED_THRESHOLD) {
                 // Ohitukset suhteessa käyttöön: kerran kirjoitettu ja aina
                 // ohitettu sana katoaa, paljon käytetty kestää ohituksia, ja
@@ -222,6 +242,7 @@ class SuggestionEngine(
         // Kokonaissuunnitelman kohdan 22 painokertoimet.
         const val FREQUENCY_WEIGHT = 1.0f
         const val USAGE_WEIGHT = 2.0f
+        const val USAGE_SCALE = 1000.0
         const val BIGRAM_WEIGHT = 4.0f
         const val TRIGRAM_WEIGHT = 7.0f
         const val ACCEPTED_WEIGHT = 3.0f
@@ -229,5 +250,7 @@ class SuggestionEngine(
         const val PINNED_WEIGHT = 20.0f
         const val IGNORED_WEIGHT = 5.0f
         const val IGNORED_SATURATION = 3f
+        const val COMPLETION_WEIGHT = 0.75f
+        const val COMPLETION_SATURATION = 6f
     }
 }

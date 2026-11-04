@@ -44,9 +44,13 @@
                 android:resource="@xml/method" />
         </service>
 
+        <!-- singleTask: näppäimistön asetusnappi tuo olemassa olevan asetustehtävän
+             esiin eikä pinoa toista instanssia sen päälle (takaisin palaisi muuten
+             ensin vanhaan asetussivuun). -->
         <activity
             android:name=".settings.SettingsActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.Ark.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

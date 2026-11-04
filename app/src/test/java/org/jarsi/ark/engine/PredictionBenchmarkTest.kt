@@ -14,9 +14,12 @@ import org.junit.Test
  * varmuuskopiolla ja sanalistalla ja laskee, monennellako kirjaimella
  * oikea sana nousee kolmen näkyvän ehdotuksen joukkoon. Kaksi joukkoa:
  * opitut sanaparit (konteksti tunnetaan) ja kylmä joukko ilman kontekstia
- * (omat sanat, joiden paria ei tässä kohdassa tunneta). Ajetaan vain, kun
- * ympäristömuuttuja ARK_BACKUP osoittaa varmuuskopiotiedostoon; muuten
- * testit ohitetaan. Raportti: build/reports/prediction-benchmark.txt.
+ * (omat sanat, joiden paria ei tässä kohdassa tunneta). Luvut lasketaan
+ * sekä moottorin raakajärjestyksestä (säätöä varten) että rivin listasta
+ * (applyCase + kirjoitettu sana kärkeen), joka vastaa näkyvää riviä.
+ * Ajetaan vain, kun ympäristömuuttuja ARK_BACKUP osoittaa
+ * varmuuskopiotiedostoon; muuten testit ohitetaan. Raportti:
+ * build/reports/prediction-benchmark.txt.
  */
 class PredictionBenchmarkTest {
 
@@ -45,25 +48,27 @@ class PredictionBenchmarkTest {
 
     private class Case(val context: List<String>, val next: String, val weight: Int)
 
-    private class Metrics(
-        val cases: Int,
-        val lettersTop3: Double,
-        val lettersTop1: Double,
-        val top3ByTwo: Double,
-        val saved: Double,
-        val junkPerThousand: Double,
-        val queries: Long,
-        val msPerQuery: Double,
-    ) {
+    /** Yhden listan (raaka tai rivi) tulokset. */
+    private class Hits {
+        var weightSum = 0L
+        var lettersTop3 = 0.0
+        var lettersTop1 = 0.0
+        var top3ByTwo = 0L
+        var saved = 0.0
+
+        fun add(weight: Int, length: Int, firstTop3: Int, firstTop1: Int) {
+            weightSum += weight
+            lettersTop3 += weight * firstTop3
+            lettersTop1 += weight * firstTop1
+            if (firstTop3 <= 2) top3ByTwo += weight
+            saved += weight * (length - firstTop3).toDouble() / length
+        }
+
         fun lines(suffix: String) = listOf(
-            "tapauksia$suffix=$cases",
-            "kirjaimia_top3$suffix=${"%.3f".format(Locale.ROOT, lettersTop3)}",
-            "kirjaimia_top1$suffix=${"%.3f".format(Locale.ROOT, lettersTop1)}",
-            "osuus_top3_viimeistaan_2$suffix=${"%.1f".format(Locale.ROOT, top3ByTwo)}",
-            "saasto$suffix=${"%.1f".format(Locale.ROOT, saved)}",
-            "roska_per_1000_kyselya$suffix=${"%.2f".format(Locale.ROOT, junkPerThousand)}",
-            "kyselyja$suffix=$queries",
-            "ms_per_kysely$suffix=${"%.3f".format(Locale.ROOT, msPerQuery)}",
+            "kirjaimia_top3$suffix=${"%.3f".format(Locale.ROOT, lettersTop3 / weightSum)}",
+            "kirjaimia_top1$suffix=${"%.3f".format(Locale.ROOT, lettersTop1 / weightSum)}",
+            "osuus_top3_viimeistaan_2$suffix=${"%.1f".format(Locale.ROOT, 100.0 * top3ByTwo / weightSum)}",
+            "saasto$suffix=${"%.1f".format(Locale.ROOT, 100.0 * saved / weightSum)}",
         )
     }
 
@@ -131,55 +136,61 @@ class PredictionBenchmarkTest {
         }
 
         fun measure(): String {
-            val lines = measure(loaded.cases).lines("") + measure(loaded.coldCases).lines("_kylma")
+            val lines = measure(loaded.cases, "") + measure(loaded.coldCases, "_kylma")
             val text = lines.joinToString("\n")
             File(REPORT_PATH).apply { parentFile?.mkdirs() }.writeText(text + "\n", Charsets.UTF_8)
             return text
         }
 
-        fun measure(cases: List<Case>): Metrics {
+        /** Rivin lista kuten KeyboardService sen muodostaa: kirjainkoko ja kirjoitettu sana kärkeen. */
+        fun rowList(engine: SuggestionEngine, prefix: String, raw: List<String>): List<String> =
+            WordTools.withTypedWord(prefix, engine.applyCase(raw, prefix, sentenceStart = false))
+
+        fun measure(cases: List<Case>, suffix: String): List<String> {
             val engine = loaded.engine
-            var weightSum = 0L
-            var lettersTop3 = 0.0
-            var lettersTop1 = 0.0
-            var top3ByTwo = 0L
-            var saved = 0.0
+            val raw = Hits()
+            val row = Hits()
             var queries = 0L
+            var junkQueries = 0L
             var junkHits = 0L
             val started = System.nanoTime()
             for (case in cases) {
                 val target = case.next
-                var firstTop3 = target.length
-                var firstTop1 = target.length
-                for (p in 1 until target.length) {
-                    val result = engine.suggest(target.take(p), case.context)
+                val length = target.length
+                var rawTop3 = length
+                var rawTop1 = length
+                var rowTop3 = length
+                var rowTop1 = length
+                for (p in 1 until length) {
+                    val prefix = target.take(p)
+                    val result = engine.suggest(prefix, case.context)
                     queries++
-                    val visible = result.take(TOP).map { it.lowercase() }
-                    // Roska lasketaan vain top3-osumaan asti, jotta luku ei
-                    // riipu siitä, kuinka pitkälle top1-haku jatkuu.
-                    if (firstTop3 == target.length) junkHits += visible.count { it in loaded.junk }
-                    if (firstTop1 == target.length && visible.firstOrNull() == target) firstTop1 = p
-                    if (firstTop3 == target.length && target in visible) firstTop3 = p
-                    if (firstTop1 < target.length) break
+                    val visibleRaw = result.take(TOP).map { it.lowercase() }
+                    val visibleRow = rowList(engine, prefix, result).take(TOP).map { it.lowercase() }
+                    // Roska lasketaan raa'an top3-osumaan asti ja samasta
+                    // kyselyjoukosta kuin sen nimittäjä.
+                    if (rawTop3 == length) {
+                        junkQueries++
+                        junkHits += visibleRaw.count { it in loaded.junk }
+                    }
+                    if (rawTop1 == length && visibleRaw.firstOrNull() == target) rawTop1 = p
+                    if (rawTop3 == length && target in visibleRaw) rawTop3 = p
+                    if (rowTop1 == length && visibleRow.firstOrNull() == target) rowTop1 = p
+                    if (rowTop3 == length && target in visibleRow) rowTop3 = p
+                    if (rawTop1 < length && rowTop1 < length) break
                 }
-                val w = case.weight
-                weightSum += w
-                lettersTop3 += w * firstTop3
-                lettersTop1 += w * firstTop1
-                if (firstTop3 <= 2) top3ByTwo += w
-                saved += w * (target.length - firstTop3).toDouble() / target.length
+                raw.add(case.weight, length, rawTop3, rawTop1)
+                row.add(case.weight, length, rowTop3, rowTop1)
             }
             val elapsedMs = (System.nanoTime() - started) / 1_000_000.0
-            return Metrics(
-                cases = cases.size,
-                lettersTop3 = lettersTop3 / weightSum,
-                lettersTop1 = lettersTop1 / weightSum,
-                top3ByTwo = 100.0 * top3ByTwo / weightSum,
-                saved = 100.0 * saved / weightSum,
-                junkPerThousand = 1000.0 * junkHits / queries,
-                queries = queries,
-                msPerQuery = elapsedMs / queries,
-            )
+            return listOf("tapauksia$suffix=${cases.size}") +
+                raw.lines(suffix) +
+                row.lines("_rivi$suffix") +
+                listOf(
+                    "roska_per_1000_kyselya$suffix=${"%.2f".format(Locale.ROOT, 1000.0 * junkHits / junkQueries)}",
+                    "kyselyja$suffix=$queries",
+                    "ms_per_kysely$suffix=${"%.3f".format(Locale.ROOT, elapsedMs / queries)}",
+                )
         }
     }
 }

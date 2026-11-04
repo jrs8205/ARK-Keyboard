@@ -810,15 +810,25 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
 
     /**
      * Kursorin edeltävä teksti sanakontekstia varten: luetaan yksi merkki
-     * yli ikkunan, jotta kentän alku erottuu ikkunan alusta — ikkunaa
-     * lyhyempi tulos alkaa kentän alusta, joka on lauseen alku.
+     * yli ikkunan, jotta kentän alku voi erottua ikkunan alusta.
      */
     private fun readContextBefore(ic: InputConnection): CharSequence? =
         readBefore(ic, MAX_WORD_LOOKBACK + 1)
 
-    /** Edeltävät sanat [before]-tekstistä; kentän alku on lauseen alku. */
+    /**
+     * Alkaako [before] kentän alusta. Ikkunaa lyhyempi tulos ei yksin riitä,
+     * koska osa editoreista palauttaa pyydettyä lyhyemmän pätkän myös
+     * keskeltä kenttää (mitattu rajatulla InputConnectionilla API 36:ssa);
+     * tunnettu kursorisijainti vahvistaa, että teksti on koko matka kentän
+     * alusta. Tuntemattomalla sijainnilla alkua ei oleteta, jolloin lauseen
+     * alku opitaan vain välimerkin jälkeen.
+     */
+    private fun readsFromFieldStart(before: CharSequence): Boolean =
+        before.length <= MAX_WORD_LOOKBACK && cursor.known && cursor.start == before.length
+
+    /** Edeltävät sanat [before]-tekstistä; vahvistettu kentän alku on lauseen alku. */
     private fun contextWords(before: CharSequence): List<String> =
-        WordTools.previousWords(before, startIsSentence = before.length <= MAX_WORD_LOOKBACK)
+        WordTools.previousWords(before, startIsSentence = readsFromFieldStart(before))
 
     /**
      * Lauseen alussa sitoutuva sana oppii rajaparin: kutsutaan ennen
@@ -3539,7 +3549,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         val before: CharSequence = read ?: ""
         // Lukukelvoton kenttä ei ole lauseen alku: sen sijainnista ei tiedetä mitään.
-        val startIsSentence = translateMode || (read != null && before.length <= MAX_WORD_LOOKBACK)
+        val startIsSentence = translateMode || (read != null && readsFromFieldStart(before))
         // Lauseen alussa (automaattinen iso kirjain päällä) ehdotukset alkavat isolla.
         val shiftActive = shift.state != ShiftState.OFF
         val index = emojiIndex

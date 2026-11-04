@@ -240,8 +240,9 @@ internal fun SliderRow(
             value = current.toFloat(),
             onValueChange = {
                 val next = it.roundToInt().coerceIn(range)
-                // Askel tuntuu sormessa kuten laitteen omissa säätimissä.
-                if (next != current) haptic.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+                // Askel tuntuu sormessa; SegmentTick on kevyttä TEXTURE_TICKiä
+                // selvempi, jotta askel tuntuu myös taskussa pidetyllä laitteella.
+                if (next != current) haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                 current = next
             },
             valueRange = range.first.toFloat()..range.last.toFloat(),

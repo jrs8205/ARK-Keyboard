@@ -60,7 +60,7 @@ class WordToolsTest {
 
     @Test
     fun `edellinen sana rivinvaihdon yli`() =
-        assertEquals(listOf("prx4"), WordTools.previousWords("prx4\n"))
+        assertEquals(listOf("<s>", "prx4"), WordTools.previousWords("prx4\n"))
 
     @Test
     fun `kaksi edellista sanaa`() =
@@ -71,12 +71,48 @@ class WordToolsTest {
         assertEquals(listOf("Jako", "20"), WordTools.previousWords("prx4\nJako 20 nouto"))
 
     @Test
-    fun `lauseen loppupiste ohitetaan`() =
-        assertEquals(listOf("sana"), WordTools.previousWords("sana. ", 1))
+    fun `lauseen loppu antaa rajamerkin`() =
+        assertEquals(listOf("<s>"), WordTools.previousWords("sana. ", 2))
 
     @Test
-    fun `tyhja teksti antaa tyhjat edeltavat`() =
-        assertEquals(emptyList<String>(), WordTools.previousWords(""))
+    fun `rajamerkki ja sen jalkeinen sana`() =
+        assertEquals(listOf("<s>", "hei"), WordTools.previousWords("Moi. hei ", 2))
+
+    @Test
+    fun `ikkunan alku ei ole lauseen alku`() =
+        assertEquals(listOf("ja"), WordTools.previousWords("ja ", 2, startIsSentence = false))
+
+    @Test
+    fun `sisainen piste ei ole raja`() {
+        assertEquals(listOf("jarsi.org", "on"), WordTools.previousWords("jarsi.org on ", 2, startIsSentence = false))
+        assertEquals(listOf("<s>", "jarsi.org", "on"), WordTools.previousWords("jarsi.org on ", 3))
+    }
+
+    @Test
+    fun `luku pisteella ei ole raja`() =
+        assertEquals(listOf("3.5", "kg"), WordTools.previousWords("3.5 kg ", 2, startIsSentence = false))
+
+    @Test
+    fun `rivinvaihto ei ole raja`() =
+        assertEquals(listOf("hei", "moi"), WordTools.previousWords("hei\nmoi ", 2, startIsSentence = false))
+
+    @Test
+    fun `kysymysmerkki ja kolme pistetta ovat rajoja`() {
+        assertEquals(listOf("<s>"), WordTools.previousWords("mitä? ", 1))
+        assertEquals(listOf("<s>"), WordTools.previousWords("no… ", 1))
+    }
+
+    @Test
+    fun `rajamerkki vie kiintion viimeisena`() =
+        assertEquals(listOf("hei", "moi"), WordTools.previousWords("Jaa. hei moi ", 2))
+
+    @Test
+    fun `tyhja teksti on lauseen alku`() =
+        assertEquals(listOf("<s>"), WordTools.previousWords(""))
+
+    @Test
+    fun `tyhja ikkuna ilman alkua on tyhja`() =
+        assertEquals(emptyList<String>(), WordTools.previousWords("", startIsSentence = false))
 
     @Test
     fun `count rajaa edeltavien maaran`() =

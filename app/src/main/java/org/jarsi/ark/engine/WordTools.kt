@@ -167,17 +167,37 @@ object WordTools {
         return if (prev[lb] <= max) prev[lb] else max + 1
     }
 
+    // Lauseen päättävät merkit (samat kuin SmartSpace-luokassa); rivinvaihto
+    // ei päätä lausetta, joten ennustus toimii rivinvaihtojen yli.
+    private const val SENTENCE_ENDERS = ".!?…"
+
     /**
      * Palauttaa enintään [count] valmista sanaa kursorin keskeneräisen sanan
-     * edeltä aikajärjestyksessä (lähin viimeisenä). Erottimet — välilyönnit,
-     * rivinvaihdot ja välimerkit — ohitetaan, joten ennustus toimii myös
-     * rivinvaihtojen yli.
+     * edeltä aikajärjestyksessä (lähin viimeisenä). Välilyönnit ja
+     * rivinvaihdot ohitetaan. Lauseen päättävä merkki on raja: sitä
+     * vanhempia sanoja ei oteta, vaan lista alkaa rajamerkillä
+     * [LearningEngine.SENTENCE_START], joka vie yhden paikan kiintiöstä.
+     * Tekstin alku on lauseen alku, kun [startIsSentence] on tosi; kutsuja
+     * antaa epätoden, kun [textBefore] on vain lukuikkunan verran pidemmästä
+     * tekstistä. Sanan sisäinen piste (jarsi.org, 3.5) ei ole raja.
      */
-    fun previousWords(textBefore: CharSequence, count: Int = 2): List<String> {
+    fun previousWords(
+        textBefore: CharSequence,
+        count: Int = 2,
+        startIsSentence: Boolean = true,
+    ): List<String> {
         val words = ArrayDeque<String>()
         var end = textBefore.length - currentWord(textBefore).length
-        while (words.size < count && end > 0) {
-            while (end > 0 && !isCore(textBefore[end - 1])) end--
+        while (words.size < count) {
+            var boundary = false
+            while (end > 0 && !isCore(textBefore[end - 1])) {
+                if (textBefore[end - 1] in SENTENCE_ENDERS) boundary = true
+                end--
+            }
+            if (boundary || (end == 0 && startIsSentence)) {
+                words.addFirst(LearningEngine.SENTENCE_START)
+                break
+            }
             if (end == 0) break
             val word = currentWord(textBefore.subSequence(0, end))
             if (word.isEmpty()) break

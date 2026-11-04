@@ -355,6 +355,13 @@ class SuggestionEngineTest {
     }
 
     @Test
+    fun `lauseen alkuun omat aloitussanat`() {
+        val (s, l) = build("ja 100")
+        repeat(2) { l.onSentenceStart(); l.onWordCommitted("Tarkista") }
+        assertEquals(listOf("Tarkista", "ja"), s.emptyInput(listOf(LearningEngine.SENTENCE_START), includeCommon = true))
+    }
+
+    @Test
     fun `kaikki omat sanat paasevat ehdolle`() {
         val (s, l) = build("kala 100")
         val shorts = listOf("kaa", "kab", "kac", "kad", "kae", "kaf", "kag", "kah", "kai", "kaj", "kak")

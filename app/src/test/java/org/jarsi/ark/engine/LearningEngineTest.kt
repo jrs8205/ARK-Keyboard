@@ -50,6 +50,30 @@ class LearningEngineTest {
     }
 
     @Test
+    fun `lauseen alun sana oppii rajaparin`() {
+        val e = engine()
+        e.onWordCommitted("moi")
+        e.onSentenceStart()
+        e.onWordCommitted("Tarkista")
+        assertEquals(listOf("Tarkista"), e.predictNext(listOf(LearningEngine.SENTENCE_START)))
+        assertEquals(emptyList<String>(), e.predictNext(listOf("moi")))
+    }
+
+    @Test
+    fun `rajamerkki ei ole sana mutta aloittaa kolmikon`() {
+        val e = engine()
+        e.onWordCommitted("moi")
+        e.onSentenceStart()
+        e.onWordCommitted("hei")
+        e.onWordCommitted("sinä")
+        assertEquals(null, e.signals(LearningEngine.SENTENCE_START))
+        val trigrams = e.drainDirty().trigrams
+        assertTrue(trigrams.none { it.second == LearningEngine.SENTENCE_START || it.next == LearningEngine.SENTENCE_START })
+        // Lauseen toinen sana ennustuu ensimmäisestä: (<s>, hei) → sinä.
+        assertEquals(listOf("sinä"), e.predictNext(listOf(LearningEngine.SENTENCE_START, "hei")))
+    }
+
+    @Test
     fun `pienella kirjoitettu korvaa lauseen alussa opitun asun`() {
         val e = engine()
         e.onWordCommitted("Jako")

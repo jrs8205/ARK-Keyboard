@@ -130,8 +130,28 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         val pending = pendingCommits.toList()
         pendingCommits.clear()
         pending.forEach { word ->
-            if (word == null) resetContext() else onWordCommitted(word)
+            when (word) {
+                null -> resetContext()
+                SENTENCE_START -> onSentenceStart()
+                else -> onWordCommitted(word)
+            }
         }
+    }
+
+    /**
+     * Seuraava sana aloittaa lauseen (piste, huuto- tai kysymysmerkki edellä,
+     * tyhjä kenttä tai kentän alku): se oppii parin [SENTENCE_START] → sana,
+     * ja lauseen alun ennustus hakee samalla avaimella. Rajamerkki ei ole
+     * sana eikä kolmikon keskimmäinen osa.
+     */
+    @Synchronized
+    fun onSentenceStart() {
+        if (!loaded) {
+            if (pendingCommits.size < PENDING_LIMIT) pendingCommits += SENTENCE_START
+            return
+        }
+        previousToken = SENTENCE_START
+        beforePreviousToken = null
     }
 
     /** Käsin kirjoitettu sana päättyi: opi sana ja kirjaa ketjut. */
@@ -454,7 +474,9 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         return DirtyLearned(outWords, outBigrams, outTrigrams, outRemoved, outRemovedChains)
     }
 
-    private companion object {
-        const val PENDING_LIMIT = 200
+    companion object {
+        /** Lauseen alun rajamerkki sanaketjuissa; ei koskaan kelvollinen sana. */
+        const val SENTENCE_START = "<s>"
+        private const val PENDING_LIMIT = 200
     }
 }

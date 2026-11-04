@@ -808,6 +808,26 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     private fun readBefore(count: Int): CharSequence? =
         currentInputConnection?.let { readBefore(it, count) }
 
+    /**
+     * Kursorin edeltävä teksti sanakontekstia varten: luetaan yksi merkki
+     * yli ikkunan, jotta kentän alku erottuu ikkunan alusta — ikkunaa
+     * lyhyempi tulos alkaa kentän alusta, joka on lauseen alku.
+     */
+    private fun readContextBefore(ic: InputConnection): CharSequence? =
+        readBefore(ic, MAX_WORD_LOOKBACK + 1)
+
+    /** Edeltävät sanat [before]-tekstistä; kentän alku on lauseen alku. */
+    private fun contextWords(before: CharSequence): List<String> =
+        WordTools.previousWords(before, startIsSentence = before.length <= MAX_WORD_LOOKBACK)
+
+    /**
+     * Lauseen alussa sitoutuva sana oppii rajaparin: kutsutaan ennen
+     * oppimista, kun [context] päättyy rajamerkkiin.
+     */
+    private fun noteSentenceStart(context: List<String>) {
+        if (context.lastOrNull() == LearningEngine.SENTENCE_START) learning.onSentenceStart()
+    }
+
     private fun readLearnedData(
         db: LearnedDatabase,
     ): Triple<List<LearnedWord>, List<LearnedBigram>, List<LearnedTrigram>> {
@@ -2490,10 +2510,10 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
      */
     private fun commitSpaceWithAutoCorrect() {
         val ic = currentInputConnection ?: return
-        val known = readBefore(ic, MAX_WORD_LOOKBACK)?.toString()
+        val known = readContextBefore(ic)?.toString()
         val before = known.orEmpty()
         val typed = WordTools.currentWord(before)
-        val context = WordTools.previousWords(before)
+        val context = if (known == null) emptyList() else contextWords(before)
         val shown = shownCompletions
         shownCompletions = emptyList()
         commitToField(ic, " ")
@@ -2501,6 +2521,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         if (typed.isEmpty() || !learningEnabled) return
         if (!autoCorrectEnabled || !field.autoCorrectAllowed) {
             learning.onSuggestionsIgnored(shown, typed)
+            noteSentenceStart(context)
             learning.onWordCommitted(typed)
             maybeFlush()
             return
@@ -2509,7 +2530,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         val session = editorSessionId
         executeSuggest {
             val corrected = suggestionEngine.autoCorrect(typed, context)
-            mainHandler.post { applyAutoCorrect(typed, corrected, shown, session) }
+            mainHandler.post { applyAutoCorrect(typed, corrected, shown, session, context) }
         }
     }
 
@@ -2518,6 +2539,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         corrected: String?,
         shown: List<String>,
         session: Int,
+        context: List<String>,
     ) {
         val display = corrected?.let {
             if (typed.first().isUpperCase()) {
@@ -2546,6 +2568,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         val finalWord = if (applied) display ?: typed else typed
         learning.onSuggestionsIgnored(shown, finalWord)
+        noteSentenceStart(context)
         learning.onWordCommitted(finalWord)
         maybeFlush()
     }
@@ -2575,11 +2598,12 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
     /** Oppii kursorin edellä olevan keskeneräisen sanan, jos oppiminen on sallittu. */
     private fun learnCurrentWord() {
         if (!learningEnabled) return
-        val before = readBefore(MAX_WORD_LOOKBACK) ?: return
+        val before = currentInputConnection?.let { readContextBefore(it) } ?: return
         val word = WordTools.currentWord(before)
         if (word.isNotEmpty()) {
             learning.onSuggestionsIgnored(shownCompletions, word)
             shownCompletions = emptyList()
+            noteSentenceStart(contextWords(before))
             learning.onWordCommitted(word)
             maybeFlush()
         }
@@ -3439,6 +3463,8 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             if (learningEnabled) {
                 learning.onSuggestionsIgnored(shownCompletions, word)
                 shownCompletions = emptyList()
+                // Koko puskuri on käytettävissä, joten sen alku on lauseen alku.
+                noteSentenceStart(WordTools.previousWords(beforeCursor))
                 if (word == current) {
                     learning.onTypedWordAccepted(word)
                 } else {
@@ -3451,7 +3477,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             return
         }
         val ic = currentInputConnection ?: return
-        val known = readBefore(ic, MAX_WORD_LOOKBACK)?.toString()
+        val known = readContextBefore(ic)?.toString()
         val before = known.orEmpty()
         val current = WordTools.currentWord(before)
         val committed = if (spaceAfterSuggestion) "$word " else word
@@ -3465,6 +3491,7 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
             // Muut näkyneet täydennykset ohitettiin; valittu sana saa hyväksynnän.
             learning.onSuggestionsIgnored(shownCompletions, word)
             shownCompletions = emptyList()
+            if (known != null) noteSentenceStart(contextWords(before))
             if (word == current) {
                 // Rivin kärjessä ollut oma kirjoitettu sana opitaan kuin kirjoitettuna.
                 learning.onTypedWordAccepted(word)
@@ -3502,19 +3529,22 @@ class KeyboardService : InputMethodService(), KeyboardView.Listener {
         }
         if (deferred) return
         // Käännöstilassa ehdotukset lasketaan siitä alueesta, jota kirjoitetaan.
+        // Käännösnäkymässä koko puskuri on käytettävissä, joten sen alku on
+        // lauseen alku; kentästä luetaan yksi merkki yli ikkunan samasta syystä.
         val before: CharSequence = if (translateMode) {
             val buffer = activeTranslateBuffer()
             buffer.text.substring(0, buffer.cursor)
         } else {
-            readBefore(MAX_WORD_LOOKBACK) ?: ""
+            currentInputConnection?.let { readContextBefore(it) } ?: ""
         }
+        val startIsSentence = translateMode || before.length <= MAX_WORD_LOOKBACK
         // Lauseen alussa (automaattinen iso kirjain päällä) ehdotukset alkavat isolla.
         val shiftActive = shift.state != ShiftState.OFF
         val index = emojiIndex
         val recents = emojiRecents
         executeSuggest {
             val word = WordTools.currentWord(before)
-            val context = WordTools.previousWords(before)
+            val context = WordTools.previousWords(before, startIsSentence = startIsSentence)
             // Emoji kirjoitettavalle tai juuri valmistuneelle sanalle.
             val emoji = index
                 ?.suggest(word.ifEmpty { context.lastOrNull().orEmpty() }, recents?.recent.orEmpty().toSet())

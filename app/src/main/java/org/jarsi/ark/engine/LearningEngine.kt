@@ -119,6 +119,9 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
             val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
             adoptLowercase(state, word)
             state.count++
+            // Käyttö nollaa ohitukset kuten hyväksyntäkin: riviltä kadonnutta
+            // sanaa ei valita riviltä vaan se kirjoitetaan loppuun.
+            state.ignoredCount = 0
             state.lastUsed = clock()
             dirtyWords += key
         }
@@ -232,6 +235,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
     fun signals(word: String): WordSignals? = words[keyOf(word)]?.let {
         WordSignals(
             usage = it.count * recency(it.lastUsed),
+            count = it.count,
             // Yksi kirjoituskerta voi olla kirjoitusvirhe: oman sanan bonus
             // alkaa vasta toisesta kerrasta.
             manuallyTyped = it.count >= 2,

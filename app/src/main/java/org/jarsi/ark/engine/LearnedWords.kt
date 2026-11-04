@@ -19,6 +19,8 @@ data class LearnedWord(
  */
 data class WordSignals(
     val usage: Float,
+    /** Kirjoituskerrat ilman tuoreuskerrointa ohitusten suhteuttamiseen. */
+    val count: Int,
     val manuallyTyped: Boolean,
     val acceptedCount: Int,
     val ignoredCount: Int,

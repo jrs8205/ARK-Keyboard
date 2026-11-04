@@ -23,6 +23,16 @@ class LearningEngineTest {
     }
 
     @Test
+    fun `kasin kirjoitus nollaa ohitukset`() {
+        val e = engine()
+        repeat(2) { e.onWordCommitted("tailscale") }
+        repeat(20) { e.onSuggestionsIgnored(listOf("tailscale"), "muu") }
+        assertEquals(20, e.signals("tailscale")!!.ignoredCount)
+        e.onWordCommitted("tailscale")
+        assertEquals(0, e.signals("tailscale")!!.ignoredCount)
+    }
+
+    @Test
     fun `pienella kirjoitettu korvaa lauseen alussa opitun asun`() {
         val e = engine()
         e.onWordCommitted("Jako")

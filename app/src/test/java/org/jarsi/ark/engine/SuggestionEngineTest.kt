@@ -300,6 +300,22 @@ class SuggestionEngineTest {
     }
 
     @Test
+    fun `paljon kaytetty sana kestaa ohituksia`() {
+        val (s, l) = build("jarsi 10", "jarmo 100")
+        repeat(77) { l.onWordCommitted("jarsi") }
+        repeat(33) { l.onSuggestionsIgnored(listOf("jarsi"), "muu") }
+        assertEquals("jarsi", s.suggest("jar").first())
+    }
+
+    @Test
+    fun `kerran kirjoitettu ja usein ohitettu putoaa yleissanan alle`() {
+        val (s, l) = build("mutta 100", "mutka 50")
+        l.onWordCommitted("mutti")
+        repeat(10) { l.onSuggestionsIgnored(listOf("mutti"), "mutta") }
+        assertEquals(listOf("mutta", "mutka", "mutti"), s.suggest("mut"))
+    }
+
+    @Test
     fun `kaikki omat sanat paasevat ehdolle`() {
         val (s, l) = build("kala 100")
         val shorts = listOf("kaa", "kab", "kac", "kad", "kae", "kaf", "kag", "kah", "kai", "kaj", "kak")

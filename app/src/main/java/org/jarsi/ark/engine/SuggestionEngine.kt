@@ -195,7 +195,13 @@ class SuggestionEngine(
             score += signals.acceptedCount / (signals.acceptedCount + 3f) * ACCEPTED_WEIGHT
             if (signals.manuallyTyped) score += MANUAL_WEIGHT
             if (signals.ignoredCount >= IGNORED_THRESHOLD) {
-                score -= signals.ignoredCount / (signals.ignoredCount + 3f) * IGNORED_WEIGHT
+                // Ohitukset suhteessa käyttöön: kerran kirjoitettu ja aina
+                // ohitettu sana katoaa, paljon käytetty kestää ohituksia, ja
+                // jokainen käyttö nollaa laskurin, joten sana nousee heti
+                // takaisin kun sitä taas käyttää.
+                val ignored = signals.ignoredCount.toFloat()
+                val used = signals.count + signals.acceptedCount + IGNORED_SATURATION
+                score -= ignored / (ignored + used) * IGNORED_WEIGHT
             }
         }
         return score
@@ -222,5 +228,6 @@ class SuggestionEngine(
         const val MANUAL_WEIGHT = 2.5f
         const val PINNED_WEIGHT = 20.0f
         const val IGNORED_WEIGHT = 5.0f
+        const val IGNORED_SATURATION = 3f
     }
 }

@@ -289,4 +289,13 @@ class SuggestionEngineTest {
         l.onSuggestionsIgnored(listOf("auto"), "muu")
         assertEquals(listOf("auto", "autio"), s.suggest("au"))
     }
+
+    @Test
+    fun `kaikki omat sanat paasevat ehdolle`() {
+        val (s, l) = build("kala 100")
+        val shorts = listOf("kaa", "kab", "kac", "kad", "kae", "kaf", "kag", "kah", "kai", "kaj", "kak")
+        repeat(3) { shorts.forEach { l.onWordCommitted(it) } }
+        repeat(2) { l.onWordCommitted("kaupungissa") }
+        assertTrue("kaupungissa" in s.suggest("ka", max = 13))
+    }
 }

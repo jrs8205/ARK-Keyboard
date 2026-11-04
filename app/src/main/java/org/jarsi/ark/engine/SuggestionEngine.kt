@@ -7,6 +7,9 @@ import kotlin.math.ln
  * Kokoaa ehdotusrivin yhtenäisellä pisteytysmallilla: yleisyys, oma käyttö,
  * kontekstiosumat (bigram/trigram), hyväksynnät, kiinnitys ja ohitukset
  * summautuvat yhdeksi pistemääräksi (kokonaissuunnitelman kohta 22).
+ * Kaikki alulla alkavat omat sanat pääsevät pisteytykseen; esikarsinta
+ * koskee vain sanalistaa, jotta pitkä harvemmin käytetty oma sana ei jää
+ * lyhyiden ja yleisten sanojen korin ulkopuolelle.
  */
 class SuggestionEngine(
     private val dictionary: DictionaryEngine,
@@ -24,7 +27,7 @@ class SuggestionEngine(
         for (word in dictionary.suggest(prefix, DICTIONARY_CANDIDATES)) {
             candidates += word.lowercase(fiLocale)
         }
-        for (word in learning.suggest(prefix, OWN_CANDIDATES)) {
+        for (word in learning.suggest(prefix, Int.MAX_VALUE)) {
             candidates += word.lowercase(fiLocale)
         }
         for (key in contextMatches.keys) {
@@ -199,7 +202,8 @@ class SuggestionEngine(
     }
 
     private companion object {
-        const val DICTIONARY_CANDIDATES = 12
+        const val DICTIONARY_CANDIDATES = 20
+        // Vain korjausvaihtoehtojen (alternatives) omien sanojen kori.
         const val OWN_CANDIDATES = 10
         const val IGNORED_THRESHOLD = 2
         const val PINNED_TOP = 2

@@ -273,4 +273,33 @@ class WordToolsTest {
         assertEquals(3, WordTools.wordBackspaceLength("   "))
         assertEquals(0, WordTools.wordBackspaceLength(""))
     }
+
+    @Test
+    fun `sovellus-perhe saa saman vartalon`() {
+        listOf("sovellus", "sovelluksen", "sovelluksessa", "sovelluksesta", "sovelluksia", "sovellukseen", "sovellukset")
+            .forEach { assertEquals(it, "sovellus", WordTools.stem(it)) }
+    }
+
+    @Test
+    fun `kaikki-perhe saa saman vartalon`() {
+        listOf("kaikki", "kaikkia", "kaikkiin", "kaikkien").forEach { assertEquals(it, "kaikk", WordTools.stem(it)) }
+    }
+
+    @Test
+    fun `paljonko kuorii liitteen ja paatteen`() = assertEquals("paljo", WordTools.stem("paljonko"))
+
+    @Test
+    fun `lyhyt sana ei kuoriudu alle neljan`() {
+        assertEquals("talo", WordTools.stem("talo"))
+        assertEquals("talo", WordTools.stem("talon"))
+        assertEquals("tuoll", WordTools.stem("tuolla"))
+        assertEquals("ja", WordTools.stem("ja"))
+    }
+
+    @Test
+    fun `osoite ja tuotenimi eivat kuoriudu`() {
+        assertEquals("jarsi.org", WordTools.stem("jarsi.org"))
+        assertEquals("ark-launcher", WordTools.stem("ark-launcher"))
+        assertEquals("10a", WordTools.stem("10a"))
+    }
 }

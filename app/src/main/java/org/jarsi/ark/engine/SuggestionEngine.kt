@@ -204,6 +204,13 @@ class SuggestionEngine(
             // muutaman käytön jälkeen.
             score += (ln(1.0 + signals.usage) / ln(1.0 + USAGE_SCALE)).toFloat() * USAGE_WEIGHT
             score += signals.acceptedCount / (signals.acceptedCount + 3f) * ACCEPTED_WEIGHT
+            if (signals.count > 0 && signals.familyUsage > 0f) {
+                // Saman vartalon muut muodot vahvistavat: harvinaisempi
+                // taivutusmuoto nousee jo muutaman käytön jälkeen. Perheen
+                // muotoja ei rajoiteta rivillä: kirjoitettu alku osoittaa
+                // yleensä juuri tähän perheeseen (mitattu omistajan datalla).
+                score += signals.familyUsage / (signals.familyUsage + FAMILY_SATURATION) * FAMILY_WEIGHT
+            }
             if (signals.manuallyTyped) {
                 score += MANUAL_WEIGHT
                 // Täydennysarvo: mitä enemmän kirjaimia ehdotus säästää, sitä
@@ -252,5 +259,7 @@ class SuggestionEngine(
         const val IGNORED_SATURATION = 3f
         const val COMPLETION_WEIGHT = 0.75f
         const val COMPLETION_SATURATION = 6f
+        const val FAMILY_WEIGHT = 0.5f
+        const val FAMILY_SATURATION = 10f
     }
 }

@@ -26,6 +26,10 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
     private val fiLocale = Locale.forLanguageTag("fi")
     private val words = HashMap<String, WordState>()
 
+    // Taivutusperheet: vartalo → saman vartalon avaimet. Perheen muut muodot
+    // vahvistavat toisiaan pisteytyksessä (sovellus, sovelluksen, …).
+    private val families = HashMap<String, HashSet<String>>()
+
     // Ketjut järjestettynä ennustushakua varten: konteksti → jatkot.
     private val bigrams = HashMap<String, HashMap<String, CountState>>()
     private val trigrams = HashMap<Pair<String, String>, HashMap<String, CountState>>()
@@ -52,6 +56,26 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         }
 
     private fun keyOf(word: String) = word.lowercase(fiLocale)
+
+    /** Sanan tila; uusi sana liitetään samalla taivutusperheeseensä. */
+    private fun stateFor(key: String, word: String): WordState = words.getOrPut(key) {
+        families.getOrPut(WordTools.stem(key)) { HashSet() } += key
+        WordState(word, 0, clock(), false, clock())
+    }
+
+    /** Saman vartalon muiden käytettyjen muotojen käyttö (määrä × tuoreus). */
+    private fun familyUsageOf(key: String): Float {
+        val members = families[WordTools.stem(key)] ?: return 0f
+        if (members.size < 2) return 0f
+        var sum = 0f
+        for (member in members) {
+            if (member == key) continue
+            val state = words[member] ?: continue
+            if (state.blocked || state.count == 0) continue
+            sum += state.count * recency(state.lastUsed)
+        }
+        return sum
+    }
 
     private fun isWordChar(c: Char) = c.isLetterOrDigit() || c == '-' || c == '.'
 
@@ -82,13 +106,16 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         loadedTrigrams: List<LearnedTrigram>,
     ) {
         words.clear()
+        families.clear()
         bigrams.clear()
         trigrams.clear()
         for (w in loadedWords) {
-            words[keyOf(w.word)] = WordState(
+            val key = keyOf(w.word)
+            words[key] = WordState(
                 w.word, w.count, w.lastUsed, w.blocked, w.created,
                 w.acceptedCount, w.ignoredCount, w.pinned,
             )
+            families.getOrPut(WordTools.stem(key)) { HashSet() } += key
         }
         for (b in loadedBigrams) {
             bigrams.getOrPut(b.previous) { HashMap() }[b.next] = CountState(b.count, b.lastUsed)
@@ -116,7 +143,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         }
         if (isEligibleWord(word)) {
             val key = keyOf(word)
-            val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
+            val state = stateFor(key, word)
             adoptLowercase(state, word)
             state.count++
             // Käyttö nollaa ohitukset kuten hyväksyntäkin: riviltä kadonnutta
@@ -143,7 +170,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
     fun onSuggestionAccepted(word: String) {
         if (!loaded) return
         val key = keyOf(word)
-        val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
+        val state = stateFor(key, word)
         adoptLowercase(state, word)
         if (state.count > 0) state.count++
         state.acceptedCount++
@@ -163,7 +190,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         if (!loaded) return
         if (isEligibleWord(word)) {
             val key = keyOf(word)
-            val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
+            val state = stateFor(key, word)
             adoptLowercase(state, word)
             state.count++
             state.acceptedCount++
@@ -212,7 +239,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         for (word in shown) {
             val key = keyOf(word)
             if (key == finalKey) continue
-            val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
+            val state = stateFor(key, word)
             state.ignoredCount++
             dirtyWords += key
         }
@@ -222,7 +249,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
     fun setPinned(word: String, pinned: Boolean) {
         if (!loaded) return
         val key = keyOf(word)
-        val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
+        val state = stateFor(key, word)
         state.pinned = pinned
         dirtyWords += key
     }
@@ -243,8 +270,13 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
             ignoredCount = it.ignoredCount,
             pinned = it.pinned,
             blocked = it.blocked,
+            familyUsage = familyUsageOf(keyOf(word)),
         )
     }
+
+    /** Saman vartalon muiden omien muotojen käyttö yhteensä. */
+    @Synchronized
+    fun familyUsage(word: String): Float = familyUsageOf(keyOf(word))
 
     /** Tallennettu kirjoitusasu tai avain sellaisenaan. */
     @Synchronized
@@ -360,6 +392,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
         if (words.remove(key) != null) {
             dirtyWords -= key
             removedWords += key
+            families[WordTools.stem(key)]?.remove(key)
         }
         // Myös sanaketjut siivotaan, ettei poistettu sana palaa ennustuksista.
         bigrams.remove(key)
@@ -377,7 +410,7 @@ class LearningEngine(private val clock: () -> Long = System::currentTimeMillis) 
     fun blockWord(word: String) {
         if (!loaded) return
         val key = keyOf(word)
-        val state = words.getOrPut(key) { WordState(word, 0, clock(), false, clock()) }
+        val state = stateFor(key, word)
         state.blocked = true
         dirtyWords += key
     }

@@ -345,6 +345,16 @@ class SuggestionEngineTest {
     }
 
     @Test
+    fun `taivutusmuoto nousee perheen voimalla`() {
+        val (s, l) = build("sovittu 100")
+        repeat(5) { l.onWordCommitted("sovinto") }
+        repeat(2) { l.onWordCommitted("sovelluksessa") }
+        repeat(10) { l.onWordCommitted("sovellus") }
+        val result = s.suggest("sov")
+        assertTrue(result.toString(), result.indexOf("sovelluksessa") < result.indexOf("sovinto"))
+    }
+
+    @Test
     fun `kaikki omat sanat paasevat ehdolle`() {
         val (s, l) = build("kala 100")
         val shorts = listOf("kaa", "kab", "kac", "kad", "kae", "kaf", "kag", "kah", "kai", "kaj", "kak")

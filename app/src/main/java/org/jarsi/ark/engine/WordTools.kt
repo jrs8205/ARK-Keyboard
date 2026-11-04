@@ -10,6 +10,49 @@ object WordTools {
 
     private val NON_WORD = Regex("[^\\p{L}\\p{N}.-]+")
 
+    // Taivutusperheen karkea vartalo: liitepartikkelit, tavallisimmat
+    // sijapäätteet ja vartalon loppuvokaalit kuoritaan, jotta saman sanan
+    // muodot (sovellus, sovelluksen, sovelluksessa) saavat saman avaimen.
+    // Heuristiikka: astevaihtelua ei tunneta (kaupunki/kaupungin eroavat),
+    // mutta sama funktio käsittelee kaikki muodot, joten ryhmittely on
+    // johdonmukainen. Vartalo on aina vähintään [STEM_MIN] merkkiä.
+    private const val STEM_MIN = 4
+    private val CLITICS = listOf("kaan", "kään", "kin", "han", "hän", "ko", "kö", "pa", "pä")
+    private val CASE_ENDINGS = listOf(
+        "ssa", "ssä", "sta", "stä", "lla", "llä", "lta", "ltä", "lle", "ksi", "tta", "ttä",
+        "ta", "tä", "na", "nä", "a", "ä", "n", "t",
+    )
+    private const val VOWELS = "aeiouyäö"
+
+    /**
+     * Karkea vartalo pienennetylle avaimelle [key]. Muut kuin kirjaimista
+     * koostuvat avaimet (jarsi.org, ark-launcher, 10a) ja alle [STEM_MIN]
+     * merkin sanat palautuvat sellaisinaan.
+     */
+    fun stem(key: String): String {
+        if (key.length < STEM_MIN || !key.all { it.isLetter() }) return key
+        var s = key
+        fun strip(suffixes: List<String>) {
+            for (suffix in suffixes) {
+                if (s.length - suffix.length >= STEM_MIN && s.endsWith(suffix)) {
+                    s = s.dropLast(suffix.length)
+                    return
+                }
+            }
+        }
+        strip(CLITICS)
+        strip(CASE_ENDINGS)
+        // Pitkä loppuvokaali yhdeksi (taloon → talo, kaikkiin → kaikki).
+        if (s.length > STEM_MIN && s[s.length - 1] == s[s.length - 2] && s.last() in VOWELS) {
+            s = s.dropLast(1)
+        }
+        // Vartalon sidevokaali pois (sovellukse → sovelluks, kaikki → kaikk).
+        while (s.length > STEM_MIN && (s.last() == 'e' || s.last() == 'i')) s = s.dropLast(1)
+        // us/ukse-vaihtelu (sovelluks → sovellus).
+        if (s.length > STEM_MIN && s.endsWith("ks")) s = s.dropLast(2) + "s"
+        return s
+    }
+
     /** Pilkkoo tekstin sanoiksi esimerkiksi sanellun lauseen oppimista varten. */
     fun words(text: CharSequence): List<String> =
         text.split(NON_WORD)

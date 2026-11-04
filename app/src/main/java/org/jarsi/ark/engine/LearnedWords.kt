@@ -26,6 +26,8 @@ data class WordSignals(
     val ignoredCount: Int,
     val pinned: Boolean,
     val blocked: Boolean,
+    /** Saman vartalon muiden omien muotojen käyttö (määrä × tuoreus) yhteensä. */
+    val familyUsage: Float = 0f,
 )
 
 /** Kontekstiosuman raakapisteet (määrä × tuoreuskerroin). */

@@ -33,6 +33,23 @@ class LearningEngineTest {
     }
 
     @Test
+    fun `perheen kaytto on muiden muotojen summa`() {
+        val e = engine()
+        repeat(3) { e.onWordCommitted("sovellus") }
+        repeat(2) { e.onWordCommitted("sovelluksen") }
+        assertEquals(3f, e.signals("sovelluksen")!!.familyUsage)
+        assertEquals(2f, e.signals("sovellus")!!.familyUsage)
+    }
+
+    @Test
+    fun `poistettu sana lahtee perheesta`() {
+        val e = engine()
+        repeat(2) { e.onWordCommitted("sovellus"); e.onWordCommitted("sovelluksen") }
+        e.removeWord("sovellus")
+        assertEquals(0f, e.signals("sovelluksen")!!.familyUsage)
+    }
+
+    @Test
     fun `pienella kirjoitettu korvaa lauseen alussa opitun asun`() {
         val e = engine()
         e.onWordCommitted("Jako")

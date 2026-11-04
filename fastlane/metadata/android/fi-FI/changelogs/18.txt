@@ -1,0 +1,1 @@
+Asetukset uusittu Material 3 Expressivellä: käyttöönoton tilakortti, taittuvat osiot ja tukikortti. Teemavalinta vaikuttaa nyt myös asetuksiin; tumma ja musta teema erottuvat selvästi. Takaisin asetuksista palaa sovellukseen yhdellä painalluksella. Kirjoitettu API-avain säilyy käännössä, ja ChatGPT-uloskirjautuminen näkyy heti. Liukusäätimet värisevät askeleittain.
